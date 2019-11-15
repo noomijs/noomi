@@ -628,7 +628,7 @@ class TestAdvice{
 #### 配置方式
 在noomi.json中增加route项，内容如下：
 
-``` json
+```js
 {
     //路由命名空间
     "namespace":"",
@@ -1078,7 +1078,7 @@ class NodomFilter{
 
 在使用Session时，需要在noomi.json的web配置项中配置web_config信息。
 
-``` json
+```js
 
 {
     "upload_tmp_dir":"/upload/tmp", //上传临时目录，相对于项目根目录，以/开始
@@ -1653,7 +1653,10 @@ class MyClass{
 }
 ```
 
-### <a id='附录1'>附录1</a>
+### <a id='附录2'>附录2</a>
+```sql
+
+```
 
 ### <a id='集群Cluster'>附录3-集群 Cluster</a>
 

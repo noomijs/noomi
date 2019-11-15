@@ -24,7 +24,7 @@
     - [安全 SecurityFactory](#安全SecurityFactory)
     - [数据库 DataBase](#数据库Database)
     - [事务 Transaction](#事务Transaction)
-- [附录]
+- [附录](#附录)
     - [附录1-全局配置文件](#附录1)
     - [附录2-安全框架数据表sql](#附录2)
     - [附录3-集群 Cluster](#集群Cluster)
@@ -46,7 +46,7 @@
 
 &emsp; &emsp;创建.vscode目录，/.vscode 新建launch.json文件，内容如下：
 
-```json
+```js
 {
     "version": "0.2.0",
     "configurations": [
@@ -70,9 +70,9 @@
 
 &emsp; &emsp;在项目根目录新建tsconfig.json文件,内容如下：
 
-```json
+```js
 {
-  "compilerOptions": {
+    "compilerOptions": {
     "module":"commonjs",
     "target": "es2017",
     "sourceMap": true,
@@ -81,7 +81,7 @@
     "outDir":"./dist/module"
   },
   "include":[
-    "**/*.ts"
+     "**/*.ts"
   ],
 }
 ```
@@ -92,7 +92,7 @@
 
 &emsp; &emsp;项目根目录下新建config目录,新建noomi.json（名字不可变）文件,内容如下：
 
-```json
+```js
 {
     "instance":{
         "instances":["dist/module/**/*.js"]
@@ -231,7 +231,7 @@ use noomi;
 
 ```sql
 create table t_user(
-   id int(11) not null auto_increment,
+    id int(11) not null auto_increment,
 	name varchar(32),
 	age int(11),
 	mobile char(11),
@@ -241,7 +241,7 @@ create table t_user(
 
 修改config/noomi.json文件，增加数据源配置，完整配置如下：
 
-```json
+```js
 {
     "instance":{
         "instances":["dist/module/**/*.js"]
@@ -319,7 +319,7 @@ export class UserService{
 
 &emsp; &emsp;在config/noomi.json的database项中增加事务配置，完整配置文件如下：
 
-```json
+```js
 {
     "instance":{
         "instances":["dist/module/**/*.js"]
@@ -447,7 +447,7 @@ export class UserService{
 使用框架来对实例进行统一管理，支持IoC，提供配置文件和注解两种方式使用。
 #### 配置方式
 在noomi.json中增加aop项，内容如下：
-```json
+```js
 //实例配置，用于IoC
 "instance":{
     //模块基础路径(可选配置)，模块从该路径中加载，配置该路径后，模块路径采用相对路径配置，注：该路径为js路径，而不是ts路径
@@ -493,7 +493,7 @@ export class UserService{
  */
 @Inject(instanceName)
 ```
-例如:
+例:
 
 ```typescript
 @Instance({
@@ -513,7 +513,7 @@ class TestService{
 aop支持配置和注解的两种方式
 #### 配置方式
 在noomi.json中增加aop项，内容如下：
-```json
+```js
 //aop配置，如果为注解方式，则不用配置
 {
     //子文件列表，表示可以加载的子aop文件
@@ -588,7 +588,7 @@ aop支持配置和注解的两种方式
 @AfterReturn(pointcutId) //返回
 ```
 
-例如:
+例:
 
 ```typescript
 @Instance({
@@ -668,7 +668,7 @@ class TestAdvice{
 ***注:该内容可以放在独立文件中（目录与noomi.json相同目录或子目录），在noomi.json中以路径方式引入，也可以在noomi.json中以对象方式配置。配置项为"route"。***
 
 #### 配置方式
-```json
+```js
 @Router(cfg)
 /* @param cfg:object
  * namespace:string  命名空间，namespace+该类下的所有方法对应的路由路径=路由完整路径，可选
@@ -687,7 +687,7 @@ class TestAdvice{
  *                                    如params:['p1','p2']，则传入url路由时的参数为{p1:v1,p2:v2}和路由自带的参数，可选
 ```
 
-例如:
+例:
 
 ```typescript
 @Router({
@@ -717,15 +717,16 @@ const cache = new NCache([cfg])
   - [redis] <string> redis名称
   - [maxSize]<number> 最大空间，默认为0，saveType为1时设置无效
 
-当saveType为1时，需要配置redis信息,推荐在redis.json中配置redis，如下:
+当saveType为1时，需要配置redis信息,需要在noomi.json中配置redis，内容如下:
 
-```json
-"redis":[{
-        "name":"default",  //redis名称
-        "host":"localhost", 
-        "port":"6379"
-    }],
+```js
+[{
+    "name":"default",  //redis名称
+    "host":"localhost", 
+    "port":"6379"
+}]
 ```
+***注:该内容可以放在独立文件中（目录与noomi.json相同目录或子目录），在noomi.json中以路径方式引入，也可以在noomi.json中以对象方式配置。配置项为"redis"。***
 
 #### async set(item[,timeout])
 
@@ -747,7 +748,7 @@ const cache = new NCache([cfg])
 + subkey:<string> 子键
 + changeExpire:<boolean> 是否更新过期时间
 
-例如：
+例：
 
 ```typescript
 (async ()=>{
@@ -785,7 +786,7 @@ const cache = new NCache([cfg])
 
 + key:<string> 键
 
-例如:
+例:
 
 ```typescript
 await n.set({
@@ -810,7 +811,7 @@ console.log(await n.has('mytest1'));
 
 在使用Session时，推荐在noomi.json的web配置项中配置session信息。
 
-```json
+```js
 //session配置(可选配置)
 {
     "name":"NSESSIONID", //set-cookie中的sessionId名，默认为NOOMISESSIONID
@@ -861,7 +862,7 @@ console.log(await n.has('mytest1'));
 
 + key<string>
 
-例如:
+例:
 
 ```typescript
 async getdata(){
@@ -1022,7 +1023,7 @@ getHttpInfo(){
 
 ***注:在使用注解配置自定义过滤器时，建议order的优先级设置为10之后，防止与框架中的过滤器优先级冲突。***
 
-例如:
+例:
 
 ```typescript
 @Instance({
@@ -1047,7 +1048,7 @@ class NodomFilter{
 
 在使用Session时，推荐在noomi.json的web配置项中配置error_page信息。
 
-```json
+```js
 //http异常页配置(可选配置)，如果http异常码在该配置中，则重定向到该异常码对应的页面
 [{
     //异常码，类型：数字
@@ -1115,7 +1116,7 @@ class NodomFilter{
 + url<string>
 
 ***注:web配置可以放在独立文件中（目录与noomi.json相同目录或子目录），在noomi.json中以路径方式引入，也可以在noomi.json中以对象方式配置。配置项为"web"。格式如下：***
-```json
+```js
 {
     "web_config":***,
     "session":***,
@@ -1127,7 +1128,7 @@ class NodomFilter{
 框架提供基于数据库的安全鉴权机制，需要创建安全相关的数据表和配置数据库，创建表sql见附录2。 
 当使用安全框架时，需要在noomi.json的配置security信息，内容如下:
 
-```json
+```js
 {
     "save_type":0,				//同session配置
     "max_size":10000000,		//同session配置
@@ -1260,7 +1261,7 @@ class NodomFilter{
 
 + authId<number> 权限id
 
-例如：
+例：
 
 ```typescript
 toPage: string;
@@ -1292,7 +1293,7 @@ async Testlogin() {
 noomi支持4种connection manager：mysql、oracle、mssql、sequelize，用户可以自定义connection manager，自定义connection manager需要加入InstanceFactory。  
 使用数据源，需要在noomi.json中配置database属性，典型配置如下：
 #### mysql配置
-```json
+```js
 {
     "product":"mysql",
     "use_pool":true,  //是否支持连接池，如果为true，options需要设置connectionLimit
@@ -1309,7 +1310,7 @@ noomi支持4种connection manager：mysql、oracle、mssql、sequelize，用户�
 ```
 ***注:options参考 npm mysql配置***
 #### oracle配置
-```json
+```js
 {
     "product":"oracle",
     "use_pool":true,
@@ -1324,7 +1325,7 @@ noomi支持4种connection manager：mysql、oracle、mssql、sequelize，用户�
 ```
 ***注:options参考 npm oracle配置***
 #### mssql配置
-```json
+```js
 {
     "product":"mssql",
     "use_pool":true,
@@ -1339,7 +1340,7 @@ noomi支持4种connection manager：mysql、oracle、mssql、sequelize，用户�
 ```
 ***注:options参考 npm mssql配置***
 #### sequelize配置
-```json
+```js
 {
     "product":"sequelize",
     "use_pool":true,
@@ -1378,7 +1379,7 @@ noomi支持4种connection manager：mysql、oracle、mssql、sequelize，用户�
 noomi支持事务及嵌套事务，事务分为配置和注解两种方式。
 #### 配置事务
 在noomi.json的database配置项中增加transaction配置  
-```json
+```js
     "transaction":{
         // "transaction":"mysqlTransaction",//自定义事务类时需要配置，否则直接根据product自动产生
         //"isolation_level":1,//隔离级 1read uncommited 2read commited 3repeatable read 4serializable
@@ -1387,7 +1388,7 @@ noomi支持事务及嵌套事务，事务分为配置和注解两种方式。
 ```
 #### 注解事务
 和配置事务方式一样，需要在database配置项中增加transaction配置，不同的是不需要设置expressions
-```json
+```js
 "transaction":{}
 ```
 ##### Transactioner装饰器
@@ -1415,9 +1416,9 @@ class MyClass{
 ```  
 该装饰器注解的方法会被作为事务方法。
 
-## 附录
+## <a id='附录'>附录</a>
 ### <a id='附录1'>附录1-全局配置文件</a>
-```json
+```js
 {
 	//框架提示语言(可选配置)，zh中文，en英文，默认zh
 	"language":"zh", 
@@ -1660,7 +1661,7 @@ class MyClass{
 
 &emsp; &emsp;在process.json中配置集群信息，更多参数配置参阅pm2官方文档
 
-```json
+```js
 {
     "apps" : [{      //数组，每个数组成员就是对应一个pm2中运行的应用
       "name"        : "noomi", // 项目名称

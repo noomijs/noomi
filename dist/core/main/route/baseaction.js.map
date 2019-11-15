@@ -1,1 +1,0 @@
-{"version":3,"file":"baseaction.js","sourceRoot":"","sources":["../../../../core/main/route/baseaction.ts"],"names":[],"mappings":";;AAEA;;GAEG;AACH,MAAM,UAAU;IAKZ,QAAQ,CAAC,IAAQ;QACb,IAAI,CAAC,KAAK,GAAG,IAAI,CAAC;IACtB,CAAC;IAED,UAAU,CAAC,GAAe;QACtB,IAAI,CAAC,OAAO,GAAG,GAAG,CAAC;IACvB,CAAC;IAED,WAAW,CAAC,GAAgB;QACxB,IAAI,CAAC,QAAQ,GAAG,GAAG,CAAC;IACxB,CAAC;CACJ;AAEM,gCAAU"}

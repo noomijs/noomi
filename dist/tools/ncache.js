@@ -1,0 +1,527 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const errorfactory_1 = require("./errorfactory");
+const redisfactory_1 = require("./redisfactory");
+const util_1 = require("./util");
+class NCache {
+    /**
+     *
+     * @param name
+     * @param saveType
+     * @param maxSize
+     */
+    constructor(cfg) {
+        this.redisSizeName = 'NCACHE_SIZE_'; //redis存储的cache size名字前缀
+        this.redisPreName = 'NCACHE_'; //redis存储前缀
+        this.redisTimeout = 'NCACHE_TIMEOUT_'; //timeout redis 前缀
+        this.saveType = cfg.saveType || 0;
+        this.name = cfg.name;
+        this.redis = cfg.redis;
+        if (this.saveType === 0) {
+            this.memoryCache = new MemoryCache(cfg);
+        }
+        else {
+            this.redisPreName += this.name + '_';
+            this.redisTimeout += this.name + '_';
+        }
+    }
+    /**
+     * 添加到cache
+     * @param key       键
+     * @param value     值
+     * @param extra     附加信息
+     * @param timeout   超时时间(秒)
+     */
+    async set(item, timeout) {
+        if (this.saveType === 0) { //数据存到内存
+            this.memoryCache.set(item, timeout);
+        }
+        else { //数据存到redis
+            await this.addToRedis(item, timeout);
+        }
+    }
+    /**
+     * 获取值
+     * @param key           键
+     * @param changeExpire  是否更新过期时间
+     * @return              value或null
+     */
+    async get(key, subKey, changeExpire) {
+        let ci = null;
+        if (this.saveType === 0) {
+            return this.memoryCache.get(key, subKey, changeExpire);
+        }
+        else {
+            return await this.getFromRedis(key, subKey, changeExpire);
+        }
+    }
+    /**
+     * 获取值
+     * @param key           键
+     * @param changeExpire  是否更新过期时间
+     * @return              value或null
+     */
+    async getMap(key, changeExpire) {
+        let ci = null;
+        if (this.saveType === 0) {
+            return this.memoryCache.getMap(key, changeExpire);
+        }
+        else {
+            return await this.getMapFromRedis(key, changeExpire);
+        }
+    }
+    /**
+     * 删除
+     * @param key 键
+     */
+    async del(key, subKey) {
+        if (this.saveType === 0) {
+            this.memoryCache.del(key, subKey);
+        }
+        else {
+            await redisfactory_1.RedisFactory.del(this.redis, this.redisPreName + key, subKey);
+        }
+    }
+    /**
+     * 获取键
+     * @param key   键，可以带通配符
+     */
+    async getKeys(key) {
+        if (this.saveType === 0) {
+            return this.memoryCache.getKeys(key);
+        }
+        else {
+            let client = redisfactory_1.RedisFactory.getClient(this.redis);
+            if (client === null) {
+                throw new errorfactory_1.NoomiError("2601", this.redis);
+            }
+            let arr = client.keys(this.redisPreName + key);
+            //把前缀去掉
+            arr.forEach((item, i) => {
+                arr[i] = item.substr(this.redisPreName.length);
+            });
+            return arr;
+        }
+    }
+    /**
+     * 是否拥有key
+     * @param key
+     * @return   true/false
+     */
+    async has(key) {
+        if (this.saveType === 0) {
+            return this.memoryCache.has(key);
+        }
+        else {
+            return await redisfactory_1.RedisFactory.has(this.redis, this.redisPreName + key);
+        }
+    }
+    /**
+     * 从redis获取值
+     * @param key           键
+     * @apram subKey        子键
+     * @param changeExpire  是否修改expire
+     */
+    async getFromRedis(key, subKey, changeExpire) {
+        let timeout = 0;
+        if (changeExpire) {
+            let ts = await redisfactory_1.RedisFactory.get(this.redis, {
+                pre: this.redisTimeout,
+                key: key
+            });
+            if (ts !== null) {
+                timeout = parseInt(ts);
+            }
+        }
+        let value = await redisfactory_1.RedisFactory.get(this.redis, {
+            pre: this.redisPreName,
+            key: key,
+            subKey: subKey,
+            timeout: timeout
+        });
+        return value || null;
+    }
+    /**
+     * 从redis获取值
+     * @param key           键
+     * @apram subKey        子键
+     * @param changeExpire  是否修改expire
+     */
+    async getMapFromRedis(key, changeExpire) {
+        let timeout = 0;
+        //超时修改expire
+        if (changeExpire) {
+            let ts = await redisfactory_1.RedisFactory.get(this.redis, {
+                pre: this.redisTimeout,
+                key: key
+            });
+            if (ts !== null) {
+                timeout = parseInt(ts);
+            }
+        }
+        let value = await redisfactory_1.RedisFactory.getMap(this.redis, {
+            key: key,
+            pre: this.redisPreName,
+            timeout: timeout
+        });
+        return value || null;
+    }
+    /**
+     * 存到redis
+     * @param item      Redis item
+     * @param timeout   超时
+     */
+    async addToRedis(item, timeout) {
+        //存储timeout
+        if (typeof timeout === 'number' && timeout > 0) {
+            await redisfactory_1.RedisFactory.set(this.redis, {
+                pre: this.redisTimeout,
+                key: item.key,
+                value: timeout
+            });
+        }
+        //存储值
+        await redisfactory_1.RedisFactory.set(this.redis, {
+            pre: this.redisPreName,
+            key: item.key,
+            subKey: item.subKey,
+            value: item.value,
+            timeout: timeout
+        });
+    }
+}
+exports.NCache = NCache;
+//存储项
+class MemoryItem {
+    constructor(timeout) {
+        this.createTime = new Date().getTime();
+        if (timeout && typeof timeout === 'number') {
+            this.timeout = timeout * 1000;
+            this.expire = this.createTime + this.timeout;
+        }
+        this.size = 0;
+        this.useRcds = [];
+        this.LRU = 1;
+    }
+}
+/**
+ * 存储区
+ */
+class MemoryCache {
+    constructor(cfg) {
+        this.storeMap = new Map();
+        this.maxSize = cfg.maxSize;
+        this.size = 0;
+    }
+    set(item, timeout) {
+        //检查空间并清理
+        this.checkAndClean(item);
+        let ci = this.storeMap.get(item.key);
+        if (ci === undefined) {
+            ci = new MemoryItem(timeout);
+            this.storeMap.set(item.key, ci);
+        }
+        if (item.subKey) { //子键
+            if (ci.value) {
+                //如果key的value不是对象，不能设置subkey
+                if (typeof ci.value !== 'object') {
+                    throw new errorfactory_1.NoomiError("3010");
+                }
+            }
+            else {
+                ci.value = Object.create(null);
+            }
+            let v;
+            let size = this.getRealSize(v);
+            //转字符串
+            if (typeof item.value === 'object') {
+                v = JSON.stringify(item.value);
+            }
+            else {
+                v = item.value + '';
+            }
+            //保留原size
+            let si = ci.size;
+            if (ci.value[item.subKey]) {
+                ci.size -= this.getRealSize(ci.value[item.subKey]);
+            }
+            ci.value[item.subKey] = v;
+            ci.size += this.getRealSize(item.value);
+            //更新cache size
+            this.size += ci.size - si;
+        }
+        else {
+            let size = this.getRealSize(item.value);
+            if (typeof item.value === 'object') {
+                ci.size = size;
+                //新建value object
+                if (!ci.value) {
+                    ci.value = Object.create(null);
+                }
+                //追加属性
+                for (let k of Object.getOwnPropertyNames(item.value)) {
+                    ci.value[k] = item.value[k];
+                }
+                this.size += size;
+            }
+            else {
+                let si = 0;
+                if (ci) {
+                    //保留原size
+                    si = ci.size;
+                }
+                else {
+                    ci = new MemoryItem(timeout);
+                    this.storeMap.set(item.key, ci);
+                }
+                ci.size += size - si;
+                ci.value = item.value;
+                this.size += size - si;
+            }
+        }
+    }
+    /**
+     * 取值
+     * @param key
+     * @param subKey
+     * @param changeExpire
+     */
+    get(key, subKey, changeExpire) {
+        if (!this.storeMap.has(key)) {
+            return null;
+        }
+        let mi = this.storeMap.get(key);
+        const ct = new Date().getTime();
+        if (mi.expire > 0 && mi.expire < ct) {
+            this.storeMap.delete(key);
+            this.size -= mi.size;
+            mi = null;
+            return null;
+        }
+        this.changeLastUse(mi);
+        if (subKey) {
+            if (typeof mi.value === 'object') {
+                return mi.value[subKey] || null;
+            }
+            return null;
+        }
+        else {
+            return mi.value;
+        }
+    }
+    /**
+     * 获取值
+     * @param key           键
+     * @param changeExpire  是否更新过期时间
+     * @return              value或null
+     */
+    getMap(key, changeExpire) {
+        if (!this.storeMap.has(key)) {
+            return null;
+        }
+        let mi = this.storeMap.get(key);
+        if (typeof mi.value !== 'object') {
+            return null;
+        }
+        const ct = new Date().getTime();
+        if (mi.expire > 0 && mi.expire < ct) {
+            this.storeMap.delete(key);
+            this.size -= mi.size;
+            mi = null;
+            return null;
+        }
+        this.changeLastUse(mi);
+        return mi.value;
+    }
+    /**
+     * 获取键
+     * @param key   键，可以带通配符
+     */
+    getKeys(key) {
+        let keys = this.storeMap.keys();
+        let reg = util_1.Util.toReg(key);
+        let k;
+        let arr = [];
+        for (let k of keys) {
+            if (reg.test(k)) {
+                arr.push(k);
+            }
+        }
+        return arr;
+    }
+    /**
+     * 删除键
+     * @param key       键
+     * @param subKey    子键
+     */
+    del(key, subKey) {
+        let mi = this.storeMap.get(key);
+        if (!mi) {
+            return;
+        }
+        if (!subKey) {
+            this.size -= mi.size;
+            this.storeMap.delete(key);
+            mi = null;
+        }
+        else { //删除子键
+            let v = mi.value[subKey];
+            if (v) {
+                mi.size -= this.getRealSize(v);
+                delete mi.value[subKey];
+            }
+        }
+    }
+    /**
+     * 是否拥有key
+     * @param key
+     * @return   true/false
+     */
+    has(key) {
+        return this.storeMap.has(key);
+    }
+    /**
+     * 修改最后使用状态
+     * @param item              memory item
+     * @param changeExpire      释放修改expire
+     */
+    changeLastUse(item, changeExpire) {
+        let ct = new Date().getTime();
+        //修改过期时间
+        if (changeExpire && item.timeout) {
+            item.expire = ct + item.timeout * 1000;
+        }
+        //最大长度为5
+        if (item.useRcds.length === 5) {
+            item.useRcds.shift();
+        }
+        item.useRcds.push(ct);
+        //计算lru
+        this.cacLRU(item);
+    }
+    /**
+     * 获取内容实际size utf8
+     * @param value     待检测值
+     * @return          size
+     */
+    getRealSize(value) {
+        let tp = typeof value;
+        switch (tp) {
+            case 'string':
+                return strSize(value);
+            case 'number':
+                return 8;
+            case 'boolean':
+                return 2;
+            case 'object':
+                let len = 0;
+                for (let p of Object.getOwnPropertyNames(value)) {
+                    len += this.getRealSize(value[p]);
+                }
+                return len;
+            default:
+                return 4;
+        }
+        /**
+         * 计算字符串尺寸
+         * @param v     字符串
+         * @return      size
+         */
+        function strSize(v) {
+            let totalLength = 0;
+            for (let i = 0; i < v.length; i++) {
+                let charCode = v.charCodeAt(i);
+                if (charCode < 0x007f) {
+                    totalLength = totalLength + 1;
+                }
+                else if ((0x0080 <= charCode) && (charCode <= 0x07ff)) {
+                    totalLength += 2;
+                }
+                else if ((0x0800 <= charCode) && (charCode <= 0xffff)) {
+                    totalLength += 3;
+                }
+            }
+            return totalLength;
+        }
+    }
+    /**
+     * 清理缓存
+     * @param size  清理大小，为0仅清除超时元素
+     */
+    cleanup(size) {
+        //无可清理对象
+        if (this.storeMap.size === 0) {
+            return;
+        }
+        let ct = new Date().getTime();
+        //清理超时的
+        for (let item of this.storeMap) {
+            let key = item[0];
+            let mi = item[1];
+            if (mi.expire > 0 && mi.expire < ct) {
+                this.storeMap.delete(key);
+                this.size -= mi.size;
+                size -= mi.size;
+                mi = null;
+            }
+        }
+        //重复清理直到size符合要求
+        while (size > 0) {
+            size -= this.clearByLRU();
+        }
+    }
+    /**
+     * 通过lru进行清理
+     * @return      清理的尺寸
+     */
+    clearByLRU() {
+        //随机取10个，删除其中lru最小的3个
+        let delArr = [];
+        let delKeys = [];
+        let keys = this.storeMap.keys();
+        for (let i = 0; i < 10; i++) {
+            let key = keys[Math.random() * this.storeMap.size | 0];
+            delKeys.push(key);
+            delArr.push(this.storeMap.get(key));
+        }
+        //升序排序
+        delArr.sort((a, b) => {
+            return a.LRU - b.LRU;
+        });
+        //释放前三个
+        let size = 0;
+        for (let i = 0; i < delKeys.length && i < 3; i++) {
+            size += delArr[i].size;
+            this.storeMap.delete(delKeys[i]);
+        }
+        return size;
+    }
+    /**
+     * 检查和清理空间
+     * @param item  cacheitem
+     */
+    checkAndClean(item) {
+        let size = this.getRealSize(item.value);
+        if (this.maxSize > 0 && size + this.size > this.maxSize) {
+            this.cleanup(size + this.size - this.maxSize);
+            if (size + this.size > this.maxSize) {
+                throw new errorfactory_1.NoomiError("3002");
+            }
+        }
+    }
+    /**
+     * 计算LRU
+     * timeout 的权重为5（先保证timeout由时间去清理）
+     * right = sum(1-(当前时间-使用记录)/当前时间) + timeout?5:0
+     * @param item
+     */
+    cacLRU(item) {
+        let ct = new Date().getTime();
+        let right = item.timeout > 0 ? 5 : 0;
+        for (let i = 0; i < item.useRcds.length; i++) {
+            right += 1 - (ct - item.useRcds[i]) / ct;
+        }
+        item.LRU = right;
+    }
+}
+//# sourceMappingURL=ncache.js.map

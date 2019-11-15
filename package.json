@@ -1,0 +1,56 @@
+{
+  "name": "noomi",
+  "version": "0.0.1",
+  "description": "一个基于node的企业级框架，支持路由、IoC、Aop、事务嵌套、安全框架、缓存、集群",
+  "main": "dist/index.js",
+  "types": "dist/types/index.d.ts",
+  "files": [
+    "dist/**/*.js",
+    "dist/types/**/*.d.ts"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/noomijs/noomi.git"
+  },
+  "keywords": [
+    "noomi",
+    "typescript",
+    "Enterprise Framework"
+  ],
+  "author": "fieldyang <fieldyang@163.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/noomijs/noomi/issues"
+  },
+  "homepage": "https://github.com/noomijs/noomi#readme",
+  "dependencies": {
+    "cls-hooked": "^4.2.2",
+    "json5": "^2.1.1",
+    "mime": "^2.4.4",
+    "redis": "^2.8.0",
+    "sequelize": "^5.21.2",
+    "sequelize-typescript": "^1.0.0",
+    "uuid": "^3.3.3"
+  },
+  "devDependencies": {
+    "mssql": "^6.0.0",
+    "oracledb": "^4.0.1"
+  },
+  "engines": {
+    "node": ">=11.0.0"
+  },
+  "contributors": [
+    {
+      "name": "杨雷",
+      "email": "fieldyang@163.com"
+    },
+    {
+      "name": "唐榜",
+      "email": "244750596@qq.com"
+    }
+  ]
+}

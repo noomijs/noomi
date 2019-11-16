@@ -995,22 +995,27 @@ getHttpInfo(){
 
 ### <a id='过滤器'>过滤器 Filter</a>
 
-**使用框架过滤器用于URL级别的权限访问控制，提供配置文件和注解两种方式**
-
-在route.json文件中对过滤器进行配置,配置参数参见instance.json文件，在配置文件中过滤器配置顺序即过滤器执行顺序。
-
-```typescript
+过滤器用于过滤请求url，并对url或参数做相应操作，在route执行前执行，noomi支持路由器链。  
+过滤器支持优先级，1-10为框架预留过滤器优先级，用户自定义过滤器时，请把优先级置于10以上，或不设置。  
+过滤器由实例工厂统一管理，所以需要添加到实例工厂。 
+过滤器支持配置和注解方式。
+#### 配置方式
+配置方式如果没有指定优先级，则按配置先后顺序执行。
+当配置过滤器时，需要在noomi.json的配置filter项，内容如下:  
+```js
 {
-    "instances":[   
+    "filters":[
         {
-            "name":"nodomFilter", 	
-            "class":"NodomFilter",
-            "path":"filter/nodomfilter"
-        }
+            "instance_name":"pathFilter",   //实例名，必填
+            "url_pattern":"/*",             //过滤url，支持通配符*，默认 "/*"
+            "method_name":"do2"             //实例中的方法名，默认do
+        } 
     ]
 }
 ```
+***注:filter配置可以放在独立文件中（目录与noomi.json相同目录或子目录），在noomi.json中以路径方式引入，也可以在noomi.json中以对象方式配置。配置项为"security"。***
 
+#### 注解方式
 **推荐使用注解方式配置过滤**
 
 ``` typescript
@@ -1030,7 +1035,7 @@ getHttpInfo(){
     name:'nodomFilter'
 })
 class NodomFilter{
-    @WebFilter('/*',99) 
+    @WebFilter('/*',99)
     do(request,response){
         const url = require("url");
         let path = url.parse(request.url).pathname;
@@ -1125,7 +1130,7 @@ class NodomFilter{
 ```
 
 ### <a id='安全SecurityFactory'>安全 SecurityFactory</a>
-框架提供基于数据库的安全鉴权机制，需要创建安全相关的数据表和配置数据库，创建表sql见附录2。 
+框架提供基于数据库的安全鉴权机制，需要创建安全相关的数据表和配置数据库，创建表sql见[附录2](#附录2)。 
 当使用安全框架时，需要在noomi.json的配置security信息，内容如下:
 
 ```js
@@ -1419,6 +1424,7 @@ class MyClass{
 ## <a id='附录'>附录</a>
 ### <a id='附录1'>附录1-全局配置文件</a>
 ```js
+
 {
 	//框架提示语言(可选配置)，zh中文，en英文，默认zh
 	"language":"zh", 
@@ -1432,11 +1438,13 @@ class MyClass{
 			"cache_option":{				//静态资源缓存配置
 				"save_type":0,  			//存储类型 0 memory, 1 redis，需要安装redis服务器并启动服务
 				"max_size":20000000,		//缓存最大字节数，save_type为0时有效
-				"file_type":[".html",".htm",".js",".css"],	//缓存静态资源类型，默认['*']，缓存所有静态资源，不建议使用*
+				//缓存静态资源类型，默认['*']，缓存所有静态资源，不建议使用*
+				"file_type":[".html",".htm",".js",".css"],	
 				"redis":"default",			//redis client名，与redis配置保持一直，默认default
 				"expires":0,				//页面缓存 expires 属性
 				"max_age":0,				//cache-control中的max-age属性
-				"public":true,				//cache-control中的public属性，优先级高于private配置，即public和private同时为true时，设置public
+				//cache-control中的public属性，优先级高于private配置，即public和private同时为true时，设置public
+				"public":true,				
 				"private":true,				//cache-control中的private属性
 				"no_cache":false,			//cache-control中的no-cache属性
 				"no_store":false,			//cache-control中的no-store属性
@@ -1446,7 +1454,7 @@ class MyClass{
 		},
 		//session配置(可选配置)
 		"session":{
-			"name":"NSESSIONID", 		//set-cookie中的sessionId名，默认为NOOMISESSIONID
+			"name":"NSESSIONID", 			//set-cookie中的sessionId名，默认为NOOMISESSIONID
 			"timeout":30,					//session超时时间，单位:分钟
 			"save_type":0,					//存储类型 0 memory, 1 redis，需要安装redis服务器并启动服务
 			"max_size":20000000,			//缓存最大字节数，save_type为0时有效
@@ -1455,7 +1463,8 @@ class MyClass{
 		//http异常页配置(可选配置)，如果http异常码在该配置中，则重定向到该异常码对应的页面
 		"error_page":[
 			{
-				"code":404,					//异常码，类型：数字
+				//异常码，类型：数字
+				"code":404,
 				//页面地址，相对于项目跟路径，以/开始
 				"location":"/pages/error/404.html"	
 			},{
@@ -1464,12 +1473,13 @@ class MyClass{
 			}
 		]
     },
-	//web 文件配置方式
+	// web文件配置方式
 	//"web":"web.json",
 	//实例配置，用于IoC
 	"instance":{
-		//模块基础路径(可选配置)，模块从该路径中加载，配置该路径后，模块路径采用相对路径配置，注：该路径为js路径，而不是ts路径
-		// "module_path":["/dist/test/app/module"],
+		//模块基础路径(可选配置)，模块从该路径中加载，配置该路径后，模块路径采用相对路径配置，
+		// 注：该路径为js路径，而不是ts路径
+		"module_path":["/dist/test/app/module"],
 		//实例数组，两种配置方式，如果数组元素为字符串，则加载符合路径规则的所有模块，
 		//如果为对象，则单个加载模块
 		//所有模块必须为class
@@ -1478,12 +1488,12 @@ class MyClass{
 			//模块类必须用@Instance或@RouteConfig注解
 			"/dist/test/app/module/**/*.js",
 			//对象模式，加载单个模块
-			/*{
+			{
 				"name":"logAdvice", 			//实例名，不可重复，必填
 				"class":"LogAdvice",			//类名，必填
 				"path":"advice/logadvice",		//模块路径，相对于module_path中的路径，必填
 				"singleton":true				//是否单例，布尔型，默认true
-			}*/
+			}
 		],
 		//配置子路径(可选配置)，相对与初始的application的context路径(该路径在noomi初始化时传入，默认/context)
 		//当模块过多时，可采用该方式分路径配置
@@ -1493,10 +1503,12 @@ class MyClass{
 	//"instance":"instance.json", 
 	//数据库配置，如果不需要使用数据库，则不用配置
 	"database":{
-		"product":"mysql", //数据库产品，字符串，可选值：mysql,oracle,mssql,sequelize，默认mysql
-		//连接管理器实例名，字符串，如果不设置，则根据product自动生成，如product为mysql，则connection_manager为mysqlConnectionManager，
+		//数据库产品，字符串，可选值：mysql,oracle,mssql,sequelize，默认mysql
+		"product":"mysql",
+		//连接管理器实例名，字符串，如果不设置，则根据product自动生成，如product为mysql，
+		//则connection_manager为mysqlConnectionManager，
 		//可以使用自定义connection_mananger，需实现ConnectionManager接口
-		//"connection_manager":"mssqlConnectionManager", 
+		"connection_manager":"mssqlConnectionManager", 
 		//是否使用数据库连接池，如果设置为true，则options选项需按照数据库产品的连接规则设置连接池相关属性，
 		//此设置对mssql和sequelize无效，mssql仅支持连接池的连接方式。sequelzie由配置文件内部设置
 		"use_pool":true,
@@ -1512,28 +1524,34 @@ class MyClass{
 		//事务设置，当存在该项时，noomi开启事务嵌套能力
 		"transaction":{
 			//事务实例名，如果不设置，则根据product自动生成，如果自定义事务，请继承Transaction接口
-		  	//"transaction":"mssqlTransaction",
-			//隔离级, 针对sequelzie，如果为数据库，则执行数据库的隔离级 1 read uncommited, 2 read commited, 3 repeatable read, 4 serializable
-			//isolation_level:2,
+		  	"transaction":"mssqlTransaction",
+			//隔离级, 针对sequelzie，如果为数据库，则执行数据库的隔离级 
+			//取值: 1 read uncommited, 2 read commited, 3 repeatable read, 4 serializable
+			"isolation_level":2,
 			//方法表达式，符合表达式条件的方法会被设置为事务方法，调用时该方法涉及的数据库操作会加入事务执行，当出现异常时，会进行事务回滚
 			//如下所示，如果实例名以service开头，其下所有方法都将作为事务方法
-			//"expressions":['service*.*']
+			"expressions":["service*.*"]
 		}
 	},
 	//数据库配置，文件方式
 	//"database":"database_mysql.json",
 	//路由配置(可选配置)，如果采用注解方式设置路由，则不用配置
 	"route":{
-		"namespace":"",        				//路由命名空间
-		"files":["route/subroute.json"],    //子文件，相对于app的configPath路径
-		"routes":[              			//路由配置
+		//路由命名空间
+		"namespace":"",
+		//子文件，相对于app的configPath路径
+		"files":["route/subroute.json"], 
+		//路由配置
+		"routes":[
 			{
 				//路径（通过浏览器访问的路径），字符串，必填，以/开头
 				//如果路径最后为*，表示该实例下的方法匹配
 				//如 /upload_*，则/upload_add表示调用uploadAction实例的add方法
 				"path":"/upload",				
-				"instance_name":"uploadAction",	//实例名，字符串，必填
-				"method":"upload",      		//方法，字符串，可选，当path中带
+				//实例名，字符串，必填
+				"instance_name":"uploadAction",	
+				//方法，字符串，可选，当path中带
+				"method":"upload", 
 				//路由结果集，如果不填，则默认为json，方法return值（必须为json格式）将回写到请求端
 				"results":[{
 					//方法返回值，如果return 1，则调用该路由结果
@@ -1559,7 +1577,8 @@ class MyClass{
 	// "route":"route.json",
 	//aop配置，如果为注解方式，则不用配置
 	"aop":{
-		"files":[],  		//子文件列表，表示可以加载的子aop文件
+		//子文件列表，表示可以加载的子aop文件
+		"files":[], 
 		//切点，可以配置多个
 		"pointcuts":[{
 			//切点id，必填，不可重复
@@ -1567,7 +1586,7 @@ class MyClass{
 			//表达式，必填，符合该表达式的方法会被拦截，可以采用通配符
 			//如下，第一个表示拦截实例名为userService的getInfo方法
 			//第二个表示拦截实例名以service开头的所有实例的所有方法（实例必须加入实例工厂，即用注解或在instance中配置）
-			"expressions":["userService.getInfo","service*.*"]   
+			"expressions":["userService.getInfo","service*.*"]
 		}],
 		//切面，可以多个
 		"aspects":[
@@ -1604,6 +1623,18 @@ class MyClass{
 			}
 		]
 	},
+	//过滤器配置
+	"filter":{
+		"filters":[
+			{
+				"instance_name":"pathFilter",   //实例名，必填
+				"url_pattern":"/*",             //过滤url，支持通配符*，默认 "/*"
+				"method_name":"do2"             //实例中的方法名，默认do
+			} 
+		]
+	},
+	//过滤器文件配置方式
+	// "filter":"filter.json",
 	//aop文件配置方式
 	// "aop":"aop.json",
 	//redis配置，当缓存、session、security采用存储方式为1时，必须设置
@@ -1638,12 +1669,12 @@ class MyClass{
 				"resourceAuthority":"t_resource_authority"	//资源权限表名，默认t_resource_authority
 			},
 			//鉴权相关字段名映射，如果与默认值相同，则不用配置
-			// "columns":{
-			// 	"resourceId":"resource_id",					//资源id字段名，默认resource_id
-			// 	"authorityId":"authority_id",				//权限id字段名，默认authority_id
-			// 	"resourceUrl":"url",						//资源url字段名，默认url
-			// 	"groupId":"group_id"						//组id字段名，默认group_id
-			// }
+			"columns":{
+				"resourceId":"resource_id",					//资源id字段名，默认resource_id
+				"authorityId":"authority_id",				//权限id字段名，默认authority_id
+				"resourceUrl":"url",						//资源url字段名，默认url
+				"groupId":"group_id"						//组id字段名，默认group_id
+			}
 		},
 		"auth_fail_url":"/pages/error/403.html",			//鉴权失败页面路径，必填
 		"login_url":"/pages/login.html"						//登录页面，必填
@@ -1653,9 +1684,103 @@ class MyClass{
 }
 ```
 
-### <a id='附录2'>附录2</a>
+### <a id='附录2'>附录2-安全框架数据表sql</a>
+示例代码为mysql数据库对应的sql，其它数据库请做相应修改。  
 ```sql
+/*==============================================================*/
+/* Table: t_authority                                           */
+/*==============================================================*/
+create table t_authority
+(
+   authority_id         int not null,
+   authority            varchar(50) not null,
+   primary key (authority_id)
+);
 
+/*==============================================================*/
+/* Table: t_group                                               */
+/*==============================================================*/
+create table t_group
+(
+   group_id             int not null,
+   group_name           varchar(50),
+   remarks              varchar(200),
+   primary key (group_id)
+);
+
+/*==============================================================*/
+/* Table: t_group_authority                                     */
+/*==============================================================*/
+create table t_group_authority
+(
+   group_authority_id   int not null,
+   authority_id         int not null,
+   group_id             int,
+   primary key (group_authority_id)
+);
+
+/*==============================================================*/
+/* Table: t_group_user                                          */
+/*==============================================================*/
+create table t_group_user
+(
+   group_user_id        int not null,
+   user_id              int,
+   group_id             int,
+   primary key (group_user_id)
+);
+
+/*==============================================================*/
+/* Table: t_resource                                            */
+/*==============================================================*/
+create table t_resource
+(
+   resource_id          int not null,
+   url                  varchar(500),
+   title                varchar(50),
+   primary key (resource_id)
+);
+
+/*==============================================================*/
+/* Table: t_resource_authority                                  */
+/*==============================================================*/
+create table t_resource_authority
+(
+   resource_authority_id int not null,
+   authority_id         int,
+   resource_id          int,
+   primary key (resource_authority_id)
+);
+
+/*==============================================================*/
+/* Table: t_user                                                */
+/*==============================================================*/
+create table t_user
+(
+   user_id              int not null,
+   user_name            varchar(50),
+   user_pwd             varchar(32),
+   enabled              smallint,
+   primary key (user_id)
+);
+
+alter table t_group_authority add constraint FK_GROUPAUTH_REF_AUTH foreign key (authority_id)
+      references t_authority (authority_id) on delete cascade on update cascade;
+
+alter table t_group_authority add constraint FK_GROUP_AU_REF_GROUP foreign key (group_id)
+      references t_group (group_id) on delete cascade on update cascade;
+
+alter table t_group_user add constraint FK_GROUP_USER_REF_GROUP foreign key (group_id)
+      references t_group (group_id) on delete cascade on update cascade;
+
+alter table t_group_user add constraint FK_GROUP_USER_REF_USER foreign key (user_id)
+      references t_user (user_id) on delete cascade on update cascade;
+
+alter table t_resource_authority add constraint FK_RES_AUTH_REF_AUTH foreign key (authority_id)
+      references t_authority (authority_id) on delete cascade on update cascade;
+
+alter table t_resource_authority add constraint FK_RES_AUTH_REF_RES foreign key (resource_id)
+      references t_resource (resource_id) on delete cascade on update cascade;
 ```
 
 ### <a id='集群Cluster'>附录3-集群 Cluster</a>

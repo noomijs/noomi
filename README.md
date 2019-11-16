@@ -105,7 +105,7 @@
 &emsp; &emsp;项目根目录下新建module目录,新建app.ts文件，内容如下：
 
 ```typescript
-import { noomi } from "noomitest";
+import { noomi } from "noomi";
 noomi(3000);
 ```
 

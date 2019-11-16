@@ -47,13 +47,13 @@ class FilterFactory{
         }else{ //字符串
             ptns.push(Util.toReg(cfg.url_pattern));
         }
-
+        
         //加入过滤器集合
         this.filters.push({
             instance:ins,
             method:cfg.method_name || 'do', //默认do
             patterns:ptns,
-            order:cfg.order||1000
+            order:cfg.order===undefined?10000:cfg.order
         });
 
         this.filters.sort((a,b)=>{

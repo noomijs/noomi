@@ -446,12 +446,13 @@ export class UserService{
 ### <a id='依赖注入IoC'>依赖注入 IoC</a>
 使用框架来对实例进行统一管理，支持IoC，提供配置文件和注解两种方式使用。
 #### 配置方式
-在noomi.json中增加aop项，内容如下：
+在noomi.json中增加instance项，内容如下：
 ```js
 //实例配置，用于IoC
-"instance":{
-    //模块基础路径(可选配置)，模块从该路径中加载，配置该路径后，模块路径采用相对路径配置，注：该路径为js路径，而不是ts路径
-    // "module_path":["/dist/test/app/module"],
+{
+    //模块基础路径(可选配置)，模块从该路径中加载，配置该路径后，模块路径采用相对路径配置，
+    // 注：该路径为js路径，而不是ts路径
+    "module_path":["/dist/test/app/module"],
     //实例数组，两种配置方式，如果数组元素为字符串，则加载符合路径规则的所有模块，
     //如果为对象，则单个加载模块
     //所有模块必须为class
@@ -464,17 +465,12 @@ export class UserService{
             "name":"logAdvice", 			//实例名，不可重复，必填
             "class":"LogAdvice",			//类名，必填
             "path":"advice/logadvice",		//模块路径，相对于module_path中的路径，必填
-            "singleton":true,				//是否单例，布尔型，默认true
-            "params":[],                    //参数数组值，按照构造器参数序列设置
-            "properties":[{                 //依赖属性数组    
-                "name":"propName",          //属性名
-                "ref":"instanceName"        //属性依赖的实例名
-            }]
+            "singleton":true				//是否单例，布尔型，默认true
         }
     ],
     //配置子路径(可选配置)，相对与初始的application的context路径(该路径在noomi初始化时传入，默认/context)
     //当模块过多时，可采用该方式分路径配置
-    // "files":["context/action.json"]
+    "files":["context/action.json"]
 }
 ```
 ***注:该内容可以放在独立文件中（目录与noomi.json相同目录或子目录），在noomi.json中以路径方式引入，也可以在noomi.json中以对象方式配置。配置项为"instance"。***
@@ -623,11 +619,9 @@ class TestAdvice{
 ```
 
 ### <a id='路由'>路由 Route</a>
-
 使用框架路由完成浏览器与服务器进行交互，路由支持配置和注解的两种方式。
 #### 配置方式
 在noomi.json中增加route项，内容如下：
-
 ```js
 {
     //路由命名空间
@@ -694,10 +688,10 @@ class TestAdvice{
     namespace:'/user',
 })
 class UserAction extends BaseAction{
-  @Route('/showinfo')
-  showinfo(){
-      return success;
-  } 
+    @Route('/showinfo')
+    showinfo(){
+        return success;
+    } 
 }
 ```
 
@@ -790,15 +784,15 @@ const cache = new NCache([cfg])
 
 ```typescript
 await n.set({
-            key:'mytest1',
-            value:'this is the test1',
-            timeout:60
-        });
+    key:'mytest1',
+    value:'this is the test1',
+    timeout:60
+});
 await n.set({
-            key:'mytest2',
-            value:'this is the test12',
-            timeout:60
-         });
+    key:'mytest2',
+    value:'this is the test12',
+    timeout:60
+});
 console.log(await n.getKeys('mytest*'));
 await n.del('mytest1');
 console.log(await n.has('mytest1'));
@@ -866,14 +860,14 @@ console.log(await n.has('mytest1'));
 
 ```typescript
 async getdata(){
-      let session = await SessionFactory.getSession(this.request); //获取session
-      await session.set('name','tom');   //session设置值
-      let value = await session.get('name');  //获取session的值
-      return {
+    let session = await SessionFactory.getSession(this.request); //获取session
+    await session.set('name','tom');   //session设置值
+    let value = await session.get('name');  //获取session的值
+    return {
         success:true,
         result:value
-     }
-   }
+    }
+}
 //路由返回结果
 /*success:true
 result: tom */
@@ -970,14 +964,14 @@ result: tom */
 ``` typescript
 @Route('/getHttpInfo')
 getHttpInfo(){
-     let Info ={
-      method:  this.request.getMethod(), 
-      url   :  this.request.getUrl(),
-      cookie : this.request.getHeader('cookie')
-       }
-  console.log(this.response.cookie.getAll());
-  return Info;
- } 
+    let Info ={
+        method:  this.request.getMethod(), 
+        url   :  this.request.getUrl(),
+        cookie: this.request.getHeader('cookie')
+    }
+    console.log(this.response.cookie.getAll());
+    return Info;
+} 
 //注:this.request为BaseAction中的参数 该类继承BaseAction
 //返回结果 
 /* method:  “GET”
@@ -1013,7 +1007,7 @@ getHttpInfo(){
     ]
 }
 ```
-***注:filter配置可以放在独立文件中（目录与noomi.json相同目录或子目录），在noomi.json中以路径方式引入，也可以在noomi.json中以对象方式配置。配置项为"security"。***
+***注:filter配置可以放在独立文件中（目录与noomi.json相同目录或子目录），在noomi.json中以路径方式引入，也可以在noomi.json中以对象方式配置。配置项为"filter"。***
 
 #### 注解方式
 **推荐使用注解方式配置过滤**
@@ -1134,7 +1128,8 @@ class NodomFilter{
 当使用安全框架时，需要在noomi.json的配置security信息，内容如下:
 
 ```js
-{
+//安全框架配置，当需要使用noomi的安全框架时，需要配置
+"security":{
     "save_type":0,				//同session配置
     "max_size":10000000,		//同session配置
     "redis":"default",			//同session配置
@@ -1156,12 +1151,12 @@ class NodomFilter{
             "resourceAuthority":"t_resource_authority"	//资源权限表名，默认t_resource_authority
         },
         //鉴权相关字段名映射，如果与默认值相同，则不用配置
-        // "columns":{
-        // 	"resourceId":"resource_id",					//资源id字段名，默认resource_id
-        // 	"authorityId":"authority_id",				//权限id字段名，默认authority_id
-        // 	"resourceUrl":"url",						//资源url字段名，默认url
-        // 	"groupId":"group_id"						//组id字段名，默认group_id
-        // }
+        "columns":{
+            "resourceId":"resource_id",					//资源id字段名，默认resource_id
+            "authorityId":"authority_id",				//权限id字段名，默认authority_id
+            "resourceUrl":"url",						//资源url字段名，默认url
+            "groupId":"group_id"						//组id字段名，默认group_id
+        }
     },
     "auth_fail_url":"/pages/error/403.html",			//鉴权失败页面路径，必填
     "login_url":"/pages/login.html"						//登录页面，必填
@@ -1270,28 +1265,28 @@ class NodomFilter{
 
 ```typescript
 toPage: string;
-  @Route({
-        "path": "/testlogin",
-        "results": [{
-            "type": "redirect",
-            "url": "${toPage}"
-        }]
-    })  
+@Route({
+    "path": "/testlogin",
+    "results": [{
+        "type": "redirect",
+        "url": "${toPage}"
+    }]
+})  
 async Testlogin() {
- await SecurityFactory.updGroupAuths(3,[5]); //添加组权限  第三组拥有的权限编号为5
- await SecurityFactory.addResourceAuth("/user/getinfo", 5);//资源访问权限编号为5       
- let userid =1; //假设鉴权页面获取到了userid 
- await SecurityFactory.addUserGroups(userid, [3], this.request);//将userid加入权限编号为3的组
+    await SecurityFactory.updGroupAuths(3,[5]); //添加组权限  第三组拥有的权限编号为5
+    await SecurityFactory.addResourceAuth("/user/getinfo", 5);//资源访问权限编号为5       
+    let userid = 1; //此处假设从session中获取到了userid 
+    await SecurityFactory.addUserGroups(userid, [3], this.request);//将userid加入权限编号为3的组
     if(userid){
-         this.toPage = await SecurityFactory.getPreLoginInfo(this.request);
-       if (!this.toPage) {
-          this.toPage = '/pages/loginsuccess.html';
+        this.toPage = await SecurityFactory.getPreLoginInfo(this.request);
+        if (!this.toPage) {
+            this.toPage = '/pages/loginsuccess.html';
         }
-   }
+    }
     else {
-          this.toPage = '/pages/loginfail.html';
-        }
- }
+        this.toPage = '/pages/loginfail.html';
+    }
+}
 //鉴权成功，跳转到鉴权前的页面
 ```
 ### <a id='#数据库Database'>数据库 Database</a>
@@ -1497,7 +1492,7 @@ class MyClass{
 		],
 		//配置子路径(可选配置)，相对与初始的application的context路径(该路径在noomi初始化时传入，默认/context)
 		//当模块过多时，可采用该方式分路径配置
-		// "files":["context/action.json"]
+		"files":["context/action.json"]
 	},
 	//实例配置，文件方式
 	//"instance":"instance.json", 
@@ -1516,9 +1511,9 @@ class MyClass{
 		"options":{
 			"host":"localhost",
 			"port":3306,
-			"user":"root",
-			"password":"field",
-			"database":"codement",
+			"user":"your user",
+			"password":"your password",
+			"database":"your database",
 			"connectionLimit":10
 		},
 		//事务设置，当存在该项时，noomi开启事务嵌套能力
@@ -1792,25 +1787,24 @@ alter table t_resource_authority add constraint FK_RES_AUTH_REF_RES foreign key 
 ```js
 {
     "apps" : [{      //数组，每个数组成员就是对应一个pm2中运行的应用
-      "name"        : "noomi", // 项目名称
-      "script"      : "build/test/app/app.js",  //入口文件
-      "instances"   : "4",  //进程数
-      "port"        :3000,  //端口号
-      "exec_mode": "cluster"  //应用程序启动模式，这里设置的是cluster_mode（集群），默认是fork
-      
-   //log_date_format: 日期时间格式化
-   //error_file:自定义应用程序的错误日志文件
-   //out_file:自定义应用程序日志文件
-   //pid_file:自定义应用程序的pid文件
-   //min_uptime:最小运行时间，这里设置的是60s即如果应用程序在60s内退出，pm2会认为程序异常退出，此时触发重启max_restarts设置数量
-   //max_restarts:设置应用程序异常退出重启的次数，默认15次（从0开始计数）
-   //cron_restart:定时启动，解决重启能解决的问题
-   //watch:是否启用监控模式，默认是false。如果设置成true，当应用程序变动时，pm2会自动重载。这里也可以设置你要监控的文件。
-   //exec_interpreter:应用程序的脚本类型，这里使用的shell，默认是nodejs
-   //autorestart:启用/禁用应用程序崩溃或退出时自动重启
-   //vizion:启用/禁用vizion特性(版本控制) 
+        "name"        : "noomi", // 项目名称
+        "script"      : "build/test/app/app.js",  //入口文件
+        "instances"   : "4",  //进程数
+        "port"        : 3000,  //端口号
+        "exec_mode"   : "cluster"  //应用程序启动模式，这里设置的是cluster_mode（集群），默认是fork
+        //log_date_format: 日期时间格式化
+        //error_file:自定义应用程序的错误日志文件
+        //out_file:自定义应用程序日志文件
+        //pid_file:自定义应用程序的pid文件
+        //min_uptime:最小运行时间，这里设置的是60s即如果应用程序在60s内退出，pm2会认为程序异常退出，此时触发重启max_restarts设置数量
+        //max_restarts:设置应用程序异常退出重启的次数，默认15次（从0开始计数）
+        //cron_restart:定时启动，解决重启能解决的问题
+        //watch:是否启用监控模式，默认是false。如果设置成true，当应用程序变动时，pm2会自动重载。这里也可以设置你要监控的文件。
+        //exec_interpreter:应用程序的脚本类型，这里使用的shell，默认是nodejs
+        //autorestart:启用/禁用应用程序崩溃或退出时自动重启
+        //vizion:启用/禁用vizion特性(版本控制) 
     }]
-  }
+}
 ```
 
 **&emsp; &emsp;安装node-pm2之后，在控制台项目根路径输入pm2 start process.json 来启动多进程运行**

@@ -1497,24 +1497,22 @@ class MyClass{
 		},
 		//session配置(可选配置)
 		"session":{
-            "name":"NSESSIONID",            //set-cookie中的sessionId名，默认为NSESSIONID
-            "timeout":30,                   //session超时时间，单位:分钟
-            "save_type":0,                  //存储类型 0 memory, 1 redis，需要安装redis服务器并启动服务
-            "max_size":20000000,            //缓存最大字节数，save_type为0时有效
-            "redis":"default"               //redis client名，与redis配置保持一直，默认default
+			"name":"NSESSIONID", 			//set-cookie中的sessionId名，默认为NSESSIONID
+			"timeout":30,					//session超时时间，单位:分钟
+			"save_type":0,					//存储类型 0 memory, 1 redis，需要安装redis服务器并启动服务
+			"max_size":20000000,			//缓存最大字节数，save_type为0时有效
+			"redis":"default"				//redis client名，与redis配置保持一直，默认default
 		},
 		//http异常页配置(可选配置)，如果http异常码在该配置中，则重定向到该异常码对应的页面
-		"error_page":[
-			{
-				//异常码，类型：数字
-				"code":404,
-				//页面地址，相对于项目跟路径，以/开始
-				"location":"/pages/error/404.html"	
-			},{
-				"code":403,
-				"location":"/pages/error/403.html"
-			}
-		]
+		"error_page":[{
+			//异常码，类型：数字
+			"code":404,
+			//页面地址，相对于项目跟路径，以/开始
+			"location":"/pages/error/404.html"	
+		},{
+			"code":403,
+			"location":"/pages/error/403.html"
+		}]
     },
 	// web文件配置方式
 	//"web":"web.json",

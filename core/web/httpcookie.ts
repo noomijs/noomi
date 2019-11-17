@@ -28,7 +28,7 @@ export class HttpCookie{
     /**
      * 获取所有参数
      */
-    getAll(){
+    getAll():Map<string,string>{
         return this.params;
     }
     /**

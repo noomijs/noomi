@@ -23,7 +23,7 @@ export class HttpResponse extends ServerResponse{
      * 回写到浏览器端
      * @param data          待写数据 
      * @param charset       字符集
-     * @param type          数据类型
+     * @param type          MIME类型
      * @param crossDomain   跨域
      */
     writeToClient(config:WriteCfg):void{

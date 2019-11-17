@@ -91,7 +91,7 @@ class HttpRequest extends IncomingMessage{
      * 获取所有paramter
      * @return          parameter object
      */
-    getAllParameter():any{
+    getAllParameters():object{
         return this.parameters;
     }
 

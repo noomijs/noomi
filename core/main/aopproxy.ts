@@ -20,15 +20,15 @@ class AopProxy{
          * 异步方法
          */
         if(func && util.types.isAsyncFunction(func)){
-            return async (params)=>{
+            return async function(){
                 //advices获取
                 let advices:any;
                 if(AopFactory){
                     advices = AopFactory.getAdvices(instanceName,methodName);
                 }
-
-                if(params){
-                    params = [params];
+                let params:Array<any> = [];
+                for(let p of arguments){
+                    params.push(p);
                 }
 
                 //参数1为实例名，2是方法名，3是被代理方法自带参数(数组)
@@ -95,17 +95,16 @@ class AopProxy{
                 
         }
         //非async 拦截
-        return (params)=>{
+        return function(){
             //advices获取
             let advices:any;
             if(AopFactory){
                 advices = AopFactory.getAdvices(instanceName,methodName);
             }
-            
-            if(params){
-                params = [params];
+            let params:Array<any> = [];
+            for(let p of arguments){
+                params.push(p);
             }
-            
             //参数1为实例名，2是方法名，3是被代理方法自带参数(数组)
             let aopParams:Array<any> = [{
                 instanceName:instanceName,

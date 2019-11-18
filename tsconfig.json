@@ -6,13 +6,13 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "outDir":"./dist",
-    // "declaration": true,
-    // "declarationDir":"./dist/types"
+    "declaration": true,
+    "declarationDir":"./dist/types"
   },
   "include":[
     "**/*.ts"
   ],
   "exclude": [
-    "./index.ts"
+    // "./index.ts"
   ]
 }

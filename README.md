@@ -41,10 +41,16 @@
 #### 全局安装
 npm install noomi -g
 #### 本地安装  
-npm install noomi  
-
+npm install noomi
 ***其它安装方式请参考 npm install***
-
+#### 依赖包
+1. cls-hooked: 4.2.2+
+2. json5: 2.1.1+
+3. mime: 2.4.4+
+4. redis: 2.8.0+
+5. sequelize: 5.21.2+
+6. sequelize-typescript: 1.0.0+
+7. uuid: 3.3.3+
 ### 项目初始化
 
 创建noomi目录,切换到根目录
@@ -123,13 +129,13 @@ import { Router, Route} from "noomi";
 export class Hello{
     @Route('/hello')
     sayHello(){
-        return 'hello world!';
+        return {result:'hello world!'};
     }
 }
 ```
 #### 执行和测试
 
-切换到app.js文件，按F5执行 切换到浏览器，输入localhost:3000/hello，浏览器显示hello world!
+切换到app.js文件，按F5执行 切换到浏览器，输入localhost:3000/hello，浏览器显示{result:"hello world!"}
 
 ### <a id='示例2'>示例2-IoC</a>
 
@@ -156,12 +162,12 @@ export class Hello{
     charChange:CharChange;
     @Route('/hello')
     sayHello(){
-        return this.charChange.toUpper('hello world!');
+        return {result:this.charChange.toUpper('hello world!')};
     }
 }
 ```
 
-切换到浏览器，输入localhost:3000/hello，输出变大写, ，浏览器显示HELLO WORLD!
+切换到浏览器，输入localhost:3000/hello，输出变大写, ，浏览器显示{result:"HELLO WORLD!"}
 
 ### <a id='示例3'>示例3-Aop</a>
 
@@ -1497,22 +1503,24 @@ class MyClass{
 		},
 		//session配置(可选配置)
 		"session":{
-			"name":"NSESSIONID", 			//set-cookie中的sessionId名，默认为NSESSIONID
-			"timeout":30,					//session超时时间，单位:分钟
-			"save_type":0,					//存储类型 0 memory, 1 redis，需要安装redis服务器并启动服务
-			"max_size":20000000,			//缓存最大字节数，save_type为0时有效
-			"redis":"default"				//redis client名，与redis配置保持一直，默认default
+            "name":"NSESSIONID",            //set-cookie中的sessionId名，默认为NSESSIONID
+            "timeout":30,                   //session超时时间，单位:分钟
+            "save_type":0,                  //存储类型 0 memory, 1 redis，需要安装redis服务器并启动服务
+            "max_size":20000000,            //缓存最大字节数，save_type为0时有效
+            "redis":"default"               //redis client名，与redis配置保持一直，默认default
 		},
 		//http异常页配置(可选配置)，如果http异常码在该配置中，则重定向到该异常码对应的页面
-		"error_page":[{
-			//异常码，类型：数字
-			"code":404,
-			//页面地址，相对于项目跟路径，以/开始
-			"location":"/pages/error/404.html"	
-		},{
-			"code":403,
-			"location":"/pages/error/403.html"
-		}]
+		"error_page":[
+			{
+				//异常码，类型：数字
+				"code":404,
+				//页面地址，相对于项目跟路径，以/开始
+				"location":"/pages/error/404.html"	
+			},{
+				"code":403,
+				"location":"/pages/error/403.html"
+			}
+		]
     },
 	// web文件配置方式
 	//"web":"web.json",
@@ -1872,19 +1880,4 @@ alter table t_resource_authority add constraint FK_RES_AUTH_REF_RES foreign key 
 
 # 贡献者
 1. 杨雷 email:fieldyang@163.com git:https://github.com/fieldyang
-2. 唐榜 email:244750596@qq.com git:https://github.com/Tang1227
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+2. 唐榜 email:244750596@qq.com git:https://github.com/Tang1227 

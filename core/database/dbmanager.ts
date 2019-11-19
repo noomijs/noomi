@@ -6,6 +6,7 @@ import { SequelizeConnectionManager } from "./sequelizeconnectionmanager";
 import { App } from "../tools/application";
 import { OracleConnectionManager } from "./oracleconnectionmanager";
 import { MssqlConnectionManager } from "./mssqlconnectionmanager";
+import { MongoConnectionManager } from "./mongoconnectionmanager";
 
 
 class DBManager{
@@ -58,15 +59,19 @@ class DBManager{
                     });
                     break;
                 case "mongodb":
-                    
-                    break;
+                        cm = new MongoConnectionManager(opt);
+                        InstanceFactory.addInstance({
+                            name:cmName,
+                            instance:cm,
+                            class:MongoConnectionManager
+                        });
+                        break;
                 case "sequelize":
                     cm = new SequelizeConnectionManager(opt);
                     InstanceFactory.addInstance({
-                        name:cfg.cmName,
+                        name:cmName,
                         instance:cm,
-                        class:SequelizeConnectionManager,
-                        singleton:true
+                        class:SequelizeConnectionManager
                     });
                     break;
                 case "typeorm":

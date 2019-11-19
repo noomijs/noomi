@@ -16,6 +16,15 @@ class SequelizeConnectionManager{
         //使用cli-hooked
         // sequelize-typescript不支持cls，要用sequelize
         SequelizeOrigin.useCLS(TransactionManager.namespace);
+        //处理models路径
+        if(cfg.models && Array.isArray(cfg.models)){
+            cfg.models.forEach((item,i)=>{
+                if(typeof item === 'string'){
+                    cfg.models[i] = process.cwd() + item;
+                }
+            });
+        }
+        
         this.sequelize = new Sequelize(cfg);
     }
 

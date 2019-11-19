@@ -1398,7 +1398,20 @@ noomi支持4种connection manager：mysql、oracle、mssql、sequelize，用户�
 }
 ```
 ***注:options参考 npm mssql配置***
+
+#### mongodb配置
+```js
+{
+    "product":"mongodb",
+    "options":{
+        "url":"mongodb://localhost:27017"
+    }
+}
+```
+***注:options的url参考 mongodb connect url配置***
+
 #### sequelize配置
+noomi采用sequelize-typescript进行封装，原生sequelize尚未进行可行性测试。
 ```js
 {
     "product":"sequelize",
@@ -1418,7 +1431,10 @@ noomi支持4种connection manager：mysql、oracle、mssql、sequelize，用户�
         },
         "define": {
             "timestamps": false
-        }
+        },
+        //model所在路径，是编译后的js所在路径，相对于项目根目录。如:/dist/module/dao/pojo，表示该目录下的所有js文件
+        //model class定义时，要用export default 进行导出，如 export default class UserModel{...}
+        "models":[]
     }
 }
 ```
@@ -1621,7 +1637,7 @@ class MyClass{
 	//"instance":"instance.json", 
 	//数据库配置，如果不需要使用数据库，则不用配置
 	"database":{
-		//数据库产品，字符串，可选值：mysql,oracle,mssql,sequelize，默认mysql
+		//数据库产品，字符串，可选值：mysql,oracle,mssql,mongodb,sequelize，默认mysql
 		"product":"mysql",
 		//连接管理器实例名，字符串，如果不设置，则根据product自动生成，如product为mysql，
 		//则connection_manager为mysqlConnectionManager，

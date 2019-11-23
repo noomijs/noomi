@@ -331,7 +331,7 @@ class InstanceFactory{
         let handled:boolean = false;    //是否已处理
         for(let i=0;i<pathArr.length-1;i++){
             const p = pathArr[i];
-            if(p.indexOf('*') === -1){
+            if(p.indexOf('*') === -1 && p !== ""){
                 pa.push(p);
             }else if(p === '**'){ //所有子孙目录
                 handled=true;

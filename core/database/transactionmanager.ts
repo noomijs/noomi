@@ -7,11 +7,11 @@ import { SequelizeTransaction } from "./sequelizetransaction";
 import { Transaction } from "./transaction";
 
 import { DBManager } from "./dbmanager";
-import { TransactionProxy } from "./transactionproxy";
-import { Sequelize,Transaction as SeqTransaction } from "sequelize";
+import { Transaction as SeqTransaction } from "sequelize";
 import { OracleTransaction } from "./oracletransaction";
 import { App } from "../tools/application";
 import { MssqlTransaction } from "./mssqltransaction";
+import { TypeormTransaction } from "./typeormtransaction";
 
 class TransactionManager{
     static transactionMap:Map<number,Transaction> = new Map();  //transaction map
@@ -43,7 +43,6 @@ class TransactionManager{
             AopFactory.addExpression(TransactionManager.pointcutId,TransactionManager.addToAopExpressions);
         });
         
-
         //增加advice
         AopFactory.addAdvice({
             pointcut_id:this.pointcutId,
@@ -120,6 +119,30 @@ class TransactionManager{
                             }
                         }
                         break;
+                    case 'typeorm': //typeorm
+                            InstanceFactory.addInstance({
+                                name:tn,
+                                class:TypeormTransaction,
+                                singleton:false
+                            }); 
+                            this.transactionOption = {};
+                            //设置隔离级别
+                            if(this.isolationLevel !== 0){
+                                switch(TransactionManager.isolationLevel){
+                                    case 1:  
+                                        this.transactionOption.isolationLevel = "READ UNCOMMITTED";
+                                        break;
+                                    case 2:
+                                        this.transactionOption.isolationLevel = "READ COMMITTED";
+                                        break;
+                                    case 3:
+                                        this.transactionOption.isolationLevel = "REPEATABLE READ";
+                                        break;
+                                    case 4:
+                                        this.transactionOption.isolationLevel = "SERIALIZABLE";
+                                }
+                            }
+                            break;
                 }
             }
         }
@@ -170,6 +193,19 @@ class TransactionManager{
         return tr;
     }
 
+    /**
+     * 删除事务
+     * @param tr    事务 
+     */
+    static del(tr:Transaction){
+        for(let id of tr.asyncIds){
+            this.transactionMap.delete(id);
+        }
+    }
+    
+    /**
+     * 往local thread中设置transaction id;
+     */
     static setIdToLocal(){
         try{
             this.namespace.set('tr_id',this.transactionId++);
@@ -179,19 +215,13 @@ class TransactionManager{
         
     }
 
-    static getIdLocal(){
+    /**
+     * 从thread获取transcton id
+     */
+    static getIdFromLocal(){
         return this.namespace.get('tr_id');
     }
-    /**
-     * 删除事务
-     * @param tranId 
-     */
-    static del(tr:Transaction){
-        for(let id of tr.asyncIds){
-            this.transactionMap.delete(id);
-        }
-    }
-
+    
     /**
      * 获取connection
      */

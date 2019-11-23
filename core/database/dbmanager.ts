@@ -7,6 +7,7 @@ import { App } from "../tools/application";
 import { OracleConnectionManager } from "./oracleconnectionmanager";
 import { MssqlConnectionManager } from "./mssqlconnectionmanager";
 import { MongoConnectionManager } from "./mongoconnectionmanager";
+import { TypeormConnectionManager } from "./typeormconnectionmanager";
 
 
 class DBManager{
@@ -75,7 +76,12 @@ class DBManager{
                     });
                     break;
                 case "typeorm":
-
+                    cm = new TypeormConnectionManager(opt);
+                    InstanceFactory.addInstance({
+                        name:cmName,
+                        instance:cm,
+                        class:TypeormConnectionManager
+                    });
                     break;
             }
         }

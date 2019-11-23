@@ -44,12 +44,21 @@
 1. down整个项目源码；
 2. 目录和文件结构按示例进行创建；
 3. 删除所有的import，按照提示重新导入所需模块。  
-***注:初次使用，建议安装方式使用。***
+***注:初次使用，建议[cli安装](#cli安装)方式使用。***
 ### <a id='安装'>安装</a>
+#### <a id='cli安装'>cli安装</a>
+1. 安装noomi-cli，输入 npm install noomi-cli -g；
+2. 新建一个目录，如 myfirstapp；
+3. 命令行模式到该目录下；
+4. 输入 noomi-cli -n 或 noomi-cli -c(淘宝源安装)，进行项目新建；
+5. 在vscode中添加文件夹到workspace；
+6. 找到根目录下的app.ts文件并运行；
+7. 浏览器中输入localhost:3000/hello。  
+***详情请参考 [npm noomi-cli](https://www.npmjs.com/package/noomi-cli)。***
 #### 全局安装
 npm install noomi -g
 #### 本地安装  
-npm install noomi  
+npm install noomi [--save]   
 ***其它安装方式请参考 npm install***
 #### 依赖包
 1. cls-hooked: 4.2.2+
@@ -58,7 +67,8 @@ npm install noomi
 4. redis: 2.8.0+
 5. sequelize: 5.21.2+
 6. sequelize-typescript: 1.0.0+
-7. uuid: 3.3.3+
+7. typeorm: 0.2.20+
+8. uuid: 3.3.3+
 ### 项目初始化
 
 创建noomi目录,切换到根目录
@@ -1196,7 +1206,9 @@ class NodomFilter{
     "expressions":["/*"], 
     //数据库相关设置
     "dboption":{
-        //数据库连接设置，如果没有配置database，则此项必填，否则可以使用数据库配置中的数据库connection manager，
+        //数据库连接设置，如果没有在noomi.json中配置database，则此项必填，否则可以使用数据库配置中的数据库connection manager
+        //暂时只支持原生数据库 mysql，mssql，oracle，不支持第三方orm框架
+        //如果配置了database且是第三方orm框架，此项必填
         //如果配置conn_cfg，则使用独立于database配置项的connection
         "conn_cfg":{
             "user":"root",
@@ -1348,15 +1360,14 @@ async Testlogin() {
 }
 //鉴权成功，跳转到鉴权前的页面
 ```
-### <a id='#数据库Database'>数据库 Database</a>
-noomi支持4种connection manager：mysql、oracle、mssql、sequelize，用户可以自定义connection manager，自定义connection manager需要加入InstanceFactory。  
+### <a id='数据库Database'>数据库 Database</a>
+noomi支持4种connection manager：mysql、oracle、mssql、sequelize、typeorm，用户可以自定义connection manager，自定义connection manager需要加入InstanceFactory。  
 使用数据源，需要在noomi.json中配置database属性，典型配置如下：
 #### mysql配置
 ```js
 {
     "product":"mysql",
     "use_pool":true,  //是否支持连接池，如果为true，options需要设置connectionLimit
-    //"connection_manager":"connection manager instance name", //自定义connection manager
     "options":{
         "host":"localhost",
         "port":3306,
@@ -1415,7 +1426,6 @@ noomi采用sequelize-typescript进行封装，原生sequelize尚未进行可行�
 ```js
 {
     "product":"sequelize",
-    "use_pool":true,
     "options":{
         "dialect":"mysql/oracle/mssql...",
         "host":"localhost",
@@ -1434,11 +1444,36 @@ noomi采用sequelize-typescript进行封装，原生sequelize尚未进行可行�
         },
         //model所在路径，是编译后的js所在路径，相对于项目根目录。如:/dist/module/dao/pojo，表示该目录下的所有js文件
         //model class定义时，要用export default 进行导出，如 export default class UserModel{...}
-        "models":[]
+        "models":["/dist/module/dao/pojo"]
     }
 }
 ```
 ***注:options参考 npm sequelize配置***
+
+#### typeorm配置
+
+```js
+{
+    "product":"typeorm",
+    "options":{
+        "type": "mysql",
+        "host": "localhost",
+        "port": 3306,
+        "username": "your user",
+        "password": "your password",
+        "database": "your db",
+        "logging": true,
+        "entities": [
+            //entity编译为js后所在路径，相对项目根目录，如:/dist/module/dao/pojo/*.js
+            "your entity js directory/*.js"
+        ]
+    },
+    "transaction":{
+        "isolation_level":1
+    }
+}
+```
+***注:options参考 npm typeorm配置***
 
 #### async getConnection():any
 ##### 功能描述
@@ -1447,12 +1482,21 @@ noomi采用sequelize-typescript进行封装，原生sequelize尚未进行可行�
 + oracle 返回connection对象
 + mssql 返回request对象
 + sequelize 返回sequelize对象
++ typeorm 返回connection（已连接）
 #### async closeConnection(connection:any):void
 ##### 功能描述
 关闭数据库连接，如果调用方法getConnection获取连接，则需要用该方法进行手动关闭。  
 ##### 参数
 conn<any> getConnection()返回的连接
 ***注:如果该方法为事务方法，则不手动关闭连接，由事务管理器(TransactionManager)进行关闭。***
+
+#### async getManager():manager
+新增于:v0.1.6 
+##### 功能描述
+获取entity manager，针对typeorm提供。  
+##### 返回值
+EntityManager  
+***注：在使用事务嵌套时，必须使用该方法返回的manager进行数据操作。***
 
 ### <a id='事务Transaction'>事务Transaction</a>
 noomi支持事务及嵌套事务，事务分为配置和注解两种方式。
@@ -1637,14 +1681,14 @@ class MyClass{
 	//"instance":"instance.json", 
 	//数据库配置，如果不需要使用数据库，则不用配置
 	"database":{
-		//数据库产品，字符串，可选值：mysql,oracle,mssql,mongodb,sequelize，默认mysql
+		//数据库产品，字符串，可选值：mysql,oracle,mssql,mongodb,sequelize，typeorm默认mysql
 		"product":"mysql",
 		//连接管理器实例名，字符串，如果不设置，则根据product自动生成，如product为mysql，
 		//则connection_manager为mysqlConnectionManager，
 		//可以使用自定义connection_mananger，需实现ConnectionManager接口
-		"connection_manager":"mssqlConnectionManager", 
+		// "connection_manager":"mysqlConnectionManager", 
 		//是否使用数据库连接池，如果设置为true，则options选项需按照数据库产品的连接规则设置连接池相关属性，
-		//此设置对mssql和sequelize无效，mssql仅支持连接池的连接方式。sequelzie由配置文件内部设置
+		//此设置对mssql、sequelize、typeorm无效，mssql仅支持连接池的连接方式。sequelzie和typeorm由配置文件内部设置
 		"use_pool":true,
 		//数据库连接属性，请参考各数据库产品的连接设置方式
 		"options":{
@@ -1658,7 +1702,7 @@ class MyClass{
 		//事务设置，当存在该项时，noomi开启事务嵌套能力
 		"transaction":{
 			//事务实例名，如果不设置，则根据product自动生成，如果自定义事务，请继承Transaction接口
-		  	// "transaction":"mssqlTransaction",
+		  	// "transaction":"mysqlTransaction",
 			//隔离级, 针对sequelzie，如果为数据库，则执行数据库的隔离级 
 			//取值: 1 read uncommited, 2 read commited, 3 repeatable read, 4 serializable
 			// "isolation_level":2,

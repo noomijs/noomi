@@ -2,7 +2,7 @@ import { DBManager } from "./dbmanager";
 import { TransactionManager } from "./transactionmanager";
 import { getConnection } from "./connectionmanager";
 import { InstanceFactory } from "../main/instancefactory";
-import { Sequelize } from "sequelize";
+import { QueryRunner } from "typeorm";
 
 
 class TransactionProxy{
@@ -15,15 +15,20 @@ class TransactionProxy{
      */
     static invoke(instanceName:string,methodName:string,func:Function,instance:any):any{
         return async (params)=>{
-            if(!Array.isArray(params)){
-                params = [params];
-            }
             let retValue;
             switch(DBManager.product){
                 case 'sequelize':
                     retValue = await new Promise(async (resolve,reject)=>{
                         TransactionManager.namespace.run(async ()=>{
                             let v = await doSequelize();
+                            resolve(v);
+                        });
+                    });
+                    break;
+                case 'typeorm':
+                    retValue = await new Promise(async (resolve,reject)=>{
+                        TransactionManager.namespace.run(async ()=>{
+                            let v = await doTypeorm();
                             resolve(v);
                         });
                     });
@@ -45,7 +50,7 @@ class TransactionProxy{
              * 数据源处理
              */
             async function doDataScource(){
-                if(!TransactionManager.getIdLocal()){
+                if(!TransactionManager.getIdFromLocal()){
                     //保存transaction id
                     TransactionManager.setIdToLocal();
                 }
@@ -72,7 +77,7 @@ class TransactionProxy{
              */
             async function doSequelize(){
                 let result:any;
-                if(!TransactionManager.getIdLocal()){
+                if(!TransactionManager.getIdFromLocal()){
                     //保存transaction id
                     TransactionManager.setIdToLocal();
                     let trOpt:any = TransactionManager.transactionOption||{};
@@ -86,6 +91,47 @@ class TransactionProxy{
                             res(e);
                         });
                     });
+                }else{
+                    try{
+                        result = await func.apply(instance,params);
+                    }catch(e){
+                        result = e;
+                    }
+                }
+                return result;
+            }
+
+            /**
+             * typeorm 处理
+             */
+            async function doTypeorm(){
+                let result:any;
+                if(!TransactionManager.getIdFromLocal()){
+                    //保存transaction id
+                    TransactionManager.setIdToLocal();
+                    let isoLevel:any;
+                    if(TransactionManager.transactionOption){
+                        isoLevel = TransactionManager.transactionOption.isolationLevel;
+                    }
+                    let conn = await getConnection();
+                    const queryRunner:QueryRunner = conn.createQueryRunner();
+
+                    await queryRunner.startTransaction(isoLevel);
+                    let tr = TransactionManager.get(true);
+                    tr.manager = queryRunner.manager;
+                    let r;
+                    try{
+                        r = await func.apply(instance,params);
+                        await queryRunner.commitTransaction();
+                    }catch(e){
+                        r = e;
+                        await queryRunner.rollbackTransaction();
+                    }finally{
+                        await queryRunner.release();
+                        //从头事务管理器删除事务
+                        TransactionManager.del(tr);
+                    }
+                    return r;
                 }else{
                     try{
                         result = await func.apply(instance,params);

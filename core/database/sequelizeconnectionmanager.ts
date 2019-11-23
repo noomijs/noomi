@@ -1,6 +1,7 @@
 import {Sequelize as SequelizeOrigin} from 'sequelize';
 import { Sequelize } from "sequelize-typescript";
 import { TransactionManager } from "./transactionmanager";
+import { App } from '../tools/application';
 
 /**
  * 连接管理器
@@ -20,7 +21,7 @@ class SequelizeConnectionManager{
         if(cfg.models && Array.isArray(cfg.models)){
             cfg.models.forEach((item,i)=>{
                 if(typeof item === 'string'){
-                    cfg.models[i] = process.cwd() + item;
+                    cfg.models[i] = App.path.posix.join(process.cwd(),item);
                 }
             });
         }

@@ -265,8 +265,7 @@ class RouteFactory{
                 break;
             default: //json
                 res.writeToClient({
-                    data:data,
-                    type:'application/json'
+                    data:data
                 });
         }
         

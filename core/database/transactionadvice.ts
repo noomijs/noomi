@@ -1,5 +1,4 @@
 import { TransactionManager } from "./transactionmanager";
-import { App } from "../tools/application";
 import { getConnection } from "./connectionmanager";
 import { Transaction } from "./transaction";
 

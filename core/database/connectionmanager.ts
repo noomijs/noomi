@@ -1,4 +1,7 @@
 import { DBManager } from "./dbmanager";
+import { TransactionManager } from "./transactionmanager";
+import { EntityManager } from "typeorm";
+
 
 interface ConnectionManager{
     //获取连接
@@ -34,4 +37,20 @@ async function closeConnection(conn:any){
     }
 }
 
-export{ConnectionManager,getConnection,closeConnection}
+/**
+ * 获取当前EntityManager
+ */
+async function getManager():Promise<EntityManager>{
+    let tr = TransactionManager.get(false);
+    //事务不存在或事务manager不存在，则从connection manager中获取
+    if(!tr || !tr.manager){
+        let cm = DBManager.getConnectionManager();
+        if(typeof cm.getManager === 'function'){
+            return await cm.getManager();
+        }  
+        return null;
+    }
+    return tr.manager;
+}
+
+export{ConnectionManager,getConnection,closeConnection,getManager}

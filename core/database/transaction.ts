@@ -6,6 +6,7 @@ import { getConnection } from "./connectionmanager";
 class Transaction{
     id:number;
     connection:any;
+    manager:any;
     src:TransactionSource;
     type:TransactionType;
     isBegin:boolean;

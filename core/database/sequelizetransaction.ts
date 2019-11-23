@@ -1,5 +1,4 @@
 import { Transaction } from "./transaction";
-import { getConnection } from "./connectionmanager";
 /**
  * mysql 事务类
  */

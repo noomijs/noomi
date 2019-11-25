@@ -8,10 +8,8 @@ import { App } from '../tools/application';
  */
 class SequelizeConnectionManager{
     sequelize:Sequelize;
-    connection:any;
     options:object;
     dbMdl:any;
-    usePool:boolean;
     poolAlias:string;       //pool别名
     constructor(cfg){
         //使用cli-hooked
@@ -25,7 +23,6 @@ class SequelizeConnectionManager{
                 }
             });
         }
-        
         this.sequelize = new Sequelize(cfg);
     }
 
@@ -41,6 +38,15 @@ class SequelizeConnectionManager{
      * @param conn 
      */
     async release(conn?:any){
+    }
+
+    /**
+     * 关闭连接
+     */
+    async close(){
+        if(this.sequelize){
+            this.sequelize.close();
+        }
     }
 }
 

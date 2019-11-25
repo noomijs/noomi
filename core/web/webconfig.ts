@@ -10,8 +10,9 @@ import { StaticResource } from "./staticresource";
  */
 export class WebConfig{
     static config:any;
+    static useHttps:boolean;
     static useServerCache:boolean = false;
-    
+    static httpsCfg:object;
     /**
      * 获取参数
      * @param name 
@@ -36,9 +37,9 @@ export class WebConfig{
                 let opt = cfg.cache_option;
                 WebConfig.useServerCache = true;
                 WebCache.init({
-                    save_type:opt.save_type,
-                    max_age:opt.max_age,
-                    max_size:opt.max_size,
+                    save_type:opt.save_type || 0,
+                    max_age:opt.max_age || 0,
+                    max_size:opt.max_size || 20000000,
                     public:opt.public,
                     no_cache:opt.no_cache,
                     no_store:opt.no_store,
@@ -54,6 +55,20 @@ export class WebConfig{
         //errorPage
         if(config.hasOwnProperty('error_page')){
             this.setErrorPages(config['error_page']);
+        }
+
+        //https 配置
+        if(config.hasOwnProperty('https')){
+            let opt = config['https'];
+            if(opt['key_file'] && typeof opt['key_file'] === 'string' && opt['key_file'] !== ''
+               && opt['cert_file'] && typeof opt['cert_file'] === 'string' && opt['cert_file'] !== ''){
+                this.useHttps = true;
+                this.httpsCfg = {
+                    'only_https':opt['only_https'],
+                    'key_file':App.path.posix.join(process.cwd(),opt['key_file']),
+                    'cert_file':App.path.posix.join(process.cwd(),opt['cert_file'])
+                }; 
+            }
         }
     }
 

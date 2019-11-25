@@ -16,13 +16,20 @@ import { NoomiTip_zh } from "../locales/msg_zh";
 import { NoomiTip_en } from "../locales/msg_en";
 
 class Noomi{
-    port:number=3000;
-    server:Server;
-    constructor(port?:number,configPath?:string){
+    port:number;            //http port
+    sslPort:number;         //https port
+    server:Server;          // http server
+    httpsServer:Server;     //https server
+    /**
+     * @param port          //http port,默认 3000
+     * @param sslPort       //https port，默认4000
+     * @param configPath    //配置文件路径，默认 /config
+     */
+    constructor(port?:number,configPath?:string,sslPort?:number){
         this.port = port || 3000;
-        configPath = configPath || '/config';
-        App.configPath = configPath;
-        this.init(configPath);
+        this.sslPort = sslPort || 4000;
+        App.configPath = configPath || '/config';
+        this.init(App.configPath);
     }
 
     /**
@@ -150,35 +157,60 @@ class Noomi{
             }
             console.log(msgTip["0116"]);
         }
-
-        //超过cpu最大使用效率时处理
-        // process.on('SIGXCPU',()=>{
-        //     //请求队列置false
-        //     // RequestQueue.setCanHandle(false);
-        // });
+        //如果web config 配置为only https，则不创建http server
+        if(!WebConfig.httpsCfg || !WebConfig.httpsCfg['only_https']){
+            // http 服务器
+            this.server = App.http.createServer((req:IncomingMessage,res:ServerResponse)=>{
+                RequestQueue.handleOne(new HttpRequest(req,res));
+            }).listen(this.port,(e)=>{
+                console.log(`Http Server is running,listening port ${this.port}`);
+                //启动队列执行
+            }).on('error',(err)=>{
+                if (err.code === 'EADDRINUSE') {
+                    console.log(msgTip["0118"]);
+                    //1秒后重试
+                    setTimeout(() => {
+                      this.server.close();
+                      this.server.listen(this.port);
+                    }, 1000);
+                }
+            }).on('clientError', (err, socket) => {
+                socket.end('HTTP/1.1 400 Bad Request\r\n');
+            });
+        }
         
-        //创建server
-        this.server = App.http.createServer((req:IncomingMessage,res:ServerResponse)=>{
-            RequestQueue.handleOne(new HttpRequest(req,res));
-        }).listen(this.port,(e)=>{
-            console.log(`Server is running,listening port ${this.port}`);
-            //启动队列执行
-        }).on('error',(err)=>{
-            if (err.code === 'EADDRINUSE') {
-                console.log(msgTip["0118"]);
-                //1秒后重试
-                setTimeout(() => {
-                  this.server.close();
-                  this.server.listen(this.port);
-                }, 1000);
-            }
-        }).on('clientError', (err, socket) => {
-            socket.end('HTTP/1.1 400 Bad Request\r\n');
-        });
+        //https 服务器
+        if(WebConfig.useHttps){
+            this.httpsServer = require('https').createServer({
+                key: App.fs.readFileSync(WebConfig.httpsCfg['key_file']),
+                cert: App.fs.readFileSync(WebConfig.httpsCfg['cert_file'])
+            },(req,res)=>{
+                RequestQueue.handleOne(new HttpRequest(req,res));
+            }).listen(this.sslPort,(e)=>{
+                console.log(`Https Server is running,listening port ${this.sslPort}`);
+                //启动队列执行
+            }).on('error',(err)=>{
+                if (err.code === 'EADDRINUSE') {
+                    console.log(msgTip["0118"]);
+                    //1秒后重试
+                    setTimeout(() => {
+                      this.httpsServer.close();
+                      this.httpsServer.listen(this.sslPort);
+                    }, 1000);
+                }
+            }).on('clientError', (err, socket) => {
+                socket.end('HTTP/1.1 400 Bad Request\r\n');
+            });
+        }
     }
 }
 
-function noomi(port?:number,contextPath?:string){
-    return new Noomi(port,contextPath);
+/**
+ * @param port          //http port,默认 3000
+ * @param sslPort       //https port，默认4000
+ * @param configPath    //配置文件路径，默认 /config
+ */
+function noomi(port?:number,contextPath?:string,sslPort?:number){
+    return new Noomi(port,contextPath,sslPort);
 }
 export {noomi,Noomi};

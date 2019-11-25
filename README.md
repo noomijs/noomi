@@ -480,10 +480,11 @@ noomi框架支持typescript开发，开发后ts文件编译成js文件，部署�
 ### <a id='noomi函数'>初始化函数-noomi</a>
 函数用于创建应用(app)，用于启动文件中。  
 #### 用法：  
-    noomi([port:number[,configPath:string]])  
+    noomi([port:number,configPath:string,sslPort?:number])  
 #### 参数：  
-- port <number> web服务器端口号，可选，默认3000。
-- configPath <string> 配置文件目录，可选，默认'/config'。路径相对于项目根目录。
+- [port]: number, web服务器端口号，可选，默认3000。
+- [configPath]: string, 配置文件目录，可选，默认'/config'。路径相对于项目根目录。
+- [sslPort]: number, https 服务器端口，可选，默认4000，新增于0.1.9。
 ### <a id='noomi.json'>初始化配置-noomi.json</a>
 该文件为noomi框架的配置文件，该文件不可缺少，必须放置在configPath根目录下，包括以下配置项：
 - language: 框架提示语言，string，可选，可选值：'zh'(中文),'en':英文，默认'zh'。
@@ -780,10 +781,10 @@ const cache = new NCache([cfg])
 ```
 #### 参数
 + cfg
-  - saveType <number> 存储类型，可选，可选值:0表示存在内存，1表示存在redis中，默认0
-  - name <string> 缓存名称，必填，唯一
-  - [redis] <string> redis，当saveType=1时，必须设置
-  - [maxSize]<number> 最大空间，默认为0，saveType=1时无效
+  - saveType: number, 存储类型，可选，可选值:0表示存在内存，1表示存在redis中，默认0
+  - name: string, 缓存名称，必填，唯一
+  - [redis]: string, redis，当saveType=1时，必须设置
+  - [maxSize]: number, 最大空间，默认为0，saveType=1时无效
 #### redis配置
 当saveType为1时，需要配置redis信息,需要在noomi.json中配置"redis"，内容如下:
 ```js
@@ -801,19 +802,19 @@ redis配置详情请参考 npm redis。
 将CacheItem实例存入缓存中
 ##### 参数
 + Item<CacheItem>
-  - key <string>键，必填
-  - [subkey] <string>子键，可选
-  - value <any>值，必填
-  - [timeout]<number> 超时时间(秒)，可选
-+ timeout<number>超时时间，可选
+  - key: string, 键，必填
+  - [subkey]: string, 子键，可选
+  - value: any, 值，必填
+  - [timeout]: number, 超时时间(秒)，可选
++ timeout: number, 超时时间，可选
 
 #### async get(key[,subkey,changeExpire]):any
 ##### 功能描述
 获取缓存中的值
 ##### 参数
-+ key:<string> 键，必填
-+ subkey:<string> 子键，可选
-+ changeExpire:<boolean> 是否更新过期时间，可选
++ key: string 键，必填
++ subkey: string, 子键，可选
++ changeExpire: boolean, 是否更新过期时间，可选
 ##### 返回值
 键或自键对应的值
 例：
@@ -837,13 +838,13 @@ redis配置详情请参考 npm redis。
 ##### 功能描述
 删除缓存
 ##### 参数
-+ key:<string> 键，必填
-+ subkey:<string> 子键，可选
++ key: string 键，必填
++ subkey: string, 子键，可选
 #### async has(key):boolean
 ##### 功能描述
 是否存在key
 ##### 参数
-+ key:<string> 键
++ key: string, 键
 ##### 返回值
 true/false
 
@@ -851,7 +852,7 @@ true/false
 ##### 功能描述
 获取keys,支持通配符*。
 ##### 参数
-+ key:<string> 键
++ key: string, 键
 ##### 返回值
 键名数组
 例:
@@ -911,21 +912,21 @@ sessionId
 ###### 功能描述
 删除sessionId对应的session实例
 ###### 参数
-+ sessionId<string> sessionId
++ sessionId: string, sessionId
 
 #### Session
 ##### async set(key,value)
 ###### 功能描述
 加入值到session中
 ###### 参数
-+ key<string> 键，必填
-+ value<any>  值，必填
++ key: string, 键，必填
++ value: any, 值，必填
 
 ##### async get(key):string
 ###### 功能描述
 返回session中的值
 ###### 参数
-+ key<string> 键，必填
++ key: string, 键，必填
 ###### 返回值
 session中key对应的值
 
@@ -933,7 +934,7 @@ session中key对应的值
 ###### 功能描述
 删除session中的键
 ###### 参数
-+ key<string> 键，必填
++ key: string, 键，必填
 
 例:
 
@@ -961,7 +962,7 @@ HttpRequest继承IncomingMessage类
 ##### 功能描述
 根据参数返回请求头信息
 ##### 参数
-+ key<string>请求头参数，key的取值请参考node IncommingMessage对象的headers
++ key: string, 请求头参数，key的取值请参考node IncommingMessage对象的headers
 ##### 返回值
 key对应的header值，如果没有则返回undefined
 #### getMethod():string
@@ -978,14 +979,14 @@ method 值
 ##### 功能描述
 设置请求参数
 ##### 参数
-+ name<string>参数名
-+ value<any>  值
++ name: string, 参数名
++ value: any, 值
 
 #### getParameter(name):any
 ##### 功能描述
 根据参数名获取请求参数值
 ##### 参数
-+  name<string>参数名
++  name: string, 参数名
 ##### 返回值
 参数值，如果不存在，则返回undefined
 
@@ -1006,32 +1007,32 @@ HttpResponse继承ServerResponse类
 回写到浏览器(客户端)端
 ##### 参数
 + config<WriteCfg>
-  - [data]<any>   数据，可选
-  - [charset]<string>  字符集，可选，默认utf8
-  - [type]<string> MIME类型
-  - [statusCode]<number> 状态码，可选，默认200
-  - [crossDomain]<boolean> 是否跨域，可选，默认false
+  - [data]: any, 数据，可选
+  - [charset]: string, 字符集，可选，默认utf8
+  - [type]: string, MIME类型
+  - [statusCode]: number, 状态码，可选，默认200
+  - [crossDomain]: boolean, 是否跨域，可选，默认false
 
 #### setHeader(key,value) 
 ##### 功能描述
 设置响应头
 ##### 参数
-+ key<string> 键，必填
-+ value<any>  值，必填
++ key: string, 键，必填
++ value: any, 值，必填
 
 ### <a id='HttpCookie'>HttpCookie</a>
 #### set(key,value) 
 ##### 功能描述
 设置cookie
 ##### 参数
-+ key<string> 键，必填
-+ value<string> 值，必填
++ key: string, 键，必填
++ value: string, 值，必填
 
 #### get(key)
 ##### 功能描述
 获取cookie值
 ##### 参数
-+ key<string> 键，必填
++ key: string, 键，必填
 ##### 返回值
 返回cookie中key对应的值
 
@@ -1045,7 +1046,7 @@ HttpResponse继承ServerResponse类
 ##### 功能描述
 通过键值删除cookie
 ##### 参数
-+ key<string> 键，必填
++ key: string, 键，必填
 
 例：
 
@@ -1149,14 +1150,14 @@ class NodomFilter{
 ###### 功能描述
 添加错误提示页
 ##### 参数
-+ code<number> 错误码，必填
-+ url<string> 页面地址，必填，相对与项目根目录，"/"开头
++ code: number, 错误码，必填
++ url: string, 页面地址，必填，相对与项目根目录，"/"开头
 
 ##### getErrorPage(code)
 ###### 功能描述
 获取错误提示页路径
 ###### 参数
-+ code<number> 错误码，必填
++ code: number, 错误码，必填
 ###### 返回值
 页面url
 
@@ -1271,83 +1272,83 @@ https配置，证书可以通过openssl生成，也可以拷贝源码中的sslke
 1. 获取浏览器提供的用户名和密码进行数据库用户验证；
 2. 验证成功后，获取用户Id和其关联的组id，调用SecurityFactory.addUserGroups添加到安全框架框架中。
 ###### 参数
-+ userId<number> 用户id
-+ groups<Array<number>> 组id数组，一个用户可能存在在多个用户组中
-+ request<HttpRequest> http request，可选，当request存在时，会将用户id添加至session中
++ userId: number, 用户id
++ groups: Array number, 组id数组，一个用户可能存在在多个用户组中
++ request: HttpRequest, http request，可选，当request存在时，会将用户id添加至session中
 
 ##### static async deleteUser(userId[,request]) 
 ###### 功能描述
 从安全缓存中删除用户，一般用于用户登出时调用。
 ###### 参数
-+ userId<number> 用户id
-+ request<HttpRequest> http request，若request存在，则同时删除session中的用户信息
++ userId: number, 用户id
++ request: HttpRequest, http request，若request存在，则同时删除session中的用户信息
 
 ##### static async deleteUserGroup(userId,groupId)
 ###### 功能描述
 从安全缓存中删除用户组信息，一般用于动态删除用户组关系后，更新安全缓存
 ###### 参数
-+ userId<number>用户id
-+ groupId<number>组id
++ userId: number, 用户id
++ groupId: number, 组id
 
 ##### static async addGroupAuthority(groupId,authId)
 ###### 功能描述
 向安全缓存中添加组以及组权限
 ###### 参数
-+ groupId<number> 组id
-+ authId<number> 权限id
++ groupId: number, 组id
++ authId: number, 权限id
 
 ##### static async updGroupAuths(groupId,authIds)
 ###### 功能描述
 向安全缓存中添加组以及组对应的多个权限，一般用于动态修改组权限数据后，更新安全缓存
 ###### 参数
-+ groupId<number> 组id
-+ authIds<Array<number>> 权限id数组
++ groupId: number, 组id
++ authIds: Array number, 权限id数组
 
 ##### static async deleteGroupAuthority(groupId,authId)
 ###### 功能描述
 删除安全缓存中的组权限，一般用于动态修改组权限数据后，更新安全缓存
 ###### 参数
-+ groupId<number>组id
-+ authId<number>权限id
++ groupId: number, 组id
++ authId: number, 权限id
 
 ##### static async deleteGroup(groupId)
 ###### 功能描述
 删除安全缓存中的组，一般用于动态删除用户组数据数据后，更新安全缓存
 ###### 参数
-+ groupId<number>组id
++ groupId: number, 组id
 
 ##### static async addResourceAuth(url,authId)
 ###### 功能描述
 向安全缓存中添加资源权限，一般用于动态添加资源权限数据后，更新安全缓存
 ###### 参数
-+ url<string> 资源路径
-+ authId<number> 权限id
++ url: string, 资源路径
++ authId: number, 权限id
 
 ##### static async updResourceAuths(url,auths)
 ###### 功能描述
 更新资源权限，一般用于动态修改资源权限数据后，更新安全缓存
 ###### 参数
-+ url<string>资源路径
-+ auths<Array<number>> 权限id
++ url: string, 资源路径
++ auths: Array number, 权限id
 
 ##### static async deleteResource(url)
 ###### 功能描述
 删除安全缓存中的资源，一般用于动态删除资源数据后，更新安全缓存
 ###### 参数
-+ url<string> 资源路径
++ url: string, 资源路径
 
 ##### static async deleteResourceAuthority(url,authId)
 ###### 功能描述
 删除安全缓存中的资源对应权限，一般用于动态修改资源权限数据后，更新安全缓存
 ###### 参数
-+ url<string> 资源路径
-+ authId<number> 权限id
++ url: string, 资源路径
++ authId: number, 权限id
 
 ##### static async deleteAuthority(authId)
 ###### 功能描述
 删除安全缓存中的权限，一般用于动态修改资源权限数据后，更新安全缓存，将同时更新安全缓存中的资源权限和组权限。
 ###### 参数
-+ authId<number> 权限id
++ authId: number, 权限id
 
 例：
 
@@ -1505,7 +1506,7 @@ noomi采用sequelize-typescript进行封装，原生sequelize尚未进行可行�
 ##### 功能描述
 关闭数据库连接，如果调用方法getConnection获取连接，则需要用该方法进行手动关闭。  
 ##### 参数
-conn<any> getConnection()返回的连接
+conn: any, getConnection()返回的连接
 ***注:如果该方法为事务方法，则不手动关闭连接，由事务管理器(TransactionManager)进行关闭。***
 
 #### async getManager():manager

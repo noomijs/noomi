@@ -5,6 +5,7 @@ import { WebConfig } from "./webconfig";
 import { HttpRequest } from "./httprequest";
 import { Util } from "../tools/util";
 import { App } from "../tools/application";
+import { ReadStream } from "fs";
 
 /**
  * 静态资源加载器
@@ -33,7 +34,8 @@ class StaticResource{
         }
 
         let errCode:number;
-        let data:any;
+        let data:any;           //file data
+        let mimeType:string;    //mimetype
         //禁止访问路径，直接返回404
         if(finded){
             errCode = 404;
@@ -41,39 +43,44 @@ class StaticResource{
             let filePath = App.path.posix.join(process.cwd(),path);
             
             if(WebConfig.useServerCache){ //从缓存取，如果用浏览器缓存数据，则返回0，不再操作
-                data = await WebCache.load(request,response,path);
-                if(data === 0){
+                let ro = await WebCache.load(request,response,path);
+                if(ro === 0){
                     //回写没修改标志
                     response.writeToClient({
                         statusCode:304
                     });
+                }else if(ro !== undefined){
+                    data = ro['data'];
+                    mimeType = ro['type'];
                 }
             }
             if(data === undefined){ //读取文件
                 if(!App.fs.existsSync(filePath) || !App.fs.statSync(filePath).isFile()){
                     errCode = 404;
                 }else{
-                    data = await new Promise((resolve,reject)=>{
-                        App.fs.readFile(filePath,'utf8',(err,v)=>{
-                            if(err){
-                                resolve();
-                            }
-                            resolve(v);
-                        });
-                    });
+                    let cacheData:any;
                     //存到cache
-                    if(data && WebConfig.useServerCache){
-                        await WebCache.add(path,filePath,data,response);
+                    if(WebConfig.useServerCache){
+                        cacheData = await WebCache.add(path,filePath,response);
+                    }
+                    //文件流输出
+                    if(cacheData === undefined){
+                        mimeType = App.mime.getType(filePath);
+                        let stream:ReadStream = App.fs.createReadStream(filePath);
+                        response.writeStreamToClient({
+                            data:stream,
+                            type:mimeType
+                        });
+                    }else{
+                        response.writeToClient({
+                            data:cacheData.data,
+                            type:cacheData.type
+                        });
                     }
                 }
             }
         }
-        if(data){
-            //写到浏览器
-            await response.writeToClient({
-                data:data
-            });
-        }else if(errCode !== undefined){
+        if(errCode !== undefined){
             let page = PageFactory.getErrorPage(errCode);
             if(page){
                 response.redirect(page);

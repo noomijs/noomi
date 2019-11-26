@@ -23,6 +23,8 @@ class WebCache{
     static proxyRevalidation:boolean;   //cache-control proxy revalidation
     static expires:number;              //expires
     static fileTypes:Array<string>;     //缓存文件类型
+    static maxSingleSize:number;        //单个文件最大size
+    static excludeFileTypes:Array<string> = ["image","audio","video"];  //不能缓存的媒体类型
     /**
      * 初始化
      */
@@ -36,23 +38,24 @@ class WebCache{
         this.mustRevalidation = cfg.must_revalidation || false;
         this.proxyRevalidation = cfg.proxy_revalidation || false;
         this.expires = cfg.expires || 0;
-
+        this.maxSingleSize = cfg.max_single_size || 1000000;
         //创建cache
         this.cache = new NCache({
             name:'NWEBCACHE',
             maxSize:cfg.max_size || 0,
-            saveType:cfg.save_type,
+            saveType:cfg.save_type || 0,
             redis:cfg.redis
         });
     }
 
     /**
      * 添加资源
-     * @param url   url 请求url
-     * @param path  url对应路径
-     * @param data  path对应数据
+     * @param url       url 请求url
+     * @param path      url对应路径
+     * @param response  http response
+     * @return          {data:文件内容,type:mime type}
      */
-    static async add(url:string,path:string,data:any,response?:HttpResponse){
+    static async add(url:string,path:string,response?:HttpResponse):Promise<Object>{
         const fs = App.fs;
         const pathMdl = App.path;
         let addFlag:boolean = false;
@@ -63,35 +66,71 @@ class WebCache{
                 resolve(data);
             });
         });
-
-        let lastModified:string = stat.mtime.toUTCString();
-        //计算hash
-        
-        const hash = App.crypto.createHash('md5');
-        hash.update(data,'utf8');
-        let etag:string = hash.digest('hex');
-
-        //非全部类型，需要进行类型判断
-        if(this.fileTypes[0] === '*'){
-            addFlag = true;
-        }else{
-            let extName = pathMdl.extname(url);
-            if(this.fileTypes.includes(extName)){
+        let mimeType:string;
+        //获取mime type
+        mimeType = App.mime.getType(path);
+        //超出最大尺寸
+        if(stat.size < this.maxSingleSize){
+            //非全部类型，需要进行类型判断
+            if(this.fileTypes[0] === '*'){
                 addFlag = true;
-            }
-        }
-        if(addFlag){
-            await this.cache.set({
-                key:url,
-                value:{
-                    etag:etag,
-                    lastModified:lastModified,
-                    data:data
+            }else{
+                let extName = pathMdl.extname(url);
+                if(this.fileTypes.includes(extName)){
+                    addFlag = true;
                 }
-            });
+            }
+            //媒体类型不缓存
+            if(addFlag){
+                for(let t of this.excludeFileTypes){
+                    if(mimeType.indexOf(t)){
+                        addFlag = false;
+                        break;
+                    }
+                }
+            }    
         }
-        if(response){
-            this.writeCacheToClient(response,etag,lastModified);
+        
+        let data:any;
+        if(addFlag){
+            //读数据
+            data = await new Promise((resolve,reject)=>{
+                App.fs.readFile(path,'utf8',(err,v)=>{
+                    if(err){
+                        resolve();
+                    }
+                    resolve(v);
+                });
+            });
+            //最后修改 
+            let lastModified:string = stat.mtime.toUTCString();
+            //计算hash
+            const hash = App.crypto.createHash('md5');
+            hash.update(data,'utf8');
+            let etag:string = hash.digest('hex');
+            if(response){
+                this.writeCacheToClient(response,etag,lastModified);
+            }
+            if(addFlag){
+                await this.cache.set({
+                    key:url,
+                    value:{
+                        etag:etag,
+                        lastModified:lastModified,
+                        data:data,
+                        type:mimeType
+                    }
+                });
+            }
+            if(response){
+                this.writeCacheToClient(response,etag,lastModified);
+            }
+        }else{
+            this.writeCacheToClient(response);
+        }
+        
+        if(data){
+            return {data:data,type:mimeType};
         }
     }
 
@@ -100,7 +139,7 @@ class WebCache{
      * @param request   request
      * @param response  response
      * @param url       url
-     * @return          0不用回写数据 或 数据
+     * @return          0不用回写数据 或 {data:data,type:mimetype}
      */
     static async load(request:HttpRequest,response:HttpResponse,url:string):Promise<any>{
         let rCheck:number = await this.check(request,url);
@@ -112,7 +151,10 @@ class WebCache{
                 let map = await this.cache.getMap(url);
                 if(map !== null && map.data && map.data !== ''){
                     this.writeCacheToClient(response,map.etag,map.lastModified);
-                    return map.data;
+                    return {
+                        data:map.data,
+                        type:map.type
+                    }
                 }
         }
     }
@@ -123,11 +165,17 @@ class WebCache{
      * @param etag              etag
      * @param lastModified      lasmodified
      */
-    static writeCacheToClient(response:HttpResponse,etag:string,lastModified:string){
+    static writeCacheToClient(response:HttpResponse,etag?:string,lastModified?:string){
         //设置etag
-        response.setHeader('Etag',etag);
+        if(etag){
+            response.setHeader('Etag',etag);
+        }
+        
         //设置lastmodified
-        response.setHeader('Last-Modified',lastModified);
+        if(lastModified){
+            response.setHeader('Last-Modified',lastModified);
+        }
+        
         //设置expire
         if(this.expires && this.expires>0){
             response.setHeader('Expires',new Date(new Date().getTime() + this.expires*1000).toUTCString());

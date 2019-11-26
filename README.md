@@ -1171,6 +1171,7 @@ class NodomFilter{
     "cache_option":{                //静态资源缓存配置
         "save_type":0,              //存储类型 0 memory, 1 redis，需要安装redis服务器并启动服务
         "max_size":20000000,        //缓存最大字节数，save_type为0时有效
+        "max_single_size":1000000,	//单个缓存文件最大size，默认1M
         "file_type":[".html",".htm",".js",".css"],  //缓存静态资源类型，默认['*']，缓存所有静态资源，不建议使用*
         "redis":"default",          //redis client名，与redis配置保持一直，默认default
         "expires":0,                //页面缓存 expires 属性
@@ -1573,7 +1574,8 @@ class MyClass{
 			"cache":true,                   //是否启用静态资源缓存，如果为false，则cache_option无效，默认false
 			"cache_option":{                //静态资源缓存配置
 				"save_type":0,              //存储类型 0 memory, 1 redis，需要安装redis服务器并启动服务
-				"max_size":20000000,        //缓存最大字节数，save_type为0时有效
+                "max_size":20000000,        //缓存最大字节数，save_type为0时有效
+                "max_single_size":1000000,	//单个缓存文件最大size，默认1M
 				//缓存静态资源类型，默认['*']，缓存所有静态资源，不建议使用*
 				"file_type":[".html",".htm",".js",".css"],	
 				"redis":"default",          //redis client名，与redis配置保持一直，默认default

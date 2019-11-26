@@ -37,9 +37,10 @@ export class WebConfig{
                 let opt = cfg.cache_option;
                 WebConfig.useServerCache = true;
                 WebCache.init({
-                    save_type:opt.save_type || 0,
-                    max_age:opt.max_age || 0,
-                    max_size:opt.max_size || 20000000,
+                    save_type:opt.save_type,
+                    max_age:opt.max_age,
+                    max_size:opt.max_size,
+                    max_single_size:opt.max_single_size,
                     public:opt.public,
                     no_cache:opt.no_cache,
                     no_store:opt.no_store,

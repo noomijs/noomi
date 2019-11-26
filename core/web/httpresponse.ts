@@ -1,6 +1,7 @@
 import { ServerResponse, OutgoingHttpHeaders, IncomingMessage } from "http";
 import { HttpCookie } from "./httpcookie";
 import { App } from "../tools/application";
+import { ReadStream } from "fs";
 
 interface WriteCfg{
     data?:any;              //数据
@@ -55,6 +56,37 @@ export class HttpResponse extends ServerResponse{
     }
 
     /**
+     * 写数据流
+     * @param config 
+     */
+    writeStreamToClient(config:WriteCfg):void{
+        let charset = config.charset || 'utf8';
+        let status = config.statusCode || 200;
+        let type = config.type || 'text/html';
+
+        //设置cookie
+        this.writeCookie();
+        let headers:OutgoingHttpHeaders = {};
+        //跨域
+        if(config.crossDomain){
+            headers['Access-Control-Allow-Origin'] = '*';
+            headers['Access-Control-Allow-Headers'] = 'Content-Type';
+        }
+        
+        //contenttype 和 字符集
+        headers['Content-Type'] = type + ';charset=' + charset;
+        let stream:ReadStream = config.data;
+        //数据长度
+        this.srcRes.writeHead(status, headers);
+        stream.on('data',(chunk)=>{
+            this.srcRes.write(chunk);
+        });
+
+        stream.on('end',()=>{
+            this.srcRes.end();
+        });
+    }
+    /**
      * 写header
      * @param key 
      * @param value 
@@ -63,49 +95,6 @@ export class HttpResponse extends ServerResponse{
         this.srcRes.setHeader(key,value);
     }
     
-
-    /**
-     * 回写文件到浏览器端
-     * @param file          待写文件 
-     * @param charset       字符集
-     * @param type          数据类型
-     * @param crossDomain   跨域
-     */
-    async writeFileToClient(config:any){
-        let charset = config.charset || 'utf8';
-        let status = config.statusCode || 200;
-        //设置cookie
-        this.writeCookie();
-
-        let type = App.mime.getType(config.path);
-        let errCode:number;
-        
-        let data:Buffer = await new Promise((resolve,reject)=>{
-            App.fs.readFile(config.path,'utf8',(err,file)=>{
-                if(err){
-                    errCode = 404;
-                    resolve();
-                }else{
-                    resolve(file);
-                }
-            });
-        });    
-        //有异常码，退出
-        if(errCode!==undefined){
-            return errCode;
-        }
-        
-        let headers:OutgoingHttpHeaders = {};
-        //数据长度
-        headers['Content-Length'] = Buffer.byteLength(data);
-        
-        //contenttype 和 字符集
-        headers['Content-Type'] = type + ';charset=' + charset;
-        this.srcRes.writeHead(status, headers);
-        this.srcRes.write(data,charset);
-        this.srcRes.end();
-    }
-
     /**
      * 重定向
      * @param response      

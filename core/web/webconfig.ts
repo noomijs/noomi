@@ -13,6 +13,7 @@ export class WebConfig{
     static useHttps:boolean;
     static useServerCache:boolean = false;
     static httpsCfg:object;
+    static crossDomain:string;
     /**
      * 获取参数
      * @param name 
@@ -31,6 +32,7 @@ export class WebConfig{
             if(cfg.hasOwnProperty('forbidden_path')){
                 StaticResource.addPath(config['forbidden_path']);
             }
+            this.crossDomain = cfg['cross_domain'];
             this.config = cfg;
             //cache
             if(cfg.cache === true){

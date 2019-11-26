@@ -2,13 +2,14 @@ import { ServerResponse, OutgoingHttpHeaders, IncomingMessage } from "http";
 import { HttpCookie } from "./httpcookie";
 import { App } from "../tools/application";
 import { ReadStream } from "fs";
+import { WebConfig } from "./webconfig";
 
 interface WriteCfg{
     data?:any;              //数据
     charset?:string;        //字符集
     type?:string;           //数据类型
     statusCode?:number;     //http 异常码
-    crossDomain?:boolean;   //是否跨域
+    crossDomain?:string;   //是否跨域
 }
 
 export class HttpResponse extends ServerResponse{
@@ -25,7 +26,7 @@ export class HttpResponse extends ServerResponse{
      * @param data          待写数据 
      * @param charset       字符集
      * @param type          MIME类型
-     * @param crossDomain   跨域
+     * @param crossDomain   跨域串
      */
     writeToClient(config:WriteCfg):void{
         let data:any = config.data || '';
@@ -38,12 +39,13 @@ export class HttpResponse extends ServerResponse{
 
         //设置cookie
         this.writeCookie();
-
         let headers:OutgoingHttpHeaders = {};
+        let crossDomain:string = config.crossDomain || WebConfig.crossDomain;
         //跨域
-        if(config.crossDomain){
-            headers['Access-Control-Allow-Origin'] = '*';
-            headers['Access-Control-Allow-Headers'] = 'Content-Type';
+        if(config.crossDomain || WebConfig.crossDomain){
+            headers['Access-Control-Allow-Origin'] = crossDomain;
+            headers['Access-Control-Allow-Headers'] = 'Content-Type,x-requested-with';
+            headers['Access-Control-Allow-Credentials'] = 'true';
         }
         
         //contenttype 和 字符集

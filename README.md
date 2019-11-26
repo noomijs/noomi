@@ -1570,7 +1570,8 @@ class MyClass{
 		"web_config":{
 			"upload_tmp_dir":"/upload/tmp", //上传临时目录，相对于项目根目录，以/开始
 			"upload_max_size":0,            //上传内容最大字节数
-			"forbidden_path":["/test/app"], //限制路径，访问该路径时，返回404
+            "forbidden_path":["/test/app"], //限制路径，访问该路径时，返回404
+            //"cross_domain":"*", 			//跨域设置，可设置跨域的域名，具体参考 Access-Control-Allow-Origin
 			"cache":true,                   //是否启用静态资源缓存，如果为false，则cache_option无效，默认false
 			"cache_option":{                //静态资源缓存配置
 				"save_type":0,              //存储类型 0 memory, 1 redis，需要安装redis服务器并启动服务

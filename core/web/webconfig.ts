@@ -11,9 +11,10 @@ import { StaticResource } from "./staticresource";
 export class WebConfig{
     static config:any;
     static useHttps:boolean;
-    static useServerCache:boolean = false;
+    static useServerCache:boolean = false;  //是否使用cache
     static httpsCfg:object;
-    static crossDomain:string;
+    static crossDomain:string;              //跨域域名
+    static welcomePage:string;              //欢迎页面
     /**
      * 获取参数
      * @param name 
@@ -33,6 +34,7 @@ export class WebConfig{
                 StaticResource.addPath(config['forbidden_path']);
             }
             this.crossDomain = cfg['cross_domain'];
+            this.welcomePage = cfg['welcome'];
             this.config = cfg;
             //cache
             if(cfg.cache === true){

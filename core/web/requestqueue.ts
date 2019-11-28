@@ -65,26 +65,30 @@ class RequestQueue{
     
     static handleOne(request:HttpRequest){
         let path = App.url.parse(request.url).pathname;
-        if(path === ''){
+        if(path === '' || path ==='/'){
+            //默认页面
+            if(WebConfig.welcomePage){
+                StaticResource.load(request,request.response,WebConfig.welcomePage);
+            }
             return;
         }
-        //获得路由，可能没有，则归属于静态资源
-        let route = RouteFactory.getRoute(path);
-        //路由资源
-        if(route !== null){
-            //参数
-            request.init().then((params)=>{
-                //过滤器执行
-                FilterFactory.doChain(request.url,request,request.response).then((r)=>{
-                    if(r){
+        //过滤器执行
+        FilterFactory.doChain(request.url,request,request.response).then((r)=>{
+            if(r){
+                //获得路由，可能没有，则归属于静态资源
+                let route = RouteFactory.getRoute(path);
+                //路由资源
+                if(route !== null){
+                    //参数
+                    request.init().then((params)=>{
                         //路由调用
                         RouteFactory.handleRoute(route,params,request,request.response);
-                    }
-                });
-            });    
-        }else{ //静态资源
-            StaticResource.load(request,request.response,path);
-        }
+                    });    
+                }else{ //静态资源
+                    StaticResource.load(request,request.response,path);
+                }
+            }
+        });
     }
 
     /**

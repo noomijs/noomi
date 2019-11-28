@@ -74,7 +74,7 @@ npm install noomi [--save]
 
 创建noomi目录,切换到根目录
 
-#### vs启动配置
+#### vscode启动配置
 
 创建.vscode目录，/.vscode 新建launch.json文件，内容如下：
 

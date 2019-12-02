@@ -29,9 +29,9 @@ export class WebConfig{
     static init(config:any){
         if(config.hasOwnProperty('web_config')){
             let cfg:any = config['web_config'];
-            //forbidden_path
-            if(cfg.hasOwnProperty('forbidden_path')){
-                StaticResource.addPath(config['forbidden_path']);
+            //static path
+            if(cfg.hasOwnProperty('static_path')){
+                StaticResource.addPath(cfg['static_path']);
             }
             this.crossDomain = cfg['cross_domain'];
             this.welcomePage = cfg['welcome'];

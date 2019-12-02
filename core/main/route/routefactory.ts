@@ -121,13 +121,18 @@ class RouteFactory{
      * @param params        调用参数
      * @param req           httprequest
      * @param res           response
+     * @return              错误码或0
      */
-    static handleRoute(pathOrRoute:any,params:object,req:HttpRequest,res:HttpResponse){
+    static handleRoute(pathOrRoute:any,params:object,req:HttpRequest,res:HttpResponse):number{
         let route:Route;
         if(typeof pathOrRoute === 'string'){
             route = this.getRoute(pathOrRoute);
         }else{
             route = pathOrRoute;
+        }
+
+        if(!route){
+            return 404;
         }
         
         //设置request
@@ -164,6 +169,7 @@ class RouteFactory{
         }catch(e){
             this.handleException(res,e);
         }
+        return 0;
     }
 
     /**

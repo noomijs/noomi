@@ -1563,280 +1563,280 @@ class MyClass{
 ### <a id='附录1'>附录1-全局配置文件示例代码</a>
 ```js
 {
-	//框架提示语言(可选配置)，zh中文，en英文，默认zh
-	"language":"zh", 
-	//web服务器相关设置(可选配置)，如果为对象，则直接使用对象，如果为字符串，则表示web配置文件路径
-	"web":{
-		"web_config":{
-			"upload_tmp_dir":"/upload/tmp", //上传临时目录，相对于项目根目录，以/开始
-			"upload_max_size":0,            //上传内容最大字节数
-            "forbidden_path":["/test/app"], //限制路径，访问该路径时，返回404
-            //"cross_domain":"*", 			//跨域设置，可设置跨域的域名，具体参考 Access-Control-Allow-Origin
-			"cache":true,                   //是否启用静态资源缓存，如果为false，则cache_option无效，默认false
-			"cache_option":{                //静态资源缓存配置
-				"save_type":0,              //存储类型 0 memory, 1 redis，需要安装redis服务器并启动服务
+    //框架提示语言(可选配置)，zh中文，en英文，默认zh
+    "language":"zh", 
+    //web服务器相关设置(可选配置)，如果为对象，则直接使用对象，如果为字符串，则表示web配置文件路径
+    "web":{
+        "web_config":{
+            "upload_tmp_dir":"/upload/tmp", //上传临时目录，相对于项目根目录，以/开始
+            "upload_max_size":0,            //上传内容最大字节数
+            "static_path":["/test/app"],    //静态资源路径
+            //"cross_domain":"*", 	    //跨域设置，可设置跨域的域名，具体参考 Access-Control-Allow-Origin
+            "cache":true,                   //是否启用静态资源缓存，如果为false，则cache_option无效，默认false
+            "cache_option":{                //静态资源缓存配置
+                "save_type":0,              //存储类型 0 memory, 1 redis，需要安装redis服务器并启动服务
                 "max_size":20000000,        //缓存最大字节数，save_type为0时有效
                 "max_single_size":1000000,	//单个缓存文件最大size，默认1M
-				//缓存静态资源类型，默认['*']，缓存所有静态资源，不建议使用*
-				"file_type":[".html",".htm",".js",".css"],	
-				"redis":"default",          //redis client名，与redis配置保持一直，默认default
-				"expires":0,                //页面缓存 expires 属性
-				"max_age":0,                //cache-control中的max-age属性
-				//cache-control中的public属性，优先级高于private配置，即public和private同时为true时，设置public
-				"public":true,				
-				"private":true,	            //cache-control中的private属性
-				"no_cache":false,           //cache-control中的no-cache属性
-				"no_store":false,           //cache-control中的no-store属性
-				"must_revalidation":false,  //cache-control中的must-revalidation属性
-				"proxy_revalidation":false  //cache-control中的proxy-revalidation属性
-			}
-		},
-		//session配置(可选配置)
-		"session":{
-			"name":"NSESSIONID",			//set-cookie中的sessionId名，默认为NSESSIONID
-			"timeout":30,					//session超时时间，单位:分钟
-			"save_type":0,					//存储类型 0 memory, 1 redis，需要安装redis服务器并启动服务
-			"max_size":20000000,			//缓存最大字节数，save_type为0时有效
-			"redis":"default"				//redis client名，与redis配置保持一直，默认default
-		},
-		//http异常页配置(可选配置)，如果http异常码在该配置中，则重定向到该异常码对应的页面
-		"error_page":[{
-			//异常码，类型：数字
-			"code":404,
-			//页面地址，相对于项目跟路径，以/开始
-			"location":"/pages/error/404.html"	
-		},{
-			"code":403,
-			"location":"/pages/error/403.html"
-		}],
-		//https 配置，如果不需要https，则删除此项
-		"https":{
-			//是否只采用https，如果为true，则不会启动http server
-			"only_https":true,
-			//私钥文件路径，相对于根目录
-			"key_file":"/sslkey/noomiprivatekey.pem",
-			//证书文件路径，相对与根目录
-			"cert_file":"/sslkey/noomicertificate.pem"
-		}
+                //缓存静态资源类型，默认['*']，缓存所有静态资源，不建议使用*
+                "file_type":[".html",".htm",".js",".css"],	
+                "redis":"default",          //redis client名，与redis配置保持一直，默认default
+                "expires":0,                //页面缓存 expires 属性
+                "max_age":0,                //cache-control中的max-age属性
+                //cache-control中的public属性，优先级高于private配置，即public和private同时为true时，设置public
+                "public":true,				
+                "private":true,	            //cache-control中的private属性
+                "no_cache":false,           //cache-control中的no-cache属性
+                "no_store":false,           //cache-control中的no-store属性
+                "must_revalidation":false,  //cache-control中的must-revalidation属性
+                "proxy_revalidation":false  //cache-control中的proxy-revalidation属性
+            }
+        },
+        //session配置(可选配置)
+        "session":{
+            "name":"NSESSIONID",			//set-cookie中的sessionId名，默认为NSESSIONID
+            "timeout":30,					//session超时时间，单位:分钟
+            "save_type":0,					//存储类型 0 memory, 1 redis，需要安装redis服务器并启动服务
+            "max_size":20000000,			//缓存最大字节数，save_type为0时有效
+            "redis":"default"				//redis client名，与redis配置保持一直，默认default
+        },
+        //http异常页配置(可选配置)，如果http异常码在该配置中，则重定向到该异常码对应的页面
+        "error_page":[{
+            //异常码，类型：数字
+            "code":404,
+            //页面地址，相对于项目跟路径，以/开始
+            "location":"/pages/error/404.html"	
+        },{
+            "code":403,
+            "location":"/pages/error/403.html"
+        }],
+        //https 配置，如果不需要https，则删除此项
+        "https":{
+            //是否只采用https，如果为true，则不会启动http server
+            "only_https":true,
+            //私钥文件路径，相对于根目录
+            "key_file":"/sslkey/noomiprivatekey.pem",
+            //证书文件路径，相对与根目录
+            "cert_file":"/sslkey/noomicertificate.pem"
+        }
     },
-	// web文件配置方式
-	//"web":"web.json",
-	//实例配置，用于IoC
-	"instance":{
-		//模块基础路径(可选配置)，模块从该路径中加载，配置该路径后，模块路径采用相对路径配置，
-		// 注：该路径为js路径，而不是ts路径，相对于项目根目录
-		"module_path":["/dist/test/app/module"],
-		//实例数组，两种配置方式，如果数组元素为字符串，则加载符合路径规则的所有模块，
-		//如果为对象，则单个加载模块
-		//所有模块必须为class
-		"instances":[
-			//字符串模式，加载符合路径规则的js文件，该路径相对于项目根目录，
-			//支持通配符*，**表示自己及所有子孙目录。
-			//采用该方式，模块类必须用@Instance或@Router注解
-			"/dist/test/app/module/**/*.js",
-			//对象模式，加载单个模块
-			{
-				"name":"logAdvice",             //实例名，不可重复，必填
-				"class":"LogAdvice",            //类名，必填
-				"path":"advice/logadvice",      //模块路径，相对于module_path中的路径，必填
-				"singleton":true,               //是否单例，布尔型，默认true,
-				"properties":[                  //注入对象
-					{
-						"name":"commonTool",    //属性名
-						"ref":"commInstanceTool"//引用实例名
-					}
-				]
-			}
-		],
-		//实例配置子路径(可选配置)，路径相对于初始的config路径(该路径在noomi初始化时传入，默认/config)
-		//当模块过多时，可采用该方式分路径配置
-		"files":["context/action.json"]
-	},
-	//aop配置，如果为注解方式，则不用配置
-	"aop":{
-		//子文件列表，表示可以加载的子aop文件
-		"files":[],  
-		//切点，可以配置多个
-		"pointcuts":[{
-			//切点id，必填，不可重复
-			"id":"pointcut1",
-			//表达式，必填，符合该表达式的方法会被拦截，可以采用通配符
-			//如下，第一个表示拦截实例名为userService的getInfo方法
-			//第二个表示拦截实例名以service开头的所有实例的所有方法（实例必须加入实例工厂，即用注解或在instance中配置）
-			"expressions":["userService.getInfo","service*.*"]   
-		}],
-		//切面，可以多个
-		"aspects":[
-			{
-				//切面对应的实例名，必填
-				"instance":"logAdvice",
-				//通知，必填
-				//所有通知对应的方法，传入参数为被拦截方法的相关信息，格式为{instanceName:实例名,methodName:方法名,params:参数数组}
-				//after-return增加 returnValue:结果
-				//sfter-throw增加 throwValue:异常信息
-				"advices":[
-					{
-						//通知对应的切点
-						"pointcut_id":"pointcut1",	
-						//通知类型，字符串，必填，取值范围:before(前置),after(后置),after-return(正常return),after-throw(抛出异常),around(环绕，即前后置)
-						"type":"before",
-						//该切面的方法名，字符串，必填
-						"method":"before"
-					},{
-						"pointcut_id":"pointcut1",
-						"type":"after",
-						"method":"after"
-					},{
-						"pointcut_id":"pointcut1",
-						"type":"after-return",
-						"method":"afterReturn"
-					},{
-						"pointcut_id":"pointcut1",
-						"type":"after-throw",
-						"method":"throw"
-					},{
-						"pointcut_id":"pointcut1",
-						"type":"around",
-						"method":"around"
-					}	
-				]
-			}
-		]
-	},
-	//aop文件配置方式
-	// "aop":"aop.json",
+    // web文件配置方式
+    //"web":"web.json",
+    //实例配置，用于IoC
+    "instance":{
+        //模块基础路径(可选配置)，模块从该路径中加载，配置该路径后，模块路径采用相对路径配置，
+        // 注：该路径为js路径，而不是ts路径，相对于项目根目录
+        "module_path":["/dist/test/app/module"],
+        //实例数组，两种配置方式，如果数组元素为字符串，则加载符合路径规则的所有模块，
+        //如果为对象，则单个加载模块
+        //所有模块必须为class
+        "instances":[
+            //字符串模式，加载符合路径规则的js文件，该路径相对于项目根目录，
+            //支持通配符*，**表示自己及所有子孙目录。
+            //采用该方式，模块类必须用@Instance或@Router注解
+            "/dist/test/app/module/**/*.js",
+            //对象模式，加载单个模块
+            {
+                "name":"logAdvice",             //实例名，不可重复，必填
+                "class":"LogAdvice",            //类名，必填
+                "path":"advice/logadvice",      //模块路径，相对于module_path中的路径，必填
+                "singleton":true,               //是否单例，布尔型，默认true,
+                "properties":[                  //注入对象
+                    {
+                        "name":"commonTool",    //属性名
+                        "ref":"commInstanceTool"//引用实例名
+                    }
+                ]
+            }
+        ],
+        //实例配置子路径(可选配置)，路径相对于初始的config路径(该路径在noomi初始化时传入，默认/config)
+        //当模块过多时，可采用该方式分路径配置
+        "files":["context/action.json"]
+    },
+    //aop配置，如果为注解方式，则不用配置
+    "aop":{
+        //子文件列表，表示可以加载的子aop文件
+        "files":[],  
+        //切点，可以配置多个
+        "pointcuts":[{
+            //切点id，必填，不可重复
+            "id":"pointcut1",
+            //表达式，必填，符合该表达式的方法会被拦截，可以采用通配符
+            //如下，第一个表示拦截实例名为userService的getInfo方法
+            //第二个表示拦截实例名以service开头的所有实例的所有方法（实例必须加入实例工厂，即用注解或在instance中配置）
+            "expressions":["userService.getInfo","service*.*"]   
+        }],
+        //切面，可以多个
+        "aspects":[
+            {
+                //切面对应的实例名，必填
+                "instance":"logAdvice",
+                //通知，必填
+                //所有通知对应的方法，传入参数为被拦截方法的相关信息，格式为{instanceName:实例名,methodName:方法名,params:参数数组}
+                //after-return增加 returnValue:结果
+                //sfter-throw增加 throwValue:异常信息
+                "advices":[
+                    {
+                        //通知对应的切点
+                        "pointcut_id":"pointcut1",	
+                        //通知类型，字符串，必填，取值范围:before(前置),after(后置),after-return(正常return),after-throw(抛出异常),around(环绕，即前后置)
+                        "type":"before",
+                        //该切面的方法名，字符串，必填
+                        "method":"before"
+                    },{
+                        "pointcut_id":"pointcut1",
+                        "type":"after",
+                        "method":"after"
+                    },{
+                        "pointcut_id":"pointcut1",
+                        "type":"after-return",
+                        "method":"afterReturn"
+                    },{
+                        "pointcut_id":"pointcut1",
+                        "type":"after-throw",
+                        "method":"throw"
+                    },{
+                        "pointcut_id":"pointcut1",
+                        "type":"around",
+                        "method":"around"
+                    }	
+                ]
+            }
+        ]
+    },
+    //aop文件配置方式
+    // "aop":"aop.json",
 
-	//实例配置，文件方式
-	//"instance":"instance.json", 
-	//数据库配置，如果不需要使用数据库，则不用配置
-	"database":{
-		//数据库产品，字符串，可选值：mysql,oracle,mssql,mongodb,sequelize，typeorm默认mysql
-		"product":"mysql",
-		//连接管理器实例名，字符串，如果不设置，则根据product自动生成，如product为mysql，
-		//则connection_manager为mysqlConnectionManager，
-		//可以使用自定义connection_mananger，需实现ConnectionManager接口
-		// "connection_manager":"mysqlConnectionManager", 
-		//是否使用数据库连接池，如果设置为true，则options选项需按照数据库产品的连接规则设置连接池相关属性，
-		//此设置对mssql、sequelize、typeorm无效，mssql仅支持连接池的连接方式。sequelzie和typeorm由配置文件内部设置
-		"use_pool":true,
-		//数据库连接属性，请参考各数据库产品的连接设置方式
-		"options":{
-			"host":"localhost",
-			"port":3306,
-			"user":"root",
-			"password":"field",
-			"database":"codement",
-			"connectionLimit":10
-		},
-		//事务设置，当存在该项时，noomi开启事务嵌套能力
-		"transaction":{
-			//事务实例名，如果不设置，则根据product自动生成，如果自定义事务，请继承Transaction接口
-		  	// "transaction":"mysqlTransaction",
-			//隔离级, 针对sequelzie，如果为数据库，则执行数据库的隔离级 
-			//取值: 1 read uncommited, 2 read commited, 3 repeatable read, 4 serializable
-			// "isolation_level":2,
-			//方法表达式，符合表达式条件的方法会被设置为事务方法，调用时该方法涉及的数据库操作会加入事务执行，当出现异常时，会进行事务回滚
-			//如下所示，如果实例名以service开头，其下所有方法都将作为事务方法
-			// "expressions":["service*.*"]
-		}
-	},
-	//数据库配置，文件方式
-	//"database":"database_mysql.json",
-	//路由配置(可选配置)，如果采用注解方式设置路由，则不用配置
-	"route":{
-		//路由命名空间，命名空间+路由路径=实际路由路径
-		"namespace":"",
-		//子文件，相对于configPath路径
-		"files":["route/subroute.json"],    
-		//路由配置
-		"routes":[              			
-			{
-				//路径（通过浏览器访问的路径），字符串，必填，以/开头
-				//如果路径最后为*，表示该实例下的方法匹配
-				//如 /upload_*，则/upload_add表示调用uploadAction实例的add方法
-				"path":"/upload",				
-				"instance_name":"uploadAction", //实例名，字符串，必填
-				"method":"upload",              //方法，字符串，可选，当path中带
-				//路由结果集，如果不填，则默认为json，方法return值（必须为json格式）将回写到请求端
-				"results":[{
-					//方法返回值，如果return 1，则调用该路由结果
-					"value":1, 					
-					//返回类型，字符串，可选值：redirect(重定向),chain(路由链),none(什么都不做),json(回写json到请求端)，默认json
-					"type":"redirect",		
-					//如果type为redirect和chain，则此项必填
-					//为redirect，则为页面或路由路径，为chain时，必须为路由路径
-					//url支持参数，如 ${page}，则表示用当前路由对应的实例中的page属性值作为url
-					"url":"/user/showinfo",
-					//参数列表，如果url为路由路径，则会从现路由对应的实例中取参数列表对应的属性值并作为参数传递到下个路由
-					"params":["userName"]
-				},{
-					//方法返回值，如果return 2，则调用该路由结果
-					"value":2,
-					"type":"chain",
-					"url":"/user/last",
-					"params":["type"]
-				}]
-			}
-		]
-	},
-	//路由配置，文件方式
-	// "route":"route.json",
-	//过滤器配置
-	"filter":{
-		"filters":[
-			{
-				"instance_name":"pathFilter",   //实例名，必填
-				"url_pattern":"/*",             //过滤url，支持通配符*，默认 "/*"
-				"method_name":"do2"             //实例中的方法名，默认do
-			} 
-		]
-	},
-	//过滤器文件配置方式
-	// "filter":"filter.json",
-	//redis配置，当缓存、session、security采用存储方式为1时，必须设置
-	//请参考npm redis中的redis设置
-	"redis":[{
-		"name":"default",
-		"host":"localhost",
-		"port":"6379"
-	}],
-	//redis文件配置方式
-	// "redis":"redis.json",
-	//安全框架配置，当需要使用noomi的安全框架时，需要配置
-	"security":{
-		"save_type":0,              //同session配置
-		"max_size":10000000,        //同session配置
-		"redis":"default",          //同session配置
-		//过滤器针对的路由路径，如果不设置，则默为/*，表示拦截所有请求(只针对路由)
-		//"expressions":["/*"], 
-		//数据库相关设置
-		"dboption":{
-			//数据库连接设置，如果没有配置database，则此项必填，否则使用数据库配置中的数据库connection manager
-			// "conn_cfg":{
-			//     "user":"root",
-			//     "password":"field",
-			//     "host":"localhost",
-			//     "database":"codement"
-			// },
-			//鉴权相关数据表名字映射，如果与默认值相同，则不用配置，数据表结构详情请参考安全管理器节
-			"tables":{
-				"groupAuthority":"t_group_authority",       //组权限表名，默认t_group_authority
-				"resource":"t_resource",                    //资源表名，默认t_resource
-				"resourceAuthority":"t_resource_authority"  //资源权限表名，默认t_resource_authority
-			},
-			//鉴权相关字段名映射，如果与默认值相同，则不用配置
-			"columns":{
-				"resourceId":"resource_id",                 //资源id字段名，默认resource_id
-				"authorityId":"authority_id",               //权限id字段名，默认authority_id
-				"resourceUrl":"url",                        //资源url字段名，默认url
-				"groupId":"group_id"                        //组id字段名，默认group_id
-			}
-		},
+    //实例配置，文件方式
+    //"instance":"instance.json", 
+    //数据库配置，如果不需要使用数据库，则不用配置
+    "database":{
+        //数据库产品，字符串，可选值：mysql,oracle,mssql,mongodb,sequelize，typeorm默认mysql
+        "product":"mysql",
+        //连接管理器实例名，字符串，如果不设置，则根据product自动生成，如product为mysql，
+        //则connection_manager为mysqlConnectionManager，
+        //可以使用自定义connection_mananger，需实现ConnectionManager接口
+        // "connection_manager":"mysqlConnectionManager", 
+        //是否使用数据库连接池，如果设置为true，则options选项需按照数据库产品的连接规则设置连接池相关属性，
+        //此设置对mssql、sequelize、typeorm无效，mssql仅支持连接池的连接方式。sequelzie和typeorm由配置文件内部设置
+        "use_pool":true,
+        //数据库连接属性，请参考各数据库产品的连接设置方式
+        "options":{
+            "host":"localhost",
+            "port":3306,
+            "user":"root",
+            "password":"field",
+            "database":"codement",
+            "connectionLimit":10
+        },
+        //事务设置，当存在该项时，noomi开启事务嵌套能力
+        "transaction":{
+            //事务实例名，如果不设置，则根据product自动生成，如果自定义事务，请继承Transaction接口
+              // "transaction":"mysqlTransaction",
+            //隔离级, 针对sequelzie，如果为数据库，则执行数据库的隔离级 
+            //取值: 1 read uncommited, 2 read commited, 3 repeatable read, 4 serializable
+            // "isolation_level":2,
+            //方法表达式，符合表达式条件的方法会被设置为事务方法，调用时该方法涉及的数据库操作会加入事务执行，当出现异常时，会进行事务回滚
+            //如下所示，如果实例名以service开头，其下所有方法都将作为事务方法
+            // "expressions":["service*.*"]
+        }
+    },
+    //数据库配置，文件方式
+    //"database":"database_mysql.json",
+    //路由配置(可选配置)，如果采用注解方式设置路由，则不用配置
+    "route":{
+        //路由命名空间，命名空间+路由路径=实际路由路径
+        "namespace":"",
+        //子文件，相对于configPath路径
+        "files":["route/subroute.json"],    
+        //路由配置
+        "routes":[              			
+            {
+                //路径（通过浏览器访问的路径），字符串，必填，以/开头
+                //如果路径最后为*，表示该实例下的方法匹配
+                //如 /upload_*，则/upload_add表示调用uploadAction实例的add方法
+                "path":"/upload",				
+                "instance_name":"uploadAction", //实例名，字符串，必填
+                "method":"upload",              //方法，字符串，可选，当path中带
+                //路由结果集，如果不填，则默认为json，方法return值（必须为json格式）将回写到请求端
+                "results":[{
+                    //方法返回值，如果return 1，则调用该路由结果
+                    "value":1, 					
+                    //返回类型，字符串，可选值：redirect(重定向),chain(路由链),none(什么都不做),json(回写json到请求端)，默认json
+                    "type":"redirect",		
+                    //如果type为redirect和chain，则此项必填
+                    //为redirect，则为页面或路由路径，为chain时，必须为路由路径
+                    //url支持参数，如 ${page}，则表示用当前路由对应的实例中的page属性值作为url
+                    "url":"/user/showinfo",
+                    //参数列表，如果url为路由路径，则会从现路由对应的实例中取参数列表对应的属性值并作为参数传递到下个路由
+                    "params":["userName"]
+                },{
+                    //方法返回值，如果return 2，则调用该路由结果
+                    "value":2,
+                    "type":"chain",
+                    "url":"/user/last",
+                    "params":["type"]
+                }]
+            }
+        ]
+    },
+    //路由配置，文件方式
+    // "route":"route.json",
+    //过滤器配置
+    "filter":{
+        "filters":[
+            {
+                "instance_name":"pathFilter",   //实例名，必填
+                "url_pattern":"/*",             //过滤url，支持通配符*，默认 "/*"
+                "method_name":"do2"             //实例中的方法名，默认do
+            } 
+        ]
+    },
+    //过滤器文件配置方式
+    // "filter":"filter.json",
+    //redis配置，当缓存、session、security采用存储方式为1时，必须设置
+    //请参考npm redis中的redis设置
+    "redis":[{
+        "name":"default",
+        "host":"localhost",
+        "port":"6379"
+    }],
+    //redis文件配置方式
+    // "redis":"redis.json",
+    //安全框架配置，当需要使用noomi的安全框架时，需要配置
+    "security":{
+        "save_type":0,              //同session配置
+        "max_size":10000000,        //同session配置
+        "redis":"default",          //同session配置
+        //过滤器针对的路由路径，如果不设置，则默为/*，表示拦截所有请求(只针对路由)
+        //"expressions":["/*"], 
+        //数据库相关设置
+        "dboption":{
+            //数据库连接设置，如果没有配置database，则此项必填，否则使用数据库配置中的数据库connection manager
+            // "conn_cfg":{
+            //     "user":"root",
+            //     "password":"field",
+            //     "host":"localhost",
+            //     "database":"codement"
+            // },
+            //鉴权相关数据表名字映射，如果与默认值相同，则不用配置，数据表结构详情请参考安全管理器节
+            "tables":{
+                "groupAuthority":"t_group_authority",       //组权限表名，默认t_group_authority
+                "resource":"t_resource",                    //资源表名，默认t_resource
+                "resourceAuthority":"t_resource_authority"  //资源权限表名，默认t_resource_authority
+            },
+            //鉴权相关字段名映射，如果与默认值相同，则不用配置
+            "columns":{
+                "resourceId":"resource_id",                 //资源id字段名，默认resource_id
+                "authorityId":"authority_id",               //权限id字段名，默认authority_id
+                "resourceUrl":"url",                        //资源url字段名，默认url
+                "groupId":"group_id"                        //组id字段名，默认group_id
+            }
+        },
         "auth_fail_url":"/pages/error/403.html",            //鉴权失败页面路径，必填
         "login_url":"/pages/login.html"                     //登录页面，必填
-	},
-	//安全框架，文件方式
-	// "security":"security.json"
+    },
+    //安全框架，文件方式
+    // "security":"security.json"
 }
 ```
 

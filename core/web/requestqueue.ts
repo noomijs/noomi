@@ -4,6 +4,7 @@ import { RouteFactory } from "../main/route/routefactory";
 import { FilterFactory } from "./filterfactory";
 import { StaticResource } from "./staticresource";
 import { App } from "../tools/application";
+import { PageFactory } from "../tools/pagefactory";
 
 /**
  * request 队列
@@ -73,19 +74,30 @@ class RequestQueue{
             return;
         }
         //过滤器执行
-        FilterFactory.doChain(request.url,request,request.response).then((r)=>{
-            if(r){
-                //获得路由，可能没有，则归属于静态资源
+        FilterFactory.doChain(request.url,request,request.response).then(async (r)=>{
+            if(!r){
+                return;
+            }
+            let code = await StaticResource.load(request,request.response,path);
+            if(code === 404){
+                //获得路由，可能没有，则
                 let route = RouteFactory.getRoute(path);
-                //路由资源
-                if(route !== null){
+                if(route === null){
+                    code = 404;
+                }else{
                     //参数
-                    request.init().then((params)=>{
-                        //路由调用
-                        RouteFactory.handleRoute(route,params,request,request.response);
-                    });    
-                }else{ //静态资源
-                    StaticResource.load(request,request.response,path);
+                    let params = await request.init();
+                    code = RouteFactory.handleRoute(path,params,request,request.response);
+                }
+                if(code !== 0){
+                    let page = PageFactory.getErrorPage(code);
+                    if(page){
+                        request.response.redirect(page);
+                    }else{
+                        request.response.writeToClient({
+                            statusCode:code
+                        });
+                    }
                 }
             }
         });

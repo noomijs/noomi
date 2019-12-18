@@ -91,7 +91,7 @@ class WebCache{
             }    
         }
         
-        let data:any;
+        let data:string|undefined;
         if(addFlag){
             //读数据
             data = await new Promise((resolve,reject)=>{
@@ -141,7 +141,7 @@ class WebCache{
      * @param url       url
      * @return          0不用回写数据 或 {data:data,type:mimetype}
      */
-    static async load(request:HttpRequest,response:HttpResponse,url:string):Promise<any>{
+    static async load(request:HttpRequest,response:HttpResponse,url:string):Promise<number|object>{
         let rCheck:number = await this.check(request,url);
         switch(rCheck){
             case 0:
@@ -203,7 +203,7 @@ class WebCache{
             return 2;
         }
         //检测 lastmodified
-        let modiSince:string = request.getHeader('if-modified-since');
+        let modiSince = request.getHeader('if-modified-since');
         let r:boolean = false;
         if(modiSince){
             let result = await this.cache.get(url,'lastModified');

@@ -2,6 +2,7 @@ import {Sequelize as SequelizeOrigin} from 'sequelize';
 import { Sequelize } from "sequelize-typescript";
 import { TransactionManager } from "./transactionmanager";
 import { App } from '../tools/application';
+import { Util } from '../tools/util';
 
 /**
  * 连接管理器
@@ -19,7 +20,7 @@ class SequelizeConnectionManager{
         if(cfg.models && Array.isArray(cfg.models)){
             cfg.models.forEach((item,i)=>{
                 if(typeof item === 'string'){
-                    cfg.models[i] = App.path.posix.join(process.cwd(),item);
+                    cfg.models[i] = Util.getAbsPath([item]);
                 }
             });
         }
@@ -49,6 +50,5 @@ class SequelizeConnectionManager{
         }
     }
 }
-
 
 export{SequelizeConnectionManager}

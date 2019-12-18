@@ -4,16 +4,18 @@ import { AopFactory } from "./aopfactory";
 import { FilterFactory } from "../web/filterfactory";
 import { HttpRequest } from "../web/httprequest";
 import { Server } from "net";
-import { SecurityFactory } from "../tools/securityfactory";
+
 import { IncomingMessage, ServerResponse } from "http";
 import { RedisFactory } from "../tools/redisfactory";
 import { NoomiError,ErrorFactory } from "../tools/errorfactory";
 import { WebConfig } from "../web/webconfig";
 import { RequestQueue } from "../web/requestqueue";
 import { DBManager } from "../database/dbmanager";
-import { App } from "../tools/application";
 import { NoomiTip_zh } from "../locales/msg_zh";
 import { NoomiTip_en } from "../locales/msg_en";
+import { Util } from "../tools/util";
+import { App } from "../tools/application";
+import { SecurityFactory } from "../tools/securityfactory";
 
 class Noomi{
     port:number;            //http port
@@ -39,7 +41,7 @@ class Noomi{
         console.log('Server is startup ...');
         let iniJson:object = null;
         try{
-            let iniStr = App.fs.readFileSync(App.path.posix.join(process.cwd(),basePath,'noomi.json'),'utf-8');
+            let iniStr = App.fs.readFileSync(Util.getAbsPath([basePath,'noomi.json']),'utf-8');
             iniJson = App.JSON.parse(iniStr);
         }catch(e){
             throw new NoomiError("1001") +'\n' +  e;
@@ -48,6 +50,7 @@ class Noomi{
         if(iniJson === null){
             throw new NoomiError("1001");
         }
+        App.appName = iniJson['app_name']||'APP';
         let language:string = iniJson['language'] || 'zh';
         let msgTip:object;
         switch(language){
@@ -61,6 +64,12 @@ class Noomi{
         //异常
         ErrorFactory.init(language);
 
+        //设置是否集群
+        App.isCluster = iniJson['cluster']===true?true:false;
+        if(App.isCluster && iniJson['redis'] === undefined){
+            throw new NoomiError("0600");
+        }
+        
         //redis初始化
         if(iniJson.hasOwnProperty('redis')){
             console.log(msgTip["0101"]);
@@ -68,7 +77,7 @@ class Noomi{
             if(typeof cfg === 'object'){  //配置为对象
                 RedisFactory.init(cfg);    
             }else{          //配置为路径
-                RedisFactory.parseFile(App.path.posix.join(basePath,cfg));
+                RedisFactory.parseFile(Util.getAbsPath([basePath,cfg]));
             }
             console.log(msgTip["0102"]);
         }
@@ -80,7 +89,7 @@ class Noomi{
             if(typeof cfg === 'object'){  //配置为对象
                 WebConfig.init(cfg);    
             }else{          //配置为路径
-                WebConfig.parseFile(App.path.posix.join(basePath,cfg));
+                WebConfig.parseFile(Util.getAbsPath([basePath,cfg]));
             }
             console.log(msgTip["0104"]);
         }
@@ -90,7 +99,7 @@ class Noomi{
             console.log(msgTip["0105"]);
             let cfg = iniJson['instance'];
             if(typeof cfg === 'string'){
-                cfg = App.path.posix.join(basePath,cfg);
+                cfg = Util.getAbsPath([basePath,cfg]);
             }
             InstanceFactory.init(cfg);
             console.log(msgTip["0106"]);
@@ -103,7 +112,7 @@ class Noomi{
             if(typeof cfg === 'object'){  //配置为对象
                 FilterFactory.init(cfg);    
             }else{          //配置为路径
-                FilterFactory.parseFile(App.path.posix.join(basePath,cfg));
+                FilterFactory.parseFile(Util.getAbsPath([basePath,cfg]));
             }
             console.log(msgTip["0108"]);
         }
@@ -115,7 +124,7 @@ class Noomi{
             if(typeof cfg === 'object'){  //配置为对象
                 RouteFactory.init(cfg);    
             }else{          //配置为路径
-                RouteFactory.parseFile(App.path.posix.join(basePath,cfg));
+                RouteFactory.parseFile(Util.getAbsPath([basePath,cfg]));
             }
             console.log(msgTip["0110"]);
         }
@@ -128,7 +137,7 @@ class Noomi{
             if(typeof cfg === 'object'){  //配置为对象
                 DBManager.init(cfg);    
             }else{          //配置为路径
-                DBManager.parseFile(App.path.posix.join(basePath,cfg));
+                DBManager.parseFile(Util.getAbsPath([basePath,cfg]));
             }
             
             console.log(msgTip["0112"]);
@@ -141,7 +150,7 @@ class Noomi{
             if(typeof cfg === 'object'){  //配置为对象
                 AopFactory.init(cfg);    
             }else{          //配置为路径
-                AopFactory.parseFile(App.path.posix.join(basePath,cfg));
+                AopFactory.parseFile(Util.getAbsPath([basePath,cfg]));
             }
             console.log(msgTip["0114"]);
         }
@@ -153,7 +162,7 @@ class Noomi{
             if(typeof cfg === 'object'){  //配置为对象
                 await SecurityFactory.init(cfg);    
             }else{          //配置为路径
-                await SecurityFactory.parseFile(App.path.posix.join(basePath,cfg));
+                await SecurityFactory.parseFile(Util.getAbsPath([basePath,cfg]));
             }
             console.log(msgTip["0116"]);
         }

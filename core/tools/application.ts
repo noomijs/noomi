@@ -1,4 +1,5 @@
 export class App {
+    static appName:string='APP';          //应用名
     static http = require('http');
     static fs = require('fs');
     static path = require('path');
@@ -11,4 +12,5 @@ export class App {
     static redis = require('redis');
     static JSON = require('json5');
     static configPath:string;
+    static isCluster:boolean = false;       //应用是否部署为为集群
 }

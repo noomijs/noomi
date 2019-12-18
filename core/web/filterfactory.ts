@@ -2,13 +2,15 @@ import { InstanceFactory } from "../main/instancefactory";
 import { NoomiError } from "../tools/errorfactory";
 import { Util } from "../tools/util";
 import { App } from "../tools/application";
+import { HttpRequest } from "./httprequest";
+import { HttpResponse } from "./httpresponse";
 
 interface FilterConfig{
     instance_name?:string;  //实例名(与instance二选一)
     method_name?:string;    //方法名,默认do
-    url_pattern?:any;       //正则表达式串，或数组
+    url_pattern?:string|Array<string>;       //正则表达式串，或数组
     instance?:any;          //实例
-    order?:number;           //优先级，越小越高
+    order?:number;          //优先级，越小越高
 }
 
 /**
@@ -67,8 +69,8 @@ class FilterFactory{
      */
     static parseFile(path:string):void{
         //读取文件
-        let jsonStr:string = App.fs.readFileSync(App.path.posix.join(process.cwd(),path),'utf-8');
-        let json:any = null;
+        let jsonStr:string = App.fs.readFileSync(path,'utf-8');
+        let json:object = null;
         try{
             json = App.JSON.parse(jsonStr);
         }catch(e){
@@ -116,7 +118,7 @@ class FilterFactory{
      * @param response  httpresponse
      * @param           promise boolean
      */
-    static async doChain(url:string,request:any,response:any):Promise<boolean>{
+    static async doChain(url:string,request:HttpRequest,response:HttpResponse):Promise<boolean>{
         let arr:Array<Filter> = FilterFactory.getFilterChain(url);
         if(arr.length === 0){
             return true;

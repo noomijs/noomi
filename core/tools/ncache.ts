@@ -1,6 +1,7 @@
 import { NoomiError } from "./errorfactory";
 import { RedisFactory } from "./redisfactory";
 import { Util } from "./util";
+import { App } from "./application";
 
 /**
  * cache类
@@ -36,8 +37,14 @@ export class NCache{
      * @param maxSize 
      */
     constructor(cfg:CacheCfg){
-        this.saveType = cfg.saveType || 0;
-        this.name = cfg.name;
+        //如果为App为集群，则saveType为1，否则为设置值
+        if(App.isCluster){
+            this.saveType = 1;
+        }else{
+            this.saveType = cfg.saveType || 0;
+        }
+        
+        this.name = App.appName + '_' + cfg.name;
         this.redis = cfg.redis;
         
         if(this.saveType === 0){
@@ -282,7 +289,6 @@ class MemoryCache{
                 ci.value = Object.create(null);
             }
             let v:string;
-            let size:number = this.getRealSize(v);
             //转字符串
             if(typeof item.value === 'object'){
                 v = JSON.stringify(item.value);

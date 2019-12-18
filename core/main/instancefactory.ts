@@ -80,7 +80,7 @@ class InstanceFactory{
         //从路径加载模块
         if(cfg.path && typeof cfg.path === 'string' && (path=cfg.path.trim()) !== ''){  
             for(let mdlPath of this.mdlBasePath){
-                mdl = require(App.path.posix.join(process.cwd(),mdlPath,path));
+                mdl = require(Util.getAbsPath([mdlPath,path]));
                 //支持ts和js,ts编译后为{className:***},js直接输出为class
                 //找到则退出
                 if(mdl){
@@ -266,7 +266,7 @@ class InstanceFactory{
      */
     static parseFile(path:string){
         //读取文件
-        let jsonStr:string = App.fs.readFileSync(App.path.posix.join(process.cwd(),path),'utf-8');
+        let jsonStr:string = App.fs.readFileSync(path,'utf-8');
         let json:InstanceJSON = null;
 
         try{
@@ -304,7 +304,7 @@ class InstanceFactory{
         //子文件
         if(Array.isArray(json.files)){
             json.files.forEach((item)=>{
-                this.parseFile(App.path.posix.resolve(App.configPath,item));
+                this.parseFile(Util.getAbsPath([App.configPath,item]));
             });
         }
 

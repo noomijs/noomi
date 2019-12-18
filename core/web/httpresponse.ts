@@ -89,14 +89,23 @@ export class HttpResponse extends ServerResponse{
         });
     }
     /**
-     * 写header
-     * @param key 
-     * @param value 
+     * 设置header
+     * @param key       键
+     * @param value     值
      */
-    setHeader(key:string,value:any){
+    setHeader(key:string,value:number|string|string[]){
         this.srcRes.setHeader(key,value);
     }
     
+    /**
+     * 写header
+     * @param key 
+     * @return     返回值
+     */
+    getHeader(key:string):number|string|string[]{
+        return this.srcRes.getHeader(key);
+    }
+
     /**
      * 重定向
      * @param response      

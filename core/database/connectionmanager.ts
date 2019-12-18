@@ -1,6 +1,8 @@
 import { DBManager } from "./dbmanager";
 import { TransactionManager } from "./transactionmanager";
-import { EntityManager } from "typeorm";
+import { EntityManager, Connection } from "typeorm";
+import { Sequelize } from "sequelize-typescript";
+import { SqlInMemory } from "typeorm/driver/SqlInMemory";
 
 
 interface ConnectionManager{
@@ -14,7 +16,7 @@ interface ConnectionManager{
  * 获取数据库或数据源连接
  * @return          promise connection
  */
-async function getConnection():Promise<any>{
+async function getConnection():Promise<Sequelize|Connection|any>{
     let instance = DBManager.getConnectionManager();
     if(instance && typeof instance.getConnection === 'function'){
         let conn = await instance.getConnection();

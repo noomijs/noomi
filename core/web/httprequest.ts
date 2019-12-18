@@ -4,11 +4,12 @@ import { HttpResponse } from "./httpresponse";
 import { WebConfig } from "./webconfig";
 import { WriteStream } from "fs";
 import { App } from "../tools/application";
+import { Util } from "../tools/util";
 
 class HttpRequest extends IncomingMessage{
     srcReq:IncomingMessage;             //源request
     response:HttpResponse;            //response
-    parameters:any = new Object();      //参数
+    parameters:object = new Object();      //参数
     
     constructor(req:IncomingMessage,res:ServerResponse){
         super(req.socket);
@@ -25,7 +26,7 @@ class HttpRequest extends IncomingMessage{
      * 初始化
      * @return     promise 请求参数
      */
-    async init():Promise<any>{
+    async init():Promise<object>{
         //非 post
         if(this.method !== 'POST'){
             return this.parameters;
@@ -51,7 +52,7 @@ class HttpRequest extends IncomingMessage{
      * 获取header信息
      * @param key       header参数 name
      */
-    getHeader(key:string):any{
+    getHeader(key:string):string | string[] | undefined{
         return this.srcReq.headers[key];
     }
 
@@ -83,7 +84,7 @@ class HttpRequest extends IncomingMessage{
      * @param name      参数名
      * @return          参数值
      */
-    getParameter(name:string):any{
+    getParameter(name:string):string{
         return this.parameters[name];
     }
 
@@ -115,7 +116,7 @@ class HttpRequest extends IncomingMessage{
      * 处理输入流
      * @param stream 
      */ 
-    formHandle(req:IncomingMessage):Promise<any>{
+    formHandle(req:IncomingMessage):Promise<object>{
         //非文件multipart/form-data方式
         if(req.headers['content-type'].indexOf('multipart/form-data') === -1){
             return new Promise((resolve,reject)=>{
@@ -132,7 +133,7 @@ class HttpRequest extends IncomingMessage{
 
         let contentLen:number = parseInt(req.headers['content-length']);
         let maxSize:number = WebConfig.get('upload_max_size');
-        let tmpDir:number = WebConfig.get('upload_tmp_dir');
+        let tmpDir:string = WebConfig.get('upload_tmp_dir');
         
         //不能大于max size
         if(maxSize > 0 && contentLen > maxSize){
@@ -142,10 +143,10 @@ class HttpRequest extends IncomingMessage{
         let dispLineNo:number = 0;          //字段分割行号，共三行
         let isFile:boolean = false;         //是否文件字段
         let dataKey:string;                 //字段名
-        let value:any;                      //字段值
+        let value:string|object;            //字段值
         let dispLine:Buffer;                //分割线
         let startField:boolean = false;     //新字段开始
-        let returnObj:any = {};             //返回对象
+        let returnObj:object = {};             //返回对象
         let writeStream:WriteStream;        //输出流
         let oldRowChar:string='';              //上一行的换行符
         
@@ -162,7 +163,6 @@ class HttpRequest extends IncomingMessage{
                 //最后一行数据
                 if(lData){
                     handleLine(lData);
-                    console.log(lData.toString('utf8'));
                 }
                 resolve(returnObj);
             });
@@ -272,7 +272,7 @@ class HttpRequest extends IncomingMessage{
                             let fn = a1[1].trim();
                             let fn1 = fn.substring(1,fn.length-1);
                             let fn2 = App.uuid.v1() + fn1.substr(fn1.lastIndexOf('.'));
-                            let filePath = App.path.posix.join(process.cwd(),tmpDir,fn2);
+                            let filePath = Util.getAbsPath([tmpDir,fn2]);
                             value = {
                                 fileName:fn1,
                                 path:filePath
@@ -283,7 +283,7 @@ class HttpRequest extends IncomingMessage{
                         return;
                     case 2: //第二行（空或者文件类型）
                         if(isFile){  //文件字段
-                            value.fileType = line.substr(line.indexOf(':')).trim();
+                            value['fileType'] = line.substr(line.indexOf(':')).trim();
                         }
                         dispLineNo = 3;
                         return;

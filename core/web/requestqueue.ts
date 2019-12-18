@@ -51,7 +51,7 @@ class RequestQueue{
             return;
         } 
             
-        let item:any = this.queue.shift();
+        let item:RequestItem = this.queue.shift();
         if(item.expire === 0 || item.expire > new Date().getTime()){
             this.handleOne(item.req);
         }

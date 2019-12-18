@@ -111,7 +111,7 @@ class SessionFactory {
      */
     static getSessionId(req: HttpRequest): string {
         let cookies = {};
-        let cook = req.getHeader('cookie');
+        let cook:any = req.getHeader('cookie');
         cook && cook.split(';').forEach(parms => {
             let parts = parms.split('=');
             cookies[parts[0].trim()] = (parts[1] || '').trim();

@@ -34,13 +34,13 @@ class StaticResource{
             return 404;
         }
         let errCode:number;
-        let data:any;           //file data
+        let data:string;           //file data
         let mimeType:string;    //mimetype
         //静态资源
     
-        let filePath = App.path.posix.join(process.cwd(),path);
+        let filePath = Util.getAbsPath([path]);
         if(WebConfig.useServerCache){ //从缓存取，如果用浏览器缓存数据，则返回0，不再操作
-            let ro = await WebCache.load(request,response,path);
+            let ro:number|object = await WebCache.load(request,response,path);
             if(ro === 0){
                 //回写没修改标志
                 response.writeToClient({
@@ -55,7 +55,7 @@ class StaticResource{
             if(!App.fs.existsSync(filePath) || !App.fs.statSync(filePath).isFile()){
                 errCode = 404;
             }else{
-                let cacheData:any;
+                let cacheData:object;
                 //存到cache
                 if(WebConfig.useServerCache){
                     cacheData = await WebCache.add(path,filePath,response);
@@ -70,8 +70,8 @@ class StaticResource{
                     });
                 }else{
                     response.writeToClient({
-                        data:cacheData.data,
-                        type:cacheData.type
+                        data:cacheData['data'],
+                        type:cacheData['type']
                     });
                 }
             }
@@ -86,7 +86,7 @@ class StaticResource{
     static addPath(paths:any){
         if(!Array.isArray(paths)){
             if(typeof paths === 'string'){
-                if(App.fs.existsSync(App.path.posix.join(process.cwd(),paths))){
+                if(App.fs.existsSync(Util.getAbsPath([paths]))){
                     this.staticMap.set(paths,Util.toReg(paths,1));
                 }
             }

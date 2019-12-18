@@ -4,6 +4,7 @@ import { SessionFactory } from "./sessionfactory";
 import { App } from "../tools/application";
 import { PageFactory } from "../tools/pagefactory";
 import { StaticResource } from "./staticresource";
+import { Util } from "../tools/util";
 
 /**
  * web 配置
@@ -70,8 +71,8 @@ export class WebConfig{
                 this.useHttps = true;
                 this.httpsCfg = {
                     'only_https':opt['only_https'],
-                    'key_file':App.path.posix.join(process.cwd(),opt['key_file']),
-                    'cert_file':App.path.posix.join(process.cwd(),opt['cert_file'])
+                    'key_file':Util.getAbsPath([opt['key_file']]),
+                    'cert_file':Util.getAbsPath([opt['cert_file']])
                 }; 
             }
         }
@@ -86,7 +87,7 @@ export class WebConfig{
         //读取文件
         let json:any;
         try{
-            let jsonStr:string = App.fs.readFileSync(App.path.posix.join(process.cwd(),path),'utf-8');
+            let jsonStr:string = App.fs.readFileSync(path,'utf-8');
             json = App.JSON.parse(jsonStr);
         }catch(e){
             throw new NoomiError("2100") + '\n' + e;
@@ -98,12 +99,12 @@ export class WebConfig{
      * 设置异常提示页面
      * @param pages page配置（json数组）
      */
-    static setErrorPages(pages:Array<any>){
+    static setErrorPages(pages:Array<object>){
         if(Array.isArray(pages)){
             pages.forEach((item)=>{
                 //需要判断文件是否存在
-                if(App.fs.existsSync(App.path.posix.join(process.cwd(),item.location))){
-                    PageFactory.addErrorPage(item.code,item.location);
+                if(App.fs.existsSync(Util.getAbsPath([item['location']]))){
+                    PageFactory.addErrorPage(item['code'],item['location']);
                 }
             });
         }

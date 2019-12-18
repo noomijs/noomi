@@ -1,8 +1,10 @@
+import { Code } from "typeorm";
+
 /**
  * 页面工厂
  */
 class PageFactory{
-    static errorPages:any = new Map();      //错误页面集合
+    static errorPages:Map<number,string> = new Map();      //错误页面集合
 
     /**
      * 添加错误提示页

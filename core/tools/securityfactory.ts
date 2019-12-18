@@ -106,7 +106,7 @@ class SecurityFactory{
         let groupId:string;
         let resourceId:string;
         let resourceUrl:string;
-
+        
         if(this.dbOptions){
             if(this.dbOptions.tables){
                 tResource = this.dbOptions.tables['resource'];
@@ -131,7 +131,7 @@ class SecurityFactory{
             resourceId:resourceId || "resource_id",
             resourceUrl:resourceUrl || "url"
         }
-
+        
         let results:Array<any>;
         let product:string = this.dbOptions.product || DBManager.product;
         let connCfg = this.dbOptions?this.dbOptions.conn_cfg:null;
@@ -164,7 +164,6 @@ class SecurityFactory{
             await this.updGroupAuths(p[0],p[1]);
         }
         
-        let resArr:Array<any> = [];
         //资源
         for(let r of results[1]){
             let a = [];
@@ -821,7 +820,7 @@ class SecurityFactory{
         //读取文件
         let json:any = null;
         try{
-            let jsonStr:string = App.fs.readFileSync(App.path.posix.join(process.cwd(),path),'utf-8');
+            let jsonStr:string = App.fs.readFileSync(path,'utf-8');
             json = App.JSON.parse(jsonStr);
             
         }catch(e){

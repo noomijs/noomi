@@ -255,7 +255,7 @@ class TransactionManager{
             instances:Array<any>;       //实例配置数组
         }
         //读取文件
-        let jsonStr:string = App.fs.readFileSync(App.path.posix.join(process.cwd(),path),'utf-8');
+        let jsonStr:string = App.fs.readFileSync(path,'utf-8');
         let json:InstanceJSON = null;
         try{
             json = App.JSON.parse(jsonStr);

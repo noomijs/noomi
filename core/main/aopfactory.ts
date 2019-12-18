@@ -198,7 +198,7 @@ class AopFactory{
     static parseFile(path:string):void{
         
         //读取文件
-        let jsonStr:string = App.fs.readFileSync(App.path.posix.join(process.cwd(),path),'utf-8');
+        let jsonStr:string = App.fs.readFileSync(path,'utf-8');
         let json:DataJson = null;
         try{
             json = App.JSON.parse(jsonStr);

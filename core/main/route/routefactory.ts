@@ -326,13 +326,14 @@ class RouteFactory{
     static init(config:any,ns?:string){
         let ns1 = config.namespace? config.namespace.trim():'';
         //设置命名空间，如果是子文件，需要连接上级文件
-        ns = ns?App.path.posix.join(ns,ns1):ns1;
+        let pa = ns?[ns,ns1]:[ns1]; 
+        ns = Util.getAbsPath(pa);
         
         //处理本级路由
         if(Array.isArray(config.routes)){
             config.routes.forEach((item)=>{
                 //增加namespce前缀
-                let p = App.path.posix.join(ns,item.path);
+                let p = Util.getAbsPath([ns,item.path]);
                 this.addRoute(p,item.instance_name,item.method,item.results);
             });
         }
@@ -340,7 +341,7 @@ class RouteFactory{
         //处理子路径路由
         if(Array.isArray(config.files)){
             config.files.forEach((item)=>{
-                this.parseFile(App.path.posix.join(App.configPath, item),ns);
+                this.parseFile(Util.getAbsPath([App.configPath, item]),ns);
             });
         }
     }
@@ -359,7 +360,7 @@ class RouteFactory{
         //读取文件
         let json:RouteJSON = null;
         try{
-            let jsonStr:string = App.fs.readFileSync(App.path.posix.join(process.cwd(),path),'utf-8');
+            let jsonStr:string = App.fs.readFileSync(path,'utf-8');
             json = App.JSON.parse(jsonStr);
         }catch(e){
             throw new NoomiError("2100") +'\n' + e;

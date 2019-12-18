@@ -1,3 +1,5 @@
+import { App } from "./application";
+
 export class Util{
     /**
      * 字符串转regexp
@@ -24,7 +26,20 @@ export class Util{
                     str = '^' + str + '$';
             }
         }
-        
         return new RegExp(str);
+    }
+
+    /**
+     * 获取绝对路径
+     * @param pa    待处理的字符串数组
+     * @return      字符串数组构成的的绝对地址
+     */
+    static getAbsPath(pa:Array<string>):string{
+        for(let i=0;i<pa.length;i++){
+            if(pa[i].startsWith('/')){
+                pa[i] = pa[i].substr(1);
+            }
+        }
+        return App.path.resolve.apply(null,pa);
     }
 }

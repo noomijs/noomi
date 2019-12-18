@@ -18,7 +18,6 @@ class DBManager{
     static init(cfg:any){
         //数据库默认mysql
         let product:string = cfg.product||'mysql';
-        
         this.product = product;
         //connection manager配置
         let cm:any;
@@ -104,7 +103,7 @@ class DBManager{
         //读取文件
         let json:any = null;
         try{
-            let jsonStr:string = App.fs.readFileSync(App.path.posix.join(process.cwd(),path),'utf-8');
+            let jsonStr:string = App.fs.readFileSync(path,'utf-8');
             json = App.JSON.parse(jsonStr);
             this.init(json);    
         }catch(e){

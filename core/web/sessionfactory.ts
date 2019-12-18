@@ -64,10 +64,8 @@ class SessionFactory {
             id = this.genSessionId();
             needCreate = true;
         }else{
-            let s = await this.cache.get(id);
-            if(s === null){
-                needCreate = true;
-            }
+            needCreate = ! await this.cache.has(id);
+            
         }
         //需要创建
         if(needCreate){

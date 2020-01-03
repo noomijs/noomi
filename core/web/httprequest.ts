@@ -5,12 +5,31 @@ import { WebConfig } from "./webconfig";
 import { WriteStream } from "fs";
 import { App } from "../tools/application";
 import { Util } from "../tools/util";
+import { Socket } from "net";
 
+/**
+ * request类
+ * @remarks
+ * 在IncomingMessage基础上增加了参数解析等方法，更适合直接使用
+ */
 class HttpRequest extends IncomingMessage{
-    srcReq:IncomingMessage;             //源request
-    response:HttpResponse;            //response
-    parameters:object = new Object();      //参数
-    
+    /**
+     * 源IncommingMessage对象(server listen 时传入)，某些需要操纵源IncommingMessage的情况下，可以直接使用
+     */
+    srcReq:IncomingMessage;    
+    /**
+     * http response对象
+     */
+    response:HttpResponse;
+    /**
+     * 参数对象
+     */
+    parameters:object = new Object();
+    /**
+     * 构造器
+     * @param req 源IncommingMessage对象(createServer时传入)
+     * @param res 源ServerResponse对象(createServer时传入)
+     */
     constructor(req:IncomingMessage,res:ServerResponse){
         super(req.socket);
         this.srcReq = req;
@@ -24,14 +43,14 @@ class HttpRequest extends IncomingMessage{
 
     /**
      * 初始化
-     * @return     promise 请求参数
+     * @returns 请求参数
      */
     async init():Promise<object>{
         //非 post
         if(this.method !== 'POST'){
             return this.parameters;
         }
-        let obj = await this.formHandle(this.srcReq);;
+        let obj = await this.formHandle();;
         if(typeof obj === 'object'){
             Object.getOwnPropertyNames(obj).forEach(key=>{
                 //已存在该key，需要做成数组
@@ -49,15 +68,16 @@ class HttpRequest extends IncomingMessage{
     }
 
     /**
-     * 获取header信息
-     * @param key       header参数 name
+     * 获取请求消息头信息
+     * @param key   消息头名，具体取值参考message.headers
+     * @returns     消息值
      */
     getHeader(key:string):string | string[] | undefined{
         return this.srcReq.headers[key];
     }
 
     /**
-     * 获取请求方法
+     * 获取请求方法，入GET、POSt等
      */
     getMethod():string{
         return this.srcReq.method;
@@ -71,6 +91,13 @@ class HttpRequest extends IncomingMessage{
     }
 
     /**
+     * 获取socket，可以通过socket获取远程地址、本地地址等
+     * @returns     socket对象
+     */
+    getSocket():Socket{
+        return this.srcReq.socket;
+    }
+    /**
      * 设置参数
      * @param name      参数名
      * @param value     参数值
@@ -82,7 +109,7 @@ class HttpRequest extends IncomingMessage{
     /**
      * 获取参数
      * @param name      参数名
-     * @return          参数值
+     * @returns         参数值
      */
     getParameter(name:string):string{
         return this.parameters[name];
@@ -90,7 +117,7 @@ class HttpRequest extends IncomingMessage{
 
     /**
      * 获取所有paramter
-     * @return          parameter object
+     * @returns         参数object
      */
     getAllParameters():object{
         return this.parameters;
@@ -105,18 +132,18 @@ class HttpRequest extends IncomingMessage{
     
     /**
      * 获取session
-     * @param request   httprequest
-     * @return          session
+     * @returns   session对象
      */
     async getSession():Promise<Session>{
         return await SessionFactory.getSession(this);
     }
 
     /**
-     * 处理输入流
-     * @param stream 
+     * POST时的参数处理
+     * @returns     参数值对象
      */ 
-    formHandle(req:IncomingMessage):Promise<object>{
+    formHandle():Promise<object>{
+        let req:IncomingMessage = this.srcReq;
         //非文件multipart/form-data方式
         if(req.headers['content-type'].indexOf('multipart/form-data') === -1){
             return new Promise((resolve,reject)=>{
@@ -146,9 +173,9 @@ class HttpRequest extends IncomingMessage{
         let value:string|object;            //字段值
         let dispLine:Buffer;                //分割线
         let startField:boolean = false;     //新字段开始
-        let returnObj:object = {};             //返回对象
+        let returnObj:object = {};          //返回对象
         let writeStream:WriteStream;        //输出流
-        let oldRowChar:string='';              //上一行的换行符
+        let oldRowChar:string='';           //上一行的换行符
         
         return new Promise((resolve,reject)=>{
             let lData:Buffer;

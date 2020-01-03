@@ -10,7 +10,7 @@ import { App } from "../tools/application";
  */
 
 /**
- * 通知
+ * 通知配置
  */
 interface AopAdvice{
     //切点
@@ -24,41 +24,71 @@ interface AopAdvice{
 }
 
 /**
- * 切面
+ * 切面类型
  */
 interface AopAspect{
+    /**
+     * 实例名
+     */
     instance:string;
-    //切点
+    /** 
+     * 切点数组 
+     */
     pointcuts:Array<AopPointcut>;
-    //通知
+    /** 
+     * 通知数组
+     */
     advices:Array<AopAdvice>;
 }
 
-//切点json数据
-interface PointcutJson{
+/** 
+ * 切点数据对象
+ */
+interface PointcutCfg{
+    /**
+     * 切点id
+     */
     id:string;
+    /**
+     * 表达式串
+     */
     expressions:Array<string>;
 }
-//数据json
-interface DataJson{
+/**
+ * aop文件配置对象
+ */
+interface AopCfg{
     files:Array<string>;            //引入文件
-    pointcuts:Array<PointcutJson>;   //切点
+    pointcuts:Array<PointcutCfg>;   //切点
     aspects:Array<AopAspect>;       //切面
 }
 
  /**
-  * aop 切点
+  * aop 切点类
   */
 class AopPointcut{
+    /**
+     * 切点id
+     */
     id:string;
-    proxyClass:any;             //代理类
-    //表达式数组（正则表达式）
+
+    /**
+     * 表达式数组（正则表达式）
+     */
     expressions:Array<RegExp> = [];
+
+    /**
+     * 通知数组
+     */
     advices:Array<AopAdvice> = [];
 
-    constructor(id:string,expressions:Array<string>,proxyClass?:any){
+    /**
+     * 构造器
+     * @param id            切点id(唯一) 
+     * @param expressions   该切点对应的表达式数组，表达式为正则表达式串
+     */
+    constructor(id:string,expressions:Array<string>){
         this.id = id;
-        this.proxyClass = proxyClass || AopProxy;
         if(!expressions){
             throw new NoomiError("2001");
         }
@@ -79,7 +109,7 @@ class AopPointcut{
      * 匹配方法是否满足表达式
      * @param instanceName  实例名
      * @param methodName    待检测方法 
-     * @return              true/false
+     * @returns             匹配返回true，否则返回false
      */
     match(instanceName:string,methodName:string):boolean{
         for(let i=0;i<this.expressions.length;i++){
@@ -90,27 +120,37 @@ class AopPointcut{
         return false;
     }
 
-    
     /**
      * 给切点添加通知
-     * @param advice 
+     * @param advice    通知对象
      */
-    addAdvice(advice:AopAdvice){
+    addAdvice(advice:AopAdvice):void{
         this.advices.push(advice);
     }
 }
 
 /**
- * aop factory
+ * Aop工厂
+ * 用于管理所有切面、切点
  */
 class AopFactory{
-    static aspects:any = new Map();
-    static pointcuts:any = new Map();
-    //是否需要开启更新proxy
-    static needToUpdateProxy:boolean = true;
     /**
-     * 添加切面
+     * 切面map，用于存储所有切面
      */
+    static aspects:any = new Map();
+    /**
+     * 切点map，用于存储所有切点
+     */
+    static pointcuts:any = new Map();
+    /**
+     * 更新proxy开关，如果设置为true，则会在nexttick更新代理，默认true
+     */
+    static needToUpdateProxy:boolean = true;
+
+    /**
+     * 添加一个切面
+     * @param cfg   切面对象 
+     */ 
     static addAspect(cfg:AopAspect):void{
         if(this.aspects.has(cfg.instance)){
             throw new NoomiError("2005",cfg.instance); 
@@ -135,14 +175,13 @@ class AopFactory{
      * 添加切点
      * @param id            切点id 
      * @param expressions   方法匹配表达式数组
-     * @param proxyClass    特定代理类
      */
-    static addPointcut(id:string,expressions:Array<string>,proxyClass?:any):void{
+    static addPointcut(id:string,expressions:Array<string>):void{
         //切点
         if(this.pointcuts.has(id)){
             throw new NoomiError("2003",id);
         }
-        this.pointcuts.set(id,new AopPointcut(id,expressions,proxyClass));
+        this.pointcuts.set(id,new AopPointcut(id,expressions));
         //延迟处理method aop代理，避免某些实例尚未加载，只加一次
         if(this.needToUpdateProxy){
             setImmediate(()=>{
@@ -154,7 +193,7 @@ class AopFactory{
     }
 
     /**
-     * 为pointcut添加expression
+     * 为切点添加表达式
      * @param pointcutId    切点id
      * @param expression    表达式或数组
      */
@@ -176,11 +215,10 @@ class AopFactory{
                 this.addProxyByExpression(reg);
             });
         }
-        
     }
 
     /**
-     * 添加通知
+     * 为切点添加一个通知
      * @param advice 通知配置
      */
     static addAdvice(advice:AopAdvice):void{
@@ -192,31 +230,30 @@ class AopFactory{
     }
 
     /**
+     * @exclude
      * 解析文件
      * @param path  文件路径 
      */
     static parseFile(path:string):void{
-        
         //读取文件
         let jsonStr:string = App.fs.readFileSync(path,'utf-8');
-        let json:DataJson = null;
+        let json:AopCfg = null;
         try{
             json = App.JSON.parse(jsonStr);
         }catch(e){
             throw new NoomiError("2000") + '\n' + e;
         }
-
         this.init(json);
     }
 
     /**
-     * 初始化
-     * @param config 
+     * 初始化切面工厂
+     * @param config 配置对象，包含切点集合、切面集合(含通知集合)
      */
-    static init(config){
+    static init(config:AopCfg){
         //切点数组
         if(Array.isArray(config.pointcuts)){
-            config.pointcuts.forEach((item:PointcutJson)=>{
+            config.pointcuts.forEach((item:PointcutCfg)=>{
                 this.addPointcut(item.id,item.expressions);
             });
         }
@@ -287,7 +324,7 @@ class AopFactory{
      * 获取切点
      * @param instanceName  实例名 
      * @param methodName    方法名
-     * @return              pointcut array
+     * @returns             切点数组
      */
     static getPointcut(instanceName:string,methodName:string):Array<AopPointcut>{
         // 遍历iterator
@@ -304,8 +341,8 @@ class AopFactory{
 
     /**
      * 根据id获取切点
-     * @param pointcutId    pointcut id
-     * @return              pointcut
+     * @param pointcutId    切点id
+     * @returns             切点对象
      */
     static getPointcutById(pointcutId:string):AopPointcut{
         return this.pointcuts.get(pointcutId);
@@ -393,4 +430,4 @@ class AopFactory{
 
 }
 
-export{AopFactory};
+export{AopFactory,AopAdvice,AopAspect,AopPointcut,AopCfg,PointcutCfg};

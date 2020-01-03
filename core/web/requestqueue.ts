@@ -24,7 +24,6 @@ class RequestQueue{
      */
     static add(req:HttpRequest){
         let timeout = WebConfig.get('request_timeout') || 0;
-        
         this.queue.push({
             req:req,
             expire:timeout>0?new Date().getTime() + timeout*1000:0

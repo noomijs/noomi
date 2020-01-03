@@ -6,15 +6,32 @@ import { SequelizeConnectionManager } from "./sequelizeconnectionmanager";
 import { App } from "../tools/application";
 import { OracleConnectionManager } from "./oracleconnectionmanager";
 import { MssqlConnectionManager } from "./mssqlconnectionmanager";
-import { MongoConnectionManager } from "./mongoconnectionmanager";
 import { TypeormConnectionManager } from "./typeormconnectionmanager";
+import { ConnectionManager } from "./connectionmanager";
 
-
+/**
+ * 数据库管理器
+ * @remarks
+ * 用于管理数据库相关配置
+ */
 class DBManager{
-    static connectionManagerName:string;    //连接管理器名
-    static transactionName:string;          //事务类名
-    static product:string;                  //数据库类型
+    /**
+     * 连接管理器实例名
+     */
+    static connectionManagerName:string;
+    /**
+     * 事务类名
+     */
+    static transactionName:string;  
+    /**
+     * 数据库产品 包括:mysql,mssql,oracle,typeorm,sequelize
+     */    
+    static product:string; 
     
+    /**
+     * 初始化
+     * @param cfg   配置项,参考数据库配置 
+     */
     static init(cfg:any){
         //数据库默认mysql
         let product:string = cfg.product||'mysql';
@@ -58,14 +75,6 @@ class DBManager{
                         class:OracleConnectionManager
                     });
                     break;
-                case "mongodb":
-                        cm = new MongoConnectionManager(opt);
-                        InstanceFactory.addInstance({
-                            name:cmName,
-                            instance:cm,
-                            class:MongoConnectionManager
-                        });
-                        break;
                 case "sequelize":
                     cm = new SequelizeConnectionManager(opt);
                     InstanceFactory.addInstance({
@@ -95,10 +104,17 @@ class DBManager{
 
     /**
      * 获取connection manager
+     * @returns    connection manager
      */
-    static getConnectionManager(){
+    static getConnectionManager():ConnectionManager{
         return InstanceFactory.getInstance(this.connectionManagerName);
     }
+
+    /**
+     * @exclude
+     * 解析文件
+     * @param path  文件路径 
+     */
     static parseFile(path:string){
         //读取文件
         let json:any = null;

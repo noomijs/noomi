@@ -10,43 +10,112 @@ import { App } from "./application";
 import { FilterFactory } from "../web/filterfactory";
 
 /**
- * 安全工厂
+ * resource 对象
  */
-interface ResourceObj{
-    url:string;                //url
-    auths:Array<number>;       //组id列表
-}
+// interface ResourceObj{
+//     /**
+//      * 资源url
+//      */
+//     url:string;          
+//     /**
+//      * 组id列表
+//      */      
+//     auths:Array<number>; 
+// }
 
+/**
+ * 安全工厂
+ * @remarks
+ * 用于管理安全对象
+ */
 class SecurityFactory{
+    /**
+     * @exclude
+     * 存储在session中的名字
+     */
     static sessionName:string = 'NOOMI_SECURITY_OBJECT';
+    /**
+     * 数据表对象
+     */
     static dbOptions:any;
-    static authType:number = 0;     //认证类型 0 session 1 token
-    static saveType:number = 0;     //数据存储类型，0内存 1redis    默认0
-    static redis:string='default';  //redis名，在redis.json中已定义
-    static maxSize:number;          //最大size
-    static cache:NCache;            //cache
+    /**
+     * 认证类型 0 session 1 token
+     */
+    static authType:number = 0;  
+    /**
+     * 数据存储类型，0内存 1redis
+     */
+    static saveType:number = 0;  
+    /**
+     * redis名，必须在redis.json中已定义,saveType=1时有效
+     */
+    static redis:string='default'; 
+    /**
+     * 最大size,saveType=0时有效
+     */
+    static maxSize:number;
+    /**
+     * 缓存对象 
+     */          
+    static cache:NCache;
+    /**
+     * 安全相关页面map
+     */
     static securityPages:Map<string,string> = new Map();
     
     //资源列表
-    static resources:Map<number,ResourceObj> = new Map();
-    //用户
+    // static resources:Map<number,ResourceObj> = new Map();
+    /**
+     * 登录用户map
+     */
     static users:Map<number,Array<number>> = new Map(); 
-    //组
+    /**
+     * 组map
+     */
     static groups:Map<number,Array<number>> = new Map();
+    /**
+     * @exclude
+     * 缓存时用户key前缀
+     */
     static USERKEY:string = 'USER';
+    /**
+     * @exclude
+     * 缓存时组key前缀
+     */
     static GROUPKEY:string = 'GROUP';
+    /**
+     * @exclude
+     * 缓存时资源key前缀
+     */
     static RESKEY:string = 'RESOURCE';
-    static USERID:string='NSECURITY_USERID';                        //userid在session中的名字
-    static PRELOGIN:string='NSECURITY_PRELOGIN';                    //prelogin在session中的名字
-    static redisUserKey:string = "NOOMI_SECURITY_USERS";            //users在redis的key
-    static redisGroupKey:string = "NOOMI_SECURITY_GROUPS";          //groups在redis的key
-    static redisResourceKey:string = "NOOMI_SECURITY_RESOURCES";    //resource在redis的key
+    /**
+     * @exclude
+     * 用户id对应session键
+     */
+    static USERID:string='NSECURITY_USERID';     
+    /**
+     * 认证前url在session中的名字 
+     */                   
+    static PRELOGIN:string='NSECURITY_PRELOGIN'; 
+
+    /**
+     * users在cache的key
+     */
+    static redisUserKey:string = "NOOMI_SECURITY_USERS"; 
+    /**
+     * groups在cache的key
+     */
+    static redisGroupKey:string = "NOOMI_SECURITY_GROUPS";
+    /**
+     * resource在cache的key
+     */
+    static redisResourceKey:string = "NOOMI_SECURITY_RESOURCES"; 
+
     /**
      * 初始化配置
-     * @config      配置项
+     * @config   配置项
      */
     static async init(config){
-
         //鉴权失败页面
         if(config.hasOwnProperty('auth_fail_url')){
             this.securityPages.set('auth_fail_url',config['auth_fail_url']);
@@ -482,9 +551,9 @@ class SecurityFactory{
     }
 
     /**
-     * 添加组权限
+     * 更新组权限
      * @param groupId   组id
-     * @param authId    权限id
+     * @param authIds   权限id数组
      */
     static async updGroupAuths(groupId:number,authIds:Array<number>){
         let key:string = this.GROUPKEY + groupId;
@@ -497,8 +566,8 @@ class SecurityFactory{
 
     /**
      * 添加资源权限
-     * @param resourceId    资源id
-     * @param authId        资源id
+     * @param url       资源url
+     * @param authId    权限id
      */
     static async addResourceAuth(url:string,authId:number){
         let key:string = this.RESKEY + url;
@@ -534,8 +603,9 @@ class SecurityFactory{
     }
 
     /**
-     * 删除用户     用户id
-     * @param userId 
+     * 删除用户
+     * @param userId    用户id 
+     * @param request   request对象
      */
     static async deleteUser(userId:number,request?:HttpRequest){
         //保存userId 到session object
@@ -679,8 +749,8 @@ class SecurityFactory{
 
     /**
      * 鉴权
-     * @param url       资源
-     * @param session   session
+     * @param url       资源url
+     * @param session   session对象
      * @return          0 通过 1未登录 2无权限
      */
     static async check(url:string,session:Session):Promise<number>{
@@ -763,7 +833,7 @@ class SecurityFactory{
 
     /**
      * 获取登录前页面
-     * @param session   session
+     * @param session   session对象
      * @return          page url
      */
     static async getPreLoginInfo(request:HttpRequest):Promise<string>{
@@ -801,8 +871,8 @@ class SecurityFactory{
 
     /**
      * 设置认证前页面
-     * @param session   Session
-     * @param page      pageurl
+     * @param session   session对象
+     * @param page      page url
      */
     static async setPreLoginInfo(session:Session,request:HttpRequest){
         await session.set(this.PRELOGIN,JSON.stringify({
@@ -813,8 +883,9 @@ class SecurityFactory{
 
     
     /**
+     * @exclude
      * 文件解析
-     * @param path 
+     * @param path 文件路径 
      */
     static async parseFile(path){
         //读取文件

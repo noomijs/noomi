@@ -1,21 +1,30 @@
-import { Transaction } from "./transaction";
+import { NoomiTransaction } from "./noomitransaction";
 import { getConnection } from "./connectionmanager";
 
 /**
  * oracle 事务类
  */
-class OracleTransaction extends Transaction{
-    async begin():Promise<void>{
+class OracleTransaction extends NoomiTransaction{
+    /**
+     * 开始事务
+     */
+    async begin(){
         if(!this.connection){
             this.connection = await getConnection();
         }
     }
 
-    async commit():Promise<void>{
+    /**
+     * 事务提交
+     */
+    async commit(){
         await this.connection.commit();
     }
 
-    async rollback():Promise<void>{
+    /**
+     * 事务回滚
+     */
+    async rollback(){
         await this.connection.rollback();
     }
 }

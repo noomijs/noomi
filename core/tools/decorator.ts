@@ -10,6 +10,7 @@ import { NoomiError } from './errorfactory';
 
 
 /**
+ * @exclude
  * instance装饰器，添加实例到实例工厂，装饰类
  * @param cfg:object|string 如果为string，则表示实例名
  *          name:string     实例名，必填
@@ -43,6 +44,7 @@ function Instance(cfg){
 }
 
 /**
+ * @exclude
  * IoC注入装饰器，装饰属性
  * @param instanceName:string  实例名，必填
  */
@@ -53,6 +55,7 @@ function Inject(instanceName:string){
 }
 
 /**
+ * @exclude
  * 路由类装饰器，装饰类
  * @param cfg:object
  *          namespace:string    命名空间，namespace+该类下的所有方法对应的路由路径=路由完整路径，可选
@@ -87,6 +90,7 @@ function Router(cfg?:any){
 }
 
 /**
+ * @exclude
  * 路由装饰器，装饰方法
  * @param cfg:object|string             如果为string，则为路由路径，默认type json
  *          path:string                 路由路径，必填
@@ -112,6 +116,7 @@ function Route(cfg:any){
     }
 }
 /**
+ * @exclude
  * web过滤器，装饰方法
  * @param pattern:string|Array<string>  过滤表达式串或数组，支持通配符，默认为/*，过滤所有路由
  * @param order:number                  优先级，值越小优先级越高，默认10000，可选
@@ -128,6 +133,7 @@ function WebFilter(pattern?:any,order?:number){
 }
 
 /**
+ * @exclude
  * 切面装饰器，装饰类
  */
 function Aspect(){
@@ -137,6 +143,7 @@ function Aspect(){
 }
 
 /**
+ * @exclude
  * 切点装饰器，切点名为方法名+()，装饰方法
  * @param expressions:string|Array<string> 切点需要拦截的表达式串或数组，支持通配符*，
  *                                         拦截对象为instanceName.methodName，
@@ -150,6 +157,7 @@ function Pointcut(expressions:any){
 }
 
 /**
+ * @exclude
  * 通知装饰器 before，装饰方法
  * @param pointcutId:string    切点id
  */
@@ -165,6 +173,7 @@ function Before(pointcutId:string){
 }
 
 /**
+ * @exclude
  * 通知装饰器 after，装饰方法
  * @param pointcutId:string    切点id
  */
@@ -180,6 +189,7 @@ function After(pointcutId:string){
 }
 
 /**
+ * @exclude
  * 通知装饰器 around，装饰方法
  * @param pointcutId:string    切点id
  */
@@ -194,6 +204,7 @@ function Around(pointcutId:string){
     }
 }
 /**
+ * @exclude
  * 通知装饰器 after-return，装饰方法
  * @param pointcutId:string   切点id
  */
@@ -209,6 +220,7 @@ function AfterReturn(pointcutId:string){
 }
 
 /**
+ * @exclude
  * 通知装饰器 after-throw，装饰方法
  * @param pointcutId    切点id
  */
@@ -224,6 +236,7 @@ function AfterThrow(pointcutId:string){
 }
 
 /**
+ * @exclude
  * 事务类装饰器，装饰类
  * 该装饰器必须放在Instance装饰器之前使用
  * 把符合条件的方法装饰为事务方法
@@ -238,11 +251,12 @@ function Transactioner(methodReg?:any){
     }
 }
 /**
+ * @exclude
  * 事务装饰器，装饰方法
  */ 
-function Transactional(){
+function Transaction(){
     return (target:any,name:string,desc:any)=>{
         TransactionManager.addTransaction(target,name);    
     }
 }
-export {Instance,Router,Route,WebFilter,Inject,Aspect,Pointcut,Before,After,Around,AfterReturn,AfterThrow,Transactioner,Transactional}
+export {Instance,Router,Route,WebFilter,Inject,Aspect,Pointcut,Before,After,Around,AfterReturn,AfterThrow,Transactioner,Transaction}

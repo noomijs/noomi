@@ -2,27 +2,67 @@ import { HttpRequest } from "./httprequest";
 import { NCache } from "../tools/ncache";
 import { App } from "../tools/application";
 
+/**
+ * session配置项
+ */
 interface SessionCfg{
-    name:string;        //session id名
-    timeout:number;     //超时时间
-    max_size:number;    //最大尺寸
-    save_type?:number;  //存储类型 0:memory 1:redis
-    redis?:string;      //redis名
+    /**
+     * sessionId名
+     */
+    name:string;
+    /**
+     * 超时时间
+     */
+    timeout:number;
+    
+    /**
+     * 存储类型 0:memory 1:redis
+     */
+    save_type?:number;  
+    /**
+     * 缓存最大尺寸，save_type=0时有效
+     */
+    max_size:number; 
+    /**
+     * redis名，save_type=1时有效
+     */
+    redis?:string;
 }
 
 /**
  * session 工厂类
+ * @remarks
+ * 用于管理session
  */
 class SessionFactory {
+    /**
+     * session map，用于存放所有session对象
+     */
     static sessions:Map<string,Session> = new Map();
-    static sessionName:string = "NSESSIONID";   //cookie中的session name
-    static timeout:number = 1800;                   //过期时间(默认30分钟)
-    static type:number=0;                           //session存储类型 0内存 1redis，默认0
-    static redis:string='default';                  //redis名，type为1时需要设置，默认为default
-    static cache:NCache;                            //缓存
+    /**
+     * cookie中的session name，默认NSESSIONID
+     */
+    static sessionName:string = "NSESSIONID";
+
+    /**
+     * 过期时间(默认30分钟)
+     */
+    static timeout:number = 1800;
+    /**
+     * session存储类型 0内存 1redis，默认0
+     */
+    static type:number=0;         
+    /**
+     * redis名，type为1时需要设置，默认为default
+     */                  
+    static redis:string='default';
+    /**
+     * 缓存对象
+     */
+    static cache:NCache;
     /**
      * 参数初始化
-     * @param cfg 
+     * @param cfg session配置项
      */
     static init(cfg:SessionCfg){
         //设置session name
@@ -49,8 +89,8 @@ class SessionFactory {
 
     /**
      * 获取session  
-     * @param req   request
-     * @param res   response
+     * @param req   request对象
+     * @param res   response对象
      */    
     static async getSession(req:HttpRequest) {
         //session存在
@@ -91,21 +131,25 @@ class SessionFactory {
 
     /**
      * 删除session
-     * @param sessionId session id
+     * @param sessionId     sessionId
      */
     static async delSession(sessionId:string){
         await this.cache.del(sessionId);
     }
     /**
-     * 创建sessionid
+     * 创建sessionId
+     * @returns     用uuid生成的sessionId
      */
     static genSessionId():string{
-        return App.uuid.v1();
+        let s = App.uuid.v1();
+        //去掉‘-’
+        return s.replace(/\-/,'');
     }
     
     /**
-     * 获取当前sessionId
-     * @param req   request
+     * 获取cookie携带的sessionId
+     * @param req   request对象
+     * @returns     sessionId
      */
     static getSessionId(req: HttpRequest): string {
         let cookies = {};
@@ -122,7 +166,14 @@ class SessionFactory {
  * session 类
  */
 class Session {
-    id: string;             //session id
+    /**
+     * session id
+     */
+    id: string;  
+    /**
+     * 构造器
+     * @param id sessionId 
+     */           
     constructor(id:string){
         this.id = id;
     }
@@ -131,11 +182,11 @@ class Session {
      * @param key   键
      * @return      值或null
      */
-    async get(key:string) {
+    async get(key:string):Promise<any> {
         return await SessionFactory.cache.get(this.id,key);
     }
     /**
-     * 设置session
+     * 设置session值
      * @param key   键 
      * @param value 值
      */
@@ -151,7 +202,7 @@ class Session {
     }
 
     /**
-     * 删除键
+     * 删除session值
      * @param key   键
      */
     async del(key:string){

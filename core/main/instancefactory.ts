@@ -15,41 +15,116 @@ interface InstanceProperty{
     ref:string;     //引用实例名
 }
 
-interface InstanceJSON{
+/**
+ * 实例文件配置对象
+ */
+interface InstanceFileCfg{
     module_path:any;            //模块基础路径(数组或单个字符串)
     files:Array<string>;        //引入文件
     instances:Array<any>;       //实例配置数组
 }
 
 /**
- * 实例配置
+ * 实例配置对象
  */
 interface InstanceCfg{
-    name:string;                            //实例名
-    class?:any;                             //类名或类
-    path?:string;                           //模块路径（相对noomi.ini配置的modulepath），与instance二选一
-    instance?:any;                          //实例与path 二选一
-    singleton?:boolean;                     //单例模式
-    params?:Array<any>;                     //参数列表
-    properties?:Array<InstanceProperty>;    //属性列表
+    /**
+     * 实例名
+     */
+    name:string;                            
+    /**
+     * 类名或类
+     */
+    class?:any;                             
+    /**
+     * 模块路径（相对noomi.ini配置的modulepath），与instance二选一
+     */
+    path?:string;                           
+    /**
+     * 实例与path 二选一
+     */
+    instance?:any;      
+    /**
+     * 单例模式，如果为true，表示该类只创建一个实例，调用时，共享调用
+     */
+    singleton?:boolean;                     
+    /**
+     * 参数列表，初始化时需要传入的参数
+     */
+    params?:Array<any>;                     
+    /**
+     * 属性列表，定义需要注入的属性
+     */
+    properties?:Array<InstanceProperty>;    
 }
 
 /**
- * 实例对象
+ * 实例对象，实例工厂中的存储元素
  */
 interface InstanceObj{
-    instance?:any;                          //实例对象
-    class?:any;                             //类引用
-    singleton:boolean;                      //单例标志
-    params?:Array<any>;                     //构造器参数
-    properties?:Array<InstanceProperty>;    //属性列表
+    /**
+     * 实例对象
+     */
+    instance?:any;                          
+    /**
+     * 类引用
+     */
+    class?:any;                            
+    /**
+     * 单例标志
+     */
+    singleton:boolean; 
+    /**
+     * 构造器参数
+     */
+    params?:Array<any>;
+    /**
+     * 属性列表
+     */
+    properties?:Array<InstanceProperty>;
 }
 
-class InstanceFactory{
-    static factory:any = new Map();
-    static mdlBasePath:Array<string> = [];
-    static injectList:Array<any> = [];
+/**
+ * 注入参数对象，用于存储待注入对象的参数
+ */
+interface InjectObj{
+    /**
+     * 待注入实例
+     */
+    instance:any,
+    /**
+     * 待注入属性名
+     */
+    propName:string,
+    /**
+     * 注入实例名
+     */
+    injectName:string
+}
 
+/**
+ * 实例工厂
+ * @remarks
+ * 用于管理所有的实例对象
+ */
+class InstanceFactory{
+    /**
+     * 实例工厂map，存放所有实例对象
+     */
+    static factory:Map<string,InstanceObj> = new Map();
+    /**
+     * 模块基础路径数组，加载实例时从该路径加载
+     */
+    static mdlBasePath:Array<string> = [];
+    /**
+     * 待注入对象数组
+     */
+    static injectList:Array<InjectObj> = [];
+
+    /**
+     * 工厂初始化
+     * @param config    配置项
+     */
     static init(config:any){
         if(typeof config === 'object'){
             this.handleJson(config);
@@ -64,7 +139,8 @@ class InstanceFactory{
     }
     /**
      * 添加单例到工厂
-     * @param cfg 实例配置
+     * @param cfg   实例配置对象
+     * @returns     undefined或添加的实例
      */
     static addInstance(cfg:InstanceCfg):any{
         if(this.factory.has(cfg.name)){
@@ -129,11 +205,10 @@ class InstanceFactory{
     }
 
     /**
-     * 添加inject
+     * 为实例添加注入
      * @param instance      实例对象 
      * @param propName      属性名
      * @param injectName    注入的实例名
-     * 
      */
     static addInject(instance:any,propName:string,injectName:string):void{
         let inj = InstanceFactory.getInstance(injectName);
@@ -149,7 +224,7 @@ class InstanceFactory{
     }
 
     /**
-     * 完成注入列表的注入操作
+     * 完成待注入列表的注入操作
      */
     static finishInject():void{
         for(let item of this.injectList){
@@ -165,7 +240,7 @@ class InstanceFactory{
      * 获取实例
      * @param name  实例名
      * @param param 参数数组
-     * @return      实例化的对象  
+     * @returns     实例化的对象或null  
      */
     static getInstance(name:string,param?:Array<any>):any{
         let ins:InstanceObj = this.factory.get(name);
@@ -194,30 +269,31 @@ class InstanceFactory{
      * 通过类获取实例
      * @param clazz     类
      * @param param     参数数组
-     * @return          实例化的对象  
+     * @returns         实例  
      */
     static getInstanceByClass(clazz:any,param?:Array<any>):any{
-        let ins:InstanceObj;
-        for(let ins of this.factory.keys()){
+        let insObj:InstanceObj;
+        
+        for(let ins of this.factory.values()){
             if(ins.class === clazz){
-                ins = this.factory.get(ins);
+                insObj = ins;
+                break;
             }
         }
-        if(!ins){
+        if(!insObj){
             return null;
         }
         
-        if(ins.singleton){
-            return ins.instance;
+        if(insObj.singleton){
+            return insObj.instance;
         }else{
-            let mdl = ins.class;
-            param = param || ins.params || [];
-            // let instance = new mdl(param);
+            let mdl = insObj.class;
+            param = param || insObj.params || [];
+            //初始化instance
             let instance = Reflect.construct(mdl,param);
-            
             //注入属性
-            if(ins.properties && ins.properties.length>0){
-                ins.properties.forEach((item)=>{
+            if(insObj.properties && insObj.properties.length>0){
+                insObj.properties.forEach((item)=>{
                     this.addInject(instance,item.name,item.ref);
                 });
             }
@@ -226,21 +302,22 @@ class InstanceFactory{
     }
 
     /**
-     * 获取instance object
-     * @param name instance name
+     * 获取实例对象
+     * @param name  实例名
+     * @returns     实例对象
      */
     static getInstanceObj(name:string):InstanceObj{
         return this.factory.get(name);
     }
 
     /**
-     * 执行方法
+     * 执行实例的一个方法
      * @param instancee     实例名或实例对象 
      * @param methodName    方法名
      * @param params        参数数组
      * @param func          方法(与methodName二选一)
+     * @returns             方法对应的结果
      */
-    
     static exec(instance:any,methodName:string,params:Array<any>,func?:Function):any{
         //实例名，需要得到实例对象
         let instanceName = '';
@@ -261,13 +338,14 @@ class InstanceFactory{
     }
 
     /**
+     * @exclude
      * 解析实例配置文件
      * @param path      文件路径
      */
     static parseFile(path:string){
         //读取文件
         let jsonStr:string = App.fs.readFileSync(path,'utf-8');
-        let json:InstanceJSON = null;
+        let json:InstanceFileCfg = null;
 
         try{
             json = App.JSON.parse(jsonStr);
@@ -278,10 +356,11 @@ class InstanceFactory{
     }
 
     /**
+     * @exclude
      * 处理配置对象
-     * @param json      inistance object
+     * @param json      实例对象
      */
-    private static handleJson(json:InstanceJSON){
+    private static handleJson(json:InstanceFileCfg){
         if(json.module_path){
             if(Array.isArray(json.module_path)){
                 json.module_path.forEach((item)=>{
@@ -321,8 +400,8 @@ class InstanceFactory{
     }
 
     /**
-     * 添加实例(从路径添加)
-     * @param path 
+     * 从文件添加实例
+     * @param path  文件路径
      */
     static addInstances(path:string){
         const basePath = process.cwd();
@@ -366,10 +445,11 @@ class InstanceFactory{
     }
     /**
      * 获取instance工厂
+     * @returns     实例工厂
      */
-    static getFactory(){
+    static getFactory():Map<string,InstanceObj>{
         return this.factory;
     }
 }
 
-export {InstanceFactory};
+export {InstanceFactory,InstanceObj,InstanceCfg,InstanceProperty};

@@ -6,44 +6,90 @@ import { Util } from "../../tools/util";
 import { App } from "../../tools/application";
 
 /**
- * route 管理
+ * 路由配置类型
  */
 interface RouteCfg{
+    /**
+     * 路由路径
+     */
     path?:string;
+    /**
+     * 路由正则表达式
+     */
     reg?:RegExp;
+    /**
+     * 该路由对应的实例名
+     */
     instanceName:string;
+    /**
+     * 该路由对应的实例方法
+     */
     method?:string;
+    /**
+     * 路由执行结果数组
+     */
     results?:Array<RouteResult>;
 }
 
 /**
- * route 结果
+ * 路由结果类型
  */
 interface RouteResult{
-    type?:string;           //类型 redirect重定向，chain路由链（和redirect不同，url不变），json ajax json数据，默认json
-    value?:any;             //返回值
-    url?:string;            //路径，type 为redirect 和 url时，必须设置
-    params?:Array<string>   //参数名数组
+    /**
+     * 结果类型，包括:redirect(重定向),chain(路由链,和redirect不同，url不会改变,json(ajax json数据),none(什么都不做)。默认json
+     */
+    type?:string;
+    /**
+     * 返回值，当返回值与value一致时，将执行此结果
+     */
+    value?:any;
+    /**
+     * 路径，type 为redirect 和 url时，必须设置
+     */
+    url?:string;
+    /**
+     * 参数名数组，当type为chain时，从当前路由对应类中获取参数数组对应的属性值并以参数对象传递到下一个路由
+     */
+    params?:Array<string>
 }
 /**
  * 路由对象
  */
-interface Route{
-    instance:any;                   //实例
-    method:string;                  //方法名
-    results?:Array<RouteResult>;    //返回结果
+interface RouteObj{
+    /**
+     * 路由对应实例
+     */
+    instance:any; 
+    /**
+     * 路由对应方法名
+     */
+    method:string;
+    /**
+     * 路由处理结果集
+     */
+    results?:Array<RouteResult>;
 }
 
+/**
+ * 路由工厂类
+ * 用于管理所有路由对象
+ */
 class RouteFactory{
-    //带通配符的路由
+    /**
+     * 带通配符的路由集合
+     */
     static dynaRouteArr:RouteCfg[] = new Array();
-    //不带通配符的路由
+    /**
+     * 不带通配符的路由
+     */
     static staticRouteMap:Map<string,RouteCfg> = new Map();
+
     /**
      * 添加路由
      * @param path      路由路径，支持通配符*，需要method支持
      * @param clazz     对应类
      * @param method    方法，path中包含*，则不设置
+     * @param results   路由处理结果集
      */
     static addRoute(path:string,clazz:string,method?:string,results?:Array<RouteResult>){
         if(results && results.length>0){
@@ -76,11 +122,11 @@ class RouteFactory{
     }
 
     /**
-     * 根据路径获取路由
-     * @param path      url path
-     * @return          {instance:**,method:**,results?:**}
+     * 根据路径获取路由对象
+     * @param path      url路径
+     * @returns         路由对象 
      */
-    static getRoute(path:string):Route{
+    static getRoute(path:string):RouteObj{
         let item:RouteCfg;
         let method:string; //方法名
         //下查找非通配符map
@@ -116,15 +162,15 @@ class RouteFactory{
     }
     
     /**
-     * 处理路径
-     * @param pathOrRoute   路径或路由参数
-     * @param params        调用参数
-     * @param req           httprequest
-     * @param res           response
-     * @return              错误码或0
+     * 路由方法执行
+     * @param pathOrRoute   路径或路由
+     * @param params        调用参数对象
+     * @param req           request 对象
+     * @param res           response 对象
+     * @returns             错误码或0
      */
-    static handleRoute(pathOrRoute:any,params:object,req:HttpRequest,res:HttpResponse):number{
-        let route:Route;
+    static handleRoute(pathOrRoute:string|RouteObj,params:object,req:HttpRequest,res:HttpResponse):number{
+        let route:RouteObj;
         if(typeof pathOrRoute === 'string'){
             route = this.getRoute(pathOrRoute);
         }else{
@@ -173,9 +219,9 @@ class RouteFactory{
     }
 
     /**
-     * 处理结果
-     * @param res       response
-     * @param data      返回值
+     * 处理路由结果
+     * @param res       response 对象
+     * @param data      路由对应方法返回值
      * @param instance  路由对应实例
      * @param results   route结果数组    
      */
@@ -201,11 +247,11 @@ class RouteFactory{
     }
 
     /**
-     * 处理一个结果
-     * @param res           response
+     * 处理一个路由结果
+     * @param res           response 对象
      * @param result        route result
-     * @param data          数据
-     * @param instance      实例
+     * @param data          路由执行结果
+     * @param instance      路由实例
      */
     static handleOneResult(res:HttpResponse,result:RouteResult,data:any,instance?:any):void{
         let url:string;
@@ -233,7 +279,6 @@ class RouteFactory{
                 res.redirect(url);
                 return;
             case "chain": //路由器链
-                
                 url = handleParamUrl(instance,result.url);
                 let url1 = App.url.parse(url).pathname;
                 let params = App.qs.parse(App.url.parse(url).query);
@@ -276,9 +321,9 @@ class RouteFactory{
         }
         
         /**
-         * 处理带参数的url
+         * 处理带参数的url，参数放在{}中
          * @param url   源url，以${propName}出现
-         * @return      处理后的url
+         * @returns     处理后的url
          */
         function handleParamUrl(instance:any,url:string):string{
             let reg:RegExp = /\$\{.*?\}/g;
@@ -295,7 +340,7 @@ class RouteFactory{
          * 获取属性值
          * @param instance  实例 
          * @param pn        属性名
-         * @return          属性值
+         * @returns         属性值
          */
         function getValue(instance:any,pn:string):any{
             if(instance[pn] !== undefined){
@@ -308,7 +353,7 @@ class RouteFactory{
 
     /**
      * 处理异常信息
-     * @param res   response
+     * @param res   response 对象
      * @param e     异常
      */
     static handleException(res:HttpResponse,e:any){
@@ -319,8 +364,8 @@ class RouteFactory{
     }
 
     /**
-     * 初始化
-     * @param config 
+     * 初始化路由工厂
+     * @param config    配置文件
      * @param ns        命名空间（上级路由路径） 
      */
     static init(config:any,ns?:string){
@@ -369,5 +414,5 @@ class RouteFactory{
     }
 }
 
-export {RouteFactory};
+export {RouteFactory,RouteObj,RouteCfg,RouteResult};
 

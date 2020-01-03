@@ -1,15 +1,32 @@
 import { ServerResponse, OutgoingHttpHeaders, IncomingMessage } from "http";
 import { HttpCookie } from "./httpcookie";
-import { App } from "../tools/application";
 import { ReadStream } from "fs";
 import { WebConfig } from "./webconfig";
 
-interface WriteCfg{
-    data?:any;              //数据
-    charset?:string;        //字符集
-    type?:string;           //数据类型
-    statusCode?:number;     //http 异常码
-    crossDomain?:string;   //是否跨域
+/**
+ * response回写配置项
+ */
+interface ResponseWriteCfg{
+    /**
+     * 待写数据，可以是数据串或stream
+     */
+    data?:any; 
+    /**
+     * 字符集，默认utf8
+     */             
+    charset?:string;   
+    /**
+     * 数据类型，默认text/html
+     */
+    type?:string;
+    /**
+     * http状态码，默认200
+     */
+    statusCode?:number;
+    /**
+     * 跨域配置串，多个域名用','分割，默认用webconfig中配置的网址数组，如果都没配置，则使用*
+     */
+    crossDomain?:string;    
 }
 
 export class HttpResponse extends ServerResponse{
@@ -22,13 +39,10 @@ export class HttpResponse extends ServerResponse{
         this.srcRes = res;
     }
     /**
-     * 回写到浏览器端
-     * @param data          待写数据 
-     * @param charset       字符集
-     * @param type          MIME类型
-     * @param crossDomain   跨域串
+     * 写到浏览器(客户)端
+     * @param config    回写配置项
      */
-    writeToClient(config:WriteCfg):void{
+    writeToClient(config:ResponseWriteCfg):void{
         let data:any = config.data || '';
         if(typeof data === 'object'){
             data = JSON.stringify(data);
@@ -40,7 +54,8 @@ export class HttpResponse extends ServerResponse{
         //设置cookie
         this.writeCookie();
         let headers:OutgoingHttpHeaders = {};
-        let crossDomain:string = config.crossDomain || WebConfig.crossDomain;
+        //默认*
+        let crossDomain:string = config.crossDomain || WebConfig.crossDomain || '*';
         //跨域
         if(config.crossDomain || WebConfig.crossDomain){
             headers['Access-Control-Allow-Origin'] = crossDomain;
@@ -58,10 +73,10 @@ export class HttpResponse extends ServerResponse{
     }
 
     /**
-     * 写数据流
-     * @param config 
+     * 写数据流到浏览器(客户端)
+     * @param config    回写配置项
      */
-    writeStreamToClient(config:WriteCfg):void{
+    writeStreamToClient(config:ResponseWriteCfg):void{
         let charset = config.charset || 'utf8';
         let status = config.statusCode || 200;
         let type = config.type || 'text/html';
@@ -89,7 +104,7 @@ export class HttpResponse extends ServerResponse{
         });
     }
     /**
-     * 设置header
+     * 设置回传header
      * @param key       键
      * @param value     值
      */
@@ -98,9 +113,9 @@ export class HttpResponse extends ServerResponse{
     }
     
     /**
-     * 写header
+     * 获取header
      * @param key 
-     * @return     返回值
+     * @returns    返回值
      */
     getHeader(key:string):number|string|string[]{
         return this.srcRes.getHeader(key);
@@ -108,8 +123,7 @@ export class HttpResponse extends ServerResponse{
 
     /**
      * 重定向
-     * @param response      
-     * @param page          跳转路径 
+     * @param page  跳转路径url 
      */
     redirect(page:string){
         this.writeCookie();
@@ -124,7 +138,7 @@ export class HttpResponse extends ServerResponse{
     }
 
     /**
-     * 写cookie到头部
+     * 写cookie到header
      */
     writeCookie(){
         let kvs = this.cookie.getAll();

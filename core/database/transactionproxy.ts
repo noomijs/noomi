@@ -4,10 +4,14 @@ import { getConnection } from "./connectionmanager";
 import { InstanceFactory } from "../main/instancefactory";
 import { QueryRunner } from "typeorm";
 
-
+/**
+ * 事务Aop代理
+ * @remarks
+ * 用于事务方法代理
+ */
 class TransactionProxy{
     /**
-     *  
+     * 代理方法 
      * @param instanceName  实例名
      * @param methodName    方法名
      * @param func          执行函数  

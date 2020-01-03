@@ -4,7 +4,7 @@ import { TransactionAdvice } from "./transactionadvice";
 import { NoomiError } from "../tools/errorfactory";
 import { MysqlTransaction } from "./mysqltransaction";
 import { SequelizeTransaction } from "./sequelizetransaction";
-import { Transaction } from "./transaction";
+import { NoomiTransaction } from "./noomitransaction";
 
 import { DBManager } from "./dbmanager";
 import { Transaction as SeqTransaction } from "sequelize";
@@ -14,7 +14,7 @@ import { MssqlTransaction } from "./mssqltransaction";
 import { TypeormTransaction } from "./typeormtransaction";
 
 class TransactionManager{
-    static transactionMap:Map<number,Transaction> = new Map();  //transaction map
+    static transactionMap:Map<number,NoomiTransaction> = new Map();  //transaction map
     static transactionMdl:string;                               //transaction 实例名
     static expressions:Array<string>;                           //纳入事务的过滤串
     static namespace:any = require('cls-hooked')
@@ -171,8 +171,8 @@ class TransactionManager{
      * @return          transacton
      */
     
-    static get(newOne?:boolean):Transaction{
-        let tr:Transaction;
+    static get(newOne?:boolean):NoomiTransaction{
+        let tr:NoomiTransaction;
         //得到当前执行异步id
         
         let id:number = this.namespace.get('tr_id');
@@ -197,8 +197,8 @@ class TransactionManager{
      * 删除事务
      * @param tr    事务 
      */
-    static del(tr:Transaction){
-        for(let id of tr.asyncIds){
+    static del(tr:NoomiTransaction){
+        for(let id of tr.trIds){
             this.transactionMap.delete(id);
         }
     }
@@ -232,7 +232,7 @@ class TransactionManager{
         if(!this.transactionMap.has(id)){
             return null;
         }
-        let tr:Transaction = this.transactionMap.get(id);
+        let tr:NoomiTransaction = this.transactionMap.get(id);
         return tr.connection;
     }
 
@@ -240,7 +240,7 @@ class TransactionManager{
      * 释放连接
      * @param tr 
      */
-    static releaseConnection(tr:Transaction){
+    static releaseConnection(tr:NoomiTransaction){
         DBManager.getConnectionManager().release(tr.connection);
     }
 

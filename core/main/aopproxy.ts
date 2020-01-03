@@ -5,10 +5,12 @@ import { App } from "../tools/application";
 
  /**
  * Aop 代理类
+ * @remarks
+ * 用于代理切点所匹配的方法，当符合切点表达式匹配的方法时，将统一调用该代理类的invoke方法
  */
 class AopProxy{
     /**
-     *  
+     * 代理方法 
      * @param instanceName  实例名
      * @param methodName    方法名
      * @param func          执行函数  
@@ -92,7 +94,6 @@ class AopProxy{
                     return result;
                 }
             }
-                
         }
         //非async 拦截
         return function(){

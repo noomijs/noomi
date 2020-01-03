@@ -1,13 +1,15 @@
-import { Transaction } from "./transaction";
+import { NoomiTransaction } from "./noomitransaction";
 /**
- * mysql 事务类
+ * sequelize 事务类
+ * @remarks
+ * typeorm事务通过事务代理完成开始、提交和回滚操作，不需要重载方法
  */
-class SequelizeTransaction extends Transaction{
-    async begin():Promise<void>{}
+class SequelizeTransaction extends NoomiTransaction{
+    async begin(){}
 
-    async commit():Promise<void>{}
+    async commit(){}
 
-    async rollback():Promise<void>{}
+    async rollback(){}
 }
 
 export {SequelizeTransaction};

@@ -1,25 +1,52 @@
 import { ConnectionManager } from "./connectionmanager";
 import { TransactionManager } from "./transactionmanager";
+import { EntityManager } from "typeorm";
 /**
  * mssql连接管理器
+ * @remarks
+ * mssql直接启动连接池，不需要单独配置
  */
 class MssqlConnectionManager implements ConnectionManager{
+    /**
+     * 连接池
+     */
     pool:any;
+    /**
+     * mysql connection对象
+     */
     connection:any;
+    /**
+     * 数据库配置项，示例如下：
+     * ```
+     *{
+     *  "server":"localhost",
+     *   "port":1434,
+     *   "user":"your user",
+     *   "password":"your password",
+     *   "database":"your db"   
+     * }
+     * ```
+     * 更多细节参考npm mssql
+     */
     options:object;
+    /**
+     * module mssql
+     */
     dbMdl:any;
-    usePool:boolean;
+    /**
+     * 构造器
+     * @param cfg 配置对象 {usePool:使用连接池,useTransaction:是否启用事务机制,其它配置参考options属性说明}
+     */
     constructor(cfg){
         this.dbMdl = require('mssql');
-        this.usePool = cfg.usePool || false;
         delete cfg.useTransaction;
-        delete cfg.usePool;
         this.options = cfg;
         this.pool = new this.dbMdl.ConnectionPool(this.options);
     }
 
     /**
      * 获取连接
+     * @returns mssql request对象
      */
     async getConnection(){
         let conn = TransactionManager.getConnection();
@@ -39,14 +66,22 @@ class MssqlConnectionManager implements ConnectionManager{
 
     /**
      * 释放连接
-     * @param conn 
+     * @param request mssql request对象
      */
-    async release(conn:any){
-        if(!conn){
+    async release(request:any){
+        if(!request){
             return;
         }
-        conn._currentRequest.connection.close({drop:false});
+        request.connection.close({drop:false});
     }
+
+    /**
+     * 获取EntityManager，TypeormConnectionManager有效，其它返回null
+     * @returns null
+     */
+    async getManager():Promise<EntityManager>{
+        return null;
+    };
 }
 
 export{MssqlConnectionManager}

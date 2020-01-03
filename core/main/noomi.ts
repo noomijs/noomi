@@ -17,12 +17,21 @@ import { Util } from "../tools/util";
 import { App } from "../tools/application";
 import { SecurityFactory } from "../tools/securityfactory";
 
-class Noomi{
+/**
+ * 框架主类
+ * @remarks
+ * 该类实例化可进行框架初始化，框架初始化有两种方式：
+ * 1. new Noomi(config)
+ * 2. noomi(config)
+ */
+class NoomiMain{
     port:number;            //http port
     sslPort:number;         //https port
     server:Server;          // http server
     httpsServer:Server;     //https server
     /**
+     * 构造器
+     * 初始化一个noomi应用
      * @param port          //http port,默认 3000
      * @param sslPort       //https port，默认4000
      * @param configPath    //配置文件路径，默认 /config
@@ -31,13 +40,14 @@ class Noomi{
         this.port = port || 3000;
         this.sslPort = sslPort || 4000;
         App.configPath = configPath || '/config';
-        this.init(App.configPath);
+        this.init();
     }
 
     /**
-     * 初始化
+     * 初始化框架
      */
-    async init(basePath:string){
+    async init(){
+        let basePath:string = App.configPath;
         console.log('Server is startup ...');
         let iniJson:object = null;
         try{
@@ -215,11 +225,12 @@ class Noomi{
 }
 
 /**
- * @param port          //http port,默认 3000
- * @param sslPort       //https port，默认4000
- * @param configPath    //配置文件路径，默认 /config
+ * 框架主方法
+ * @param port          http port,默认 3000
+ * @param sslPort       https port，默认4000
+ * @param configPath    配置文件路径，默认 /config
  */
-function noomi(port?:number,contextPath?:string,sslPort?:number){
-    return new Noomi(port,contextPath,sslPort);
+function noomi(port?:number,contextPath?:string,sslPort?:number):NoomiMain{
+    return new NoomiMain(port,contextPath,sslPort);
 }
-export {noomi,Noomi};
+export {noomi,NoomiMain};

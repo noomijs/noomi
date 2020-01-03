@@ -7,18 +7,42 @@ import { StaticResource } from "./staticresource";
 import { Util } from "../tools/util";
 
 /**
- * web 配置
+ * web 配置类
+ * @remarks
+ * 用于管理web配置参数
  */
 export class WebConfig{
+    /**
+     * 配置项
+     */
     static config:any;
+    /**
+     * 是否使用https
+     */
     static useHttps:boolean;
-    static useServerCache:boolean = false;  //是否使用cache
+    /**
+     * 是否使用cache
+     */
+    static useServerCache:boolean = false;
+    /**
+     * https配置，useHttps为true时有效，包括：
+     *  only_https:是否只采用https，如果为true，则不会启动http server，只启动https server
+     *  key_file:私钥文件路径，相对于根目录
+     *  cert_file:证书文件路径，相对与根目录
+     */
     static httpsCfg:object;
-    static crossDomain:string;              //跨域域名
-    static welcomePage:string;              //欢迎页面
+    /**
+     * 跨域域名，多个域名用','分割
+     */
+    static crossDomain:string;
+    /**
+     * 欢迎页面，访问根目录时跳转到该页面
+     */
+    static welcomePage:string;
+
     /**
      * 获取参数
-     * @param name 
+     * @param name webconfig参数名
      */
     static get(name:string){
         if(!this.config || !this.config.hasOwnProperty(name)){
@@ -27,6 +51,10 @@ export class WebConfig{
         return this.config[name];
     }
 
+    /**
+     * 初始化
+     * @param config 参阅web.json配置 
+     */
     static init(config:any){
         if(config.hasOwnProperty('web_config')){
             let cfg:any = config['web_config'];
@@ -79,6 +107,7 @@ export class WebConfig{
     }
 
     /**
+     * @exclude
      * 解析路由文件
      * @param path  文件路径
      * @param ns    命名空间，默认 /
@@ -96,8 +125,8 @@ export class WebConfig{
     }
 
     /**
-     * 设置异常提示页面
-     * @param pages page配置（json数组）
+     * 设置异常页面
+     * @param pages page配置数组[{code:http异常码,location:异常码对应页面地址(相对于项目根目录)}]
      */
     static setErrorPages(pages:Array<object>){
         if(Array.isArray(pages)){
@@ -109,5 +138,4 @@ export class WebConfig{
             });
         }
     }
-    
 }

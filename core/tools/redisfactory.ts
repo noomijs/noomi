@@ -1,34 +1,67 @@
 import { NoomiError } from "./errorfactory";
 import { App } from "./application";
 
+/**
+ * redis 配置项
+ */
 interface RedisCfg{
+    /**
+     * redis名
+     */
     name?:string,
+    /**
+     * 主机地址
+     */
     host:string,
+    /**
+     * 端口号
+     */
     port:string,
+    /**
+     * 其它配置，请参考npm redis
+     */
     options?:any
 }
 
 /**
- * redis项
+ * redis存储项
  */
 interface RedisItem{
-    key:string;         //键
-    pre?:string;         //pre key,与pre+key作为真正的key
-    subKey?:string;     //子键
-    value?:any,         //值
-    timeout?:number;    //超时时间
+    /**
+     * 键
+     */
+    key:string;
+    /**
+     * pre key,与pre+key作为真正的key
+     */
+    pre?:string;   
+    /**
+     * 子键
+     */      
+    subKey?:string;
+    /**
+     * 值
+     */
+    value?:any, 
+    /**
+     * 超时时间
+     */
+    timeout?:number;
 }
 /**
  * redis 工厂
  */
 class RedisFactory{
+    /**
+     * 存储所有的redis对象
+     */
     static clientMap:Map<string,any> = new Map();
     /**
-     * 添加redis client
-     * @param cfg 
+     * 添加redis client到clientMap
+     * @param cfg   redis配置项
      */
     static addClient(cfg:RedisCfg){
-        let client = App.redis.createClient(cfg.port,cfg.host,cfg.options)
+        let client = App.redis.createClient(cfg.port,cfg.host,cfg.options);
         client.on('error',err=>{
             throw err;
         });
@@ -38,7 +71,7 @@ class RedisFactory{
     /**
      * 获得redis client
      * @param name      client name，默认default
-     * @return          client
+     * @return          redis client
      */
     static getClient(name:string){
         name = name || 'default';
@@ -49,7 +82,7 @@ class RedisFactory{
     }
 
     /**
-     * 设置值
+     * 把值存入redis中
      * @param clientName    client name
      * @param item          redis item
      */
@@ -92,7 +125,7 @@ class RedisFactory{
     }
 
     /**
-     * 获取值
+     * 从redis 中取值
      * @param clientName    client name
      * @param item          redis item
      * @return              item value
@@ -134,7 +167,7 @@ class RedisFactory{
      * 是否存在某个key
      * @param clientName    redis name
      * @param key           key
-     * @return              true/false
+     * @return              存在则返回true，否则返回false
      */
     static async has(clientName:string,key:string):Promise<boolean>{
         let client = this.getClient(clientName);
@@ -151,11 +184,12 @@ class RedisFactory{
         }
         return false;
     }
+
     /**
-     * 设置过期时间
-     * @param client 
-     * @param key 
-     * @param timeout 
+     * 设置超时时间
+     * @param client    client name 
+     * @param key       键
+     * @param timeout   超时时间
      */
     static async setTimeout(client:any,key:string,timeout:number){
         if(typeof timeout !== 'number' || timeout <= 0){
@@ -176,8 +210,8 @@ class RedisFactory{
     /**
      * 获取map数据
      * @param clientName    client name
-     * @param key           key
-     * @param pre           pre key
+     * @param item          RedisItem
+     * @returns             object或null
      */
     static async getMap(clientName:string,item:RedisItem){
         let client = this.getClient(clientName);
@@ -197,12 +231,11 @@ class RedisFactory{
             this.setTimeout(clientName,item.key,item.timeout);
         }
         return r;
-        
     }
 
     /**
      * 删除项
-     * @clientName      redis name
+     * @clientName      client name
      * @param key       键 
      * @param subKey    子键
      */
@@ -220,7 +253,7 @@ class RedisFactory{
 
     /**
      * 解析配置文件
-     * @param path 
+     * @param path  redis配置文件路径
      */
     static parseFile(path:string){
         //读取文件
@@ -236,7 +269,7 @@ class RedisFactory{
 
     /**
      * 初始化
-     * @param config    rdis配置 
+     * @param config    redis配置 
      */
     static init(config){
         //可以为数组，也可以为单个对象

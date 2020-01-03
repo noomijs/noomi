@@ -4,29 +4,73 @@ import { HttpResponse } from "./httpresponse";
 import { Stats } from "fs";
 import { App } from "../tools/application";
 
-interface ResCfg{
-    etag:string;            //ETag
-    lastModified:string;    //最后修改时间
-    data?:any;           //数据
-}
 /**
  * web 缓存类
+ * @remarks
+ * 用于管理缓存资源
  */
 class WebCache{
-    static cache:NCache;                //缓存
-    static maxAge:number;               //cache-control max-age 值
-    static isPublic:boolean;            //cache-control public
-    static isPrivate:boolean;           //cache-control privite
-    static noCache:boolean;             //cache-control no cache
-    static noStore:boolean;             //cache-control no store
-    static mustRevalidation:boolean;    //cache-control must revalidation
-    static proxyRevalidation:boolean;   //cache-control proxy revalidation
-    static expires:number;              //expires
-    static fileTypes:Array<string>;     //缓存文件类型
-    static maxSingleSize:number;        //单个文件最大size
-    static excludeFileTypes:Array<string> = ["image","audio","video"];  //不能缓存的媒体类型
+    /**
+     * cache对象
+     */
+    static cache:NCache;
+    /**
+     * cache-control max-age
+     */
+    static maxAge:number;
+    /**
+     * cache-control public
+     */
+    static isPublic:boolean;
+    /**
+     * cache-control privite
+     */
+    static isPrivate:boolean;
+    /**
+     * cache-control no-cache
+     */
+    static noCache:boolean;
+    /**
+     * cache-control no-store
+     */
+    static noStore:boolean;
+    /**
+     * cache-control must-revalidation
+     */
+    static mustRevalidation:boolean;
+    /**
+     * cache-control proxy-revalidation
+     */
+    static proxyRevalidation:boolean;
+    /**
+     * expires
+     */
+    static expires:number;
+    /**
+     * 缓存文件类型，默认[*]
+     */
+    static fileTypes:Array<string>;
+    /**
+     * 单个文件最大size
+     */
+    static maxSingleSize:number;
+    /**
+     * 不能缓存的媒体类型
+     */
+    static excludeFileTypes:Array<string> = ["image","audio","video"];  
     /**
      * 初始化
+     * @param cfg   配置项，包括:
+     *                  file_type           缓存文件类型，默认[*]
+     *                  max_age             cache-control max-age
+     *                  no_cache            cache-control no-cache   
+     *                  no_store            cache-control no-store
+     *                  public              cache-control public
+     *                  private             cache-control privite
+     *                  must_revalidation   cache-control must-revalidation
+     *                  proxy_revalidation  cache-control proxy-revalidation
+     *                  expires             过期时间(秒)
+     *                  max_single_size     单个缓存文件最大尺寸
      */
     static async init(cfg:any){
         this.maxAge = cfg.max_age|0;
@@ -38,7 +82,7 @@ class WebCache{
         this.mustRevalidation = cfg.must_revalidation || false;
         this.proxyRevalidation = cfg.proxy_revalidation || false;
         this.expires = cfg.expires || 0;
-        this.maxSingleSize = cfg.max_single_size || 1000000;
+        this.maxSingleSize = cfg.max_single_size || 20000000;
         //创建cache
         this.cache = new NCache({
             name:'NWEBCACHE',
@@ -49,11 +93,11 @@ class WebCache{
     }
 
     /**
-     * 添加资源
-     * @param url       url 请求url
+     * 添加资源到缓存中
+     * @param url       url请求url
      * @param path      url对应路径
-     * @param response  http response
-     * @return          {data:文件内容,type:mime type}
+     * @param response  response对象
+     * @returns         {data:文件内容,type:mime type}
      */
     static async add(url:string,path:string,response?:HttpResponse):Promise<Object>{
         const fs = App.fs;
@@ -139,7 +183,7 @@ class WebCache{
      * @param request   request
      * @param response  response
      * @param url       url
-     * @return          0不用回写数据 或 {data:data,type:mimetype}
+     * @returns         0不用回写数据 或 {data:data,type:mimetype}
      */
     static async load(request:HttpRequest,response:HttpResponse,url:string):Promise<number|object>{
         let rCheck:number = await this.check(request,url);
@@ -161,9 +205,9 @@ class WebCache{
 
     /**
      * 写cache到客户端
-     * @param response          httpresponse
-     * @param etag              etag
-     * @param lastModified      lasmodified
+     * @param response          response对象
+     * @param etag              etag            文件hash码    
+     * @param lastModified      lasmodified     最后修改时间
      */
     static writeCacheToClient(response:HttpResponse,etag?:string,lastModified?:string){
         //设置etag
@@ -194,8 +238,8 @@ class WebCache{
 
     /**
      * 资源check，如果需要更改，则从服务器获取
-     * @param request
-     * @return          0从浏览器获取 1已更新 2资源不在缓存
+     * @param request   request对象
+     * @returns         0:从浏览器获取 1:已更新 2:资源不在缓存
      */
     static async check(request:HttpRequest,url:string):Promise<number>{
         let exist = await this.cache.has(url);

@@ -1,13 +1,17 @@
 import { TransactionManager } from "./transactionmanager";
 import { getConnection } from "./connectionmanager";
-import { Transaction } from "./transaction";
+import { NoomiTransaction } from "./noomitransaction";
 
+/**
+ * 事务通知
+ * 
+ */
 export class TransactionAdvice{
     /**
-     * 事务方法调用前
+     * 事务方法调用前通知
      */
     async before(){
-        let tr:Transaction = await TransactionManager.get(true);
+        let tr:NoomiTransaction = await TransactionManager.get(true);
         //connection 未初始化，初始化connection
         if(!tr.connection){
             tr.connection = await getConnection();
@@ -21,10 +25,10 @@ export class TransactionAdvice{
     }
 
     /**
-     * 事务方法返回时
+     * 事务方法返回时通知
      */
     async afterReturn(){
-        let tr:Transaction = await TransactionManager.get();
+        let tr:NoomiTransaction = await TransactionManager.get();
         if(!tr || !tr.isBegin){
             return;
         }
@@ -42,19 +46,22 @@ export class TransactionAdvice{
 
 
     /**
-     * 事务方法抛出异常时
+     * 事务方法抛出异常时通知
      */
     async afterThrow(){
-        let tr:Transaction = await TransactionManager.get();
+        let tr:NoomiTransaction = await TransactionManager.get();
         if(!tr || !tr.isBegin){
             return;
         }
         if(tr){
             tr.trIds.pop();
-            await tr.rollback();
-            //释放连接
-            await TransactionManager.releaseConnection(tr);
-            TransactionManager.del(tr);
+            //最外层rollback
+            if(tr.trIds.length===0){
+                await tr.rollback();
+                //释放连接
+                await TransactionManager.releaseConnection(tr);
+                TransactionManager.del(tr);
+            }
         }
     }
 }

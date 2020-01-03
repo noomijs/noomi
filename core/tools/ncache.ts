@@ -4,37 +4,91 @@ import { Util } from "./util";
 import { App } from "./application";
 
 /**
- * cache类
+ * cache item类型，用于cache操作参数传递
  */
 interface CacheItem{
-    key:string;         //键
-    subKey?:string;     //子键
-    value:any;          //值
-    timeout?:number;    //超时时间(秒)
+    /**
+     * 键
+     */
+    key:string;
+    /**
+     * 子键，当key对应值为map时，存取操作需要设置
+     */
+    subKey?:string;
+    /**
+     * 键对应值
+     */
+    value:any;
+    /**
+     * 超时时间(秒)，为0或不设置，则表示不超时
+     */
+    timeout?:number;
 }
 
-
+/**
+ * cache配置类型，初始化cache时使用
+ */
 interface CacheCfg{
-    name:string;        //cache 名
-    saveType:number;    //存储类型 0内存，1redis，默认1
-    redis?:string;      //redis名
-    maxSize?:number;    //最大空间，默认为0，如果saveType=1，设置无效
-}
-
-export class NCache{
-    redis:string;                                   //redis名，saveType为1时（redis需要）
-    memoryCache:MemoryCache;                        //memory cache对象
-    name:string;                                    //名字（redis需要）
-    saveType:number;                                //存储类型 0内存 1redis     默认0
-    redisSizeName:string = 'NCACHE_SIZE_';          //redis存储的cache size名字前缀
-    redisPreName:string = 'NCACHE_';                //redis存储前缀
-    redisTimeout:string = 'NCACHE_TIMEOUT_';        //timeout redis 前缀
+    /**
+     * cache 名
+     */
+    name:string;
+    /**
+     * 存储类型 0内存，1redis，默认0，如果应用设置为集群部署，则设置无效(强制为1)
+     */
+    saveType:number;
+    /**
+     * redis名，如果saveType=1，则必须设置，默认default
+     */
+    redis?:string;
 
     /**
-     * 
-     * @param name 
-     * @param saveType 
-     * @param maxSize 
+     * 最大空间，默认为0(表示不限制)，如果saveType=1，设置无效
+     */
+    maxSize?:number;
+}
+
+/**
+ * Cache类
+ * @remarks
+ * 用于处理缓存，支持内存cache和redis cache
+ */
+export class NCache{
+    /**
+     * redis名，saveType为1时存在
+     */
+    redis:string;
+    /**
+     * 内存cache对象，saveType=0时存在
+     */
+    memoryCache:MemoryCache;
+    /**
+     * cache名字，全局唯一
+     */
+    name:string;
+    /**
+     * 存储类型 0内存 1redis
+     */
+    saveType:number;
+    /**
+     * @exclude
+     * redis存储的cache size名字前缀
+     */
+    redisSizeName:string = 'NCACHE_SIZE_';
+    /**
+     * @exclude
+     * redis存储前缀
+     */
+    redisPreName:string = 'NCACHE_';
+    /**
+     * @exclude
+     * timeout redis 前缀
+     */
+    redisTimeout:string = 'NCACHE_TIMEOUT_';
+
+    /**
+     * 构造器
+     * @param cfg   cache初始化参数
      */
     constructor(cfg:CacheCfg){
         //如果为App为集群，则saveType为1，否则为设置值
@@ -56,7 +110,7 @@ export class NCache{
     }
 
     /**
-     * 添加到cache
+     * 添加值到cache
      * @param key       键
      * @param value     值
      * @param extra     附加信息
@@ -74,9 +128,9 @@ export class NCache{
      * 获取值
      * @param key           键
      * @param changeExpire  是否更新过期时间
-     * @return              value或null
+     * @returns             value或null
      */
-    async get(key:string,subKey?:string,changeExpire?:boolean){
+    async get(key:string,subKey?:string,changeExpire?:boolean):Promise<any>{
         let ci:CacheItem = null;
         if(this.saveType === 0){
             return this.memoryCache.get(key,subKey,changeExpire);
@@ -86,12 +140,12 @@ export class NCache{
     }
 
     /**
-     * 获取值
+     * 获取map，当key对应的存储对象为map时，则获取map，否则为null
      * @param key           键
      * @param changeExpire  是否更新过期时间
-     * @return              value或null
+     * @return              object或null
      */
-    async getMap(key:string,changeExpire?:boolean){
+    async getMap(key:string,changeExpire?:boolean):Promise<any>{
         let ci:CacheItem = null;
         if(this.saveType === 0){
             return this.memoryCache.getMap(key,changeExpire);
@@ -101,8 +155,9 @@ export class NCache{
     }
 
     /**
-     * 删除
-     * @param key 键
+     * 删除键
+     * @param key       键
+     * @param subKey    子键
      */
     async del(key:string,subKey?:string){
         if(this.saveType === 0){
@@ -113,8 +168,9 @@ export class NCache{
     }
 
     /**
-     * 获取键
+     * 获取键数组
      * @param key   键，可以带通配符 
+     * @returns     键名组成的数组
      */
     async getKeys(key:string):Promise<Array<string>>{
         if(this.saveType === 0){
@@ -134,8 +190,8 @@ export class NCache{
     }
     /**
      * 是否拥有key
-     * @param key 
-     * @return   true/false
+     * @param key   键 
+     * @returns     如果存在则返回true，否则返回false 
      */
     async has(key:string):Promise<boolean>{
         if(this.saveType === 0){
@@ -149,8 +205,9 @@ export class NCache{
     /**
      * 从redis获取值
      * @param key           键
-     * @apram subKey        子键
+     * @param subKey        子键
      * @param changeExpire  是否修改expire
+     * @returns             键对应的值
      */
     private async getFromRedis(key:string,subKey?:string,changeExpire?:boolean):Promise<any>{
         let timeout:number = 0;
@@ -174,10 +231,11 @@ export class NCache{
     }
 
     /**
-     * 从redis获取值
+     * 从redis获取map
      * @param key           键
      * @apram subKey        子键
      * @param changeExpire  是否修改expire
+     * @returns             object或null
      */
     private async getMapFromRedis(key:string,changeExpire?:boolean):Promise<any>{
         let timeout:number = 0;
@@ -201,9 +259,9 @@ export class NCache{
     }
 
     /**
-     * 存到redis
-     * @param item      Redis item
-     * @param timeout   超时
+     * 存到值redis
+     * @param item      cache item
+     * @param timeout   超时时间
      */
     private async addToRedis(item:CacheItem,timeout?:number){
         //存储timeout
@@ -233,17 +291,51 @@ export class NCache{
    
 }
 
-//存储项
+/**
+ * @exclude
+ * 内存存储项类
+ */
 class MemoryItem{
-    key:string;         //key
-    type:number;        //类型0 字符串  1 map
-    createTime:number;  //创建时间
-    timeout:number;     //超时时间(秒)
-    expire:number;      //过期时间
-    useRcds:Array<any>; //使用记录
-    LRU:number;         //最近最久使用，值越大越不淘汰
-    value:any;          //值
-    size:number;        //尺寸
+    /**
+     * 键
+     */
+    key:string;         
+    /**
+     * 类型0 字符串  1 map
+     */
+    type:number;        
+    /**
+     * 创建时间
+     */
+    createTime:number;
+    /**
+     * 超时时间(秒)
+     */
+    timeout:number;
+    /**
+     * 过期时间
+     */   
+    expire:number; 
+    /**
+     * 使用记录，用于LRU置换，记录最近5次访问时间
+     */
+    useRcds:Array<any>; 
+    /**
+     * 最近最久使用值，值越大越不淘汰
+     */
+    LRU:number;
+    /**
+     * 值
+     */
+    value:any;
+    /**
+     * 存储空间
+     */
+    size:number;
+    /**
+     * 构造器
+     * @param timeout 超时时间
+     */
     constructor(timeout?:number){
         this.createTime = new Date().getTime();
         if(timeout && typeof timeout === 'number'){
@@ -256,21 +348,43 @@ class MemoryItem{
     }
 }
 /**
- * 存储区
+ * @exclude
+ * 内存cache类
+ * 用于管理内存存储相关对象
  */
 class MemoryCache{
-    
-    maxSize:number;             //最大size
-    extraSize:number;           //附加size（对象）
-    storeMap:Map<string,any>;   //存储总map
-    size:number;                //当前尺寸
+    /**
+     * 缓存最大size
+     */
+    maxSize:number; 
+    /**
+     * 附加size（对象）
+     */
+    extraSize:number;
+    /**
+     * 存储总map
+     */
+    storeMap:Map<string,any>;
+    /**
+     * 当前使用大小
+     */
+    size:number;             
 
-    constructor(cfg:any){
+    /**
+     * 构造器
+     * @param cfg 
+     */
+    constructor(cfg:CacheCfg){
         this.storeMap = new Map();
         this.maxSize = cfg.maxSize;
         this.size = 0;
     }
 
+    /**
+     * 往缓存中存值
+     * @param item      cache item
+     * @param timeout   超时时间
+     */
     set(item:CacheItem,timeout?:number){
         //检查空间并清理
         this.checkAndClean(item);
@@ -335,10 +449,10 @@ class MemoryCache{
     }
 
     /**
-     * 取值
-     * @param key 
-     * @param subKey 
-     * @param changeExpire 
+     * 从cache取值
+     * @param key           键
+     * @param subKey        子键
+     * @param changeExpire  是否更新超时时间
      */
     get(key:string,subKey?:string,changeExpire?:boolean){
         if(!this.storeMap.has(key)){
@@ -365,12 +479,12 @@ class MemoryCache{
     }
 
     /**
-     * 获取值
+     * 获取map
      * @param key           键
      * @param changeExpire  是否更新过期时间
-     * @return              value或null
+     * @return              object或null
      */
-    getMap(key:string,changeExpire?:boolean){
+    getMap(key:string,changeExpire?:boolean):Promise<any>{
         if(!this.storeMap.has(key)){
             return null;
         }
@@ -391,8 +505,9 @@ class MemoryCache{
     }
 
     /**
-     * 获取键
+     * 获取键数组
      * @param key   键，可以带通配符 
+     * @returns     键名数组
      */
     getKeys(key:string):Array<string>{
         let keys = this.storeMap.keys();
@@ -432,9 +547,9 @@ class MemoryCache{
     }
 
     /**
-     * 是否拥有key
-     * @param key 
-     * @return   true/false
+     * 是否存在键
+     * @param key   键
+     * @return      存在则返回true，否则返回false
      */
     has(key:string):boolean{
         return this.storeMap.has(key);
@@ -461,9 +576,9 @@ class MemoryCache{
     }
 
     /**
-     * 获取内容实际size utf8
+     * 获取值实际所占size
      * @param value     待检测值
-     * @return          size
+     * @return          值所占空间大小
      */
     getRealSize(value:any):number{
         let tp = typeof value;
@@ -579,7 +694,7 @@ class MemoryCache{
      * 计算LRU
      * timeout 的权重为5（先保证timeout由时间去清理）
      * right = sum(1-(当前时间-使用记录)/当前时间) + timeout?5:0
-     * @param item 
+     * @param item 待计算的内存 item
      */
     cacLRU(item:MemoryItem){
         let ct = new Date().getTime();

@@ -11,12 +11,17 @@ import { ReadStream } from "fs";
  * 静态资源加载器
  */
 class StaticResource{
-    static staticMap:Map<string,RegExp> = new Map(); //forbidden path map
     /**
-     * 
+     * 静态资源map，用于管理可访问静态资源路径，目录可以带通配符‘*’
+     */
+    static staticMap:Map<string,RegExp> = new Map();
+
+    /**
+     * 加载静态资源
      * @param path      文件路径
      * @param request   request
      * @param response  response
+     * @returns         http异常码或0
      */
     static async load(request:HttpRequest,response:HttpResponse,path:string):Promise<number>{
         
@@ -83,7 +88,7 @@ class StaticResource{
      * 添加静态路径
      * @param paths   待添加的目录或目录数组 
      */
-    static addPath(paths:any){
+    static addPath(paths:string|string[]){
         if(!Array.isArray(paths)){
             if(typeof paths === 'string'){
                 if(App.fs.existsSync(Util.getAbsPath([paths]))){

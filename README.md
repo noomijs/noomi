@@ -287,16 +287,16 @@ create table t_userinfo(
 }
 ```
 
-在module/route 目录下增加useraction.ts文件，代码如下：
+在module/route 目录下增加userroute.ts文件，代码如下：
 
 ```typescript
-import { BaseAction, Router, Inject } from "noomi";
+import { BaseRoute, Router, Inject } from "noomi";
 import { UserService } from "../service/userservice";
 @Router({
     namespace:'/user',
     path:'/'
 })
-export class UserAction extends BaseAction{
+export class UserRoute extends BaseRoute{
     @Inject('userService')
     userService:UserService;
 
@@ -366,16 +366,16 @@ export class UserService{
 }
 ```
 
-在route/useraction.ts下增加addtwo方法，完整代码如下：
+在route/userroute.ts下增加addtwo方法，完整代码如下：
 
 ```typescript
-import { BaseAction, Router, Inject } from "noomi";
+import { BaseRoute, Router, Inject } from "noomi";
 import { UserService } from "../service/userservice";
 @Router({
     namespace:'/user',
     path:'/'
 })
-export class UserAction extends BaseAction{
+export class UserRoute extends BaseRoute{
     @Inject('userService')
     userService:UserService;
     async add(){
@@ -530,7 +530,7 @@ noomi对实例进行统一管理，支持IoC，提供配置文件和注解两种
     ],
     //实例配置子路径(可选配置)，路径相对于初始的config路径(该路径在noomi初始化时传入，默认/config)
     //当模块过多时，可采用该方式分路径配置
-    "files":["context/action.json"]
+    "files":["context/route1.json"]
 }
 ```
 ***注:该内容可以放在独立文件中（目录与noomi.json相同目录或子目录），在noomi.json中以路径方式引入，也可以在noomi.json中以对象方式配置。配置项为"instance"。***
@@ -764,7 +764,7 @@ class TestAdvice{
 @Router({
     namespace:'/user',
 })
-class UserAction extends BaseAction{
+class UserRoute extends BaseRoute{
     @Route('/showinfo')
     showinfo(){
         return success;
@@ -1061,7 +1061,7 @@ getHttpInfo(){
     console.log(this.response.cookie.getAll());
     return Info;
 } 
-//注:this.request为BaseAction中的参数 该类继承BaseAction
+//注:this.request为BaseRoute中的参数 该类继承BaseRoute
 //返回结果 
 /* method:  “GET”
    url:     ”/getHttpInfo”
@@ -1546,12 +1546,12 @@ class MyClass{
 methodReg:过滤方法，支持通配符*，用于过滤类中的方法，如果方法名符合，则会作为事务方法。如果为空，则匹配类中的所有方法。
 如@Transactioner("add*")把类中所有以“add”开头的方法作为事务方法。  
 ***注:使用时，Transactioner装饰器必须放在Instance装饰器的前面。***
-##### Transactional装饰器
+##### Transaction装饰器
 该装饰器用于方法的注解。
 使用方式：
 ```typescript  
 class MyClass{
-    @Transactional()
+    @Transaction()
     myMethod(){
         ...
     }
@@ -1650,7 +1650,7 @@ class MyClass{
         ],
         //实例配置子路径(可选配置)，路径相对于初始的config路径(该路径在noomi初始化时传入，默认/config)
         //当模块过多时，可采用该方式分路径配置
-        "files":["context/action.json"]
+        "files":["context/route.json"]
     },
     //aop配置，如果为注解方式，则不用配置
     "aop":{

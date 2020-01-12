@@ -5,7 +5,7 @@ import { App } from "../tools/application";
 /**
  * session配置项
  */
-interface SessionCfg{
+interface ISessionCfg{
     /**
      * sessionId名
      */
@@ -64,7 +64,7 @@ class SessionFactory {
      * 参数初始化
      * @param cfg session配置项
      */
-    static init(cfg:SessionCfg){
+    static init(cfg:ISessionCfg){
         //设置session name
         if(typeof cfg.name === 'string'){
             let n = cfg.name.trim();

@@ -3,11 +3,12 @@ import { Sequelize } from "sequelize-typescript";
 import { TransactionManager } from "./transactionmanager";
 import { Util } from '../tools/util';
 import { EntityManager } from 'typeorm';
+import { IConnectionManager } from './connectionmanager';
 
 /**
  * sequelize连接管理器
  */
-class SequelizeConnectionManager{
+class SequelizeConnectionManager implements IConnectionManager{
     /**
      * sequelize对象
      */
@@ -38,10 +39,7 @@ class SequelizeConnectionManager{
      * 更多细节参考npm sequelize
      */
     options:object;
-    /**
-     * module mysql
-     */
-    dbMdl:any;
+    
     
     /**
      * 构造器

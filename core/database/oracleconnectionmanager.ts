@@ -1,10 +1,10 @@
-import { ConnectionManager } from "./connectionmanager";
+import { IConnectionManager } from "./connectionmanager";
 import { TransactionManager } from "./transactionmanager";
 import { EntityManager } from "typeorm";
 /**
  * oracle连接管理器
  */
-class OracleConnectionManager implements ConnectionManager{
+class OracleConnectionManager implements IConnectionManager{
     /**
      * 连接池
      */

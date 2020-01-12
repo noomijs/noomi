@@ -1,4 +1,4 @@
-import { ConnectionManager } from "./connectionmanager";
+import { IConnectionManager } from "./connectionmanager";
 import { TransactionManager } from "./transactionmanager";
 import { EntityManager } from "typeorm";
 /**
@@ -6,7 +6,7 @@ import { EntityManager } from "typeorm";
  * @remarks
  * mssql直接启动连接池，不需要单独配置
  */
-class MssqlConnectionManager implements ConnectionManager{
+class MssqlConnectionManager implements IConnectionManager{
     /**
      * 连接池
      */

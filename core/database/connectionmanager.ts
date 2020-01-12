@@ -2,22 +2,21 @@ import { DBManager } from "./dbmanager";
 import { TransactionManager } from "./transactionmanager";
 import { EntityManager, Connection } from "typeorm";
 import { Sequelize } from "sequelize-typescript";
-import { SqlInMemory } from "typeorm/driver/SqlInMemory";
 
 /**
  * 数据库连接管理器
  * @remarks
  * 用于管理connection
  */
-interface ConnectionManager{
+interface IConnectionManager{
     /**
      * 数据库连接池
      */
-    pool:any;
+    pool?:any;
     /**
-     * 数据库module，包括mysql,mssql,oracle,sequelize,typeorm
+     * 数据库module，可以是 mysql module,mssql module, oracle module
      */
-    dbMdl:any;
+    dbMdl?:any;
     /**
      * 获取连接
      */
@@ -55,7 +54,7 @@ async function getConnection():Promise<Sequelize|Connection|any>{
 };
 
 /**
- * 关闭连接
+ * 关闭数据库连接
  * @param conn  待关闭的连接，product为原生数据库(mysql、mssql、oracle) 时有效
  */
 async function closeConnection(conn:any){
@@ -78,10 +77,10 @@ async function getManager():Promise<EntityManager>{
     let tr = TransactionManager.get(false);
     //事务不存在或事务manager不存在，则从connection manager中获取
     if(!tr || !tr.manager){
-        let cm:ConnectionManager = DBManager.getConnectionManager();
+        let cm:IConnectionManager = DBManager.getConnectionManager();
         return await cm.getManager();
     }
     return tr.manager;
 }
 
-export{ConnectionManager,getConnection,closeConnection,getManager}
+export{IConnectionManager,getConnection,closeConnection,getManager}

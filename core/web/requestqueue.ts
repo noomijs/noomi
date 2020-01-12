@@ -7,14 +7,19 @@ import { App } from "../tools/application";
 import { PageFactory } from "../tools/pagefactory";
 
 /**
+ * @exclude
  * request 队列
  */
-interface RequestItem{
+interface IRequestItem{
     req:HttpRequest;        //request
     expire?:number;         //过期时间
 }
+/**
+ * @exclude
+ * 请求队列
+ */
 class RequestQueue{
-    static queue:Array<RequestItem> = []; 
+    static queue:Array<IRequestItem> = []; 
     //可以处理标志
     static canHandle:boolean = true;
     /**
@@ -50,7 +55,7 @@ class RequestQueue{
             return;
         } 
             
-        let item:RequestItem = this.queue.shift();
+        let item:IRequestItem = this.queue.shift();
         if(item.expire === 0 || item.expire > new Date().getTime()){
             this.handleOne(item.req);
         }

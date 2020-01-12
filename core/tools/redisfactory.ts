@@ -4,7 +4,7 @@ import { App } from "./application";
 /**
  * redis 配置项
  */
-interface RedisCfg{
+interface IRedisCfg{
     /**
      * redis名
      */
@@ -26,7 +26,7 @@ interface RedisCfg{
 /**
  * redis存储项
  */
-interface RedisItem{
+interface IRedisItem{
     /**
      * 键
      */
@@ -60,7 +60,7 @@ class RedisFactory{
      * 添加redis client到clientMap
      * @param cfg   redis配置项
      */
-    static addClient(cfg:RedisCfg){
+    static addClient(cfg:IRedisCfg){
         let client = App.redis.createClient(cfg.port,cfg.host,cfg.options);
         client.on('error',err=>{
             throw err;
@@ -86,7 +86,7 @@ class RedisFactory{
      * @param clientName    client name
      * @param item          redis item
      */
-    static async set(clientName:string,item:RedisItem){
+    static async set(clientName:string,item:IRedisItem){
         let client = this.getClient(clientName);
         if(client === null){
             throw new NoomiError("2601",clientName);
@@ -130,7 +130,7 @@ class RedisFactory{
      * @param item          redis item
      * @return              item value
      */
-    static async get(clientName:string,item:RedisItem):Promise<string>{
+    static async get(clientName:string,item:IRedisItem):Promise<string>{
         let client = this.getClient(clientName);
         if(client === null){
             throw new NoomiError("2601",clientName);
@@ -210,10 +210,10 @@ class RedisFactory{
     /**
      * 获取map数据
      * @param clientName    client name
-     * @param item          RedisItem
+     * @param item          IRedisItem
      * @returns             object或null
      */
-    static async getMap(clientName:string,item:RedisItem){
+    static async getMap(clientName:string,item:IRedisItem){
         let client = this.getClient(clientName);
         let key:string = item.pre?item.pre+item.key:item.key;
         if(client === null){

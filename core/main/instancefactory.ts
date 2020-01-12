@@ -10,15 +10,22 @@ import { App } from "../tools/application";
 /**
  * 实例属性
  */
-interface InstanceProperty{
-    name:string;    //属性名
-    ref:string;     //引用实例名
+interface IInstanceProperty{
+    /**
+     * 属性名
+     */
+    name:string;    
+    /**
+     * 引用实例名
+     */
+    ref:string;     
 }
 
 /**
+ * @exclude
  * 实例文件配置对象
  */
-interface InstanceFileCfg{
+interface IInstanceFileCfg{
     module_path:any;            //模块基础路径(数组或单个字符串)
     files:Array<string>;        //引入文件
     instances:Array<any>;       //实例配置数组
@@ -27,7 +34,7 @@ interface InstanceFileCfg{
 /**
  * 实例配置对象
  */
-interface InstanceCfg{
+interface IInstanceCfg{
     /**
      * 实例名
      */
@@ -49,19 +56,19 @@ interface InstanceCfg{
      */
     singleton?:boolean;                     
     /**
-     * 参数列表，初始化时需要传入的参数
+     * 参数数组，初始化时需要传入的参数
      */
-    params?:Array<any>;                     
+    params?:Array<any>;
     /**
      * 属性列表，定义需要注入的属性
      */
-    properties?:Array<InstanceProperty>;    
+    properties?:Array<IInstanceProperty>;    
 }
 
 /**
  * 实例对象，实例工厂中的存储元素
  */
-interface InstanceObj{
+interface IInstance{
     /**
      * 实例对象
      */
@@ -81,13 +88,13 @@ interface InstanceObj{
     /**
      * 属性列表
      */
-    properties?:Array<InstanceProperty>;
+    properties?:Array<IInstanceProperty>;
 }
 
 /**
  * 注入参数对象，用于存储待注入对象的参数
  */
-interface InjectObj{
+interface IInject{
     /**
      * 待注入实例
      */
@@ -111,7 +118,7 @@ class InstanceFactory{
     /**
      * 实例工厂map，存放所有实例对象
      */
-    static factory:Map<string,InstanceObj> = new Map();
+    static factory:Map<string,IInstance> = new Map();
     /**
      * 模块基础路径数组，加载实例时从该路径加载
      */
@@ -119,7 +126,7 @@ class InstanceFactory{
     /**
      * 待注入对象数组
      */
-    static injectList:Array<InjectObj> = [];
+    static injectList:Array<IInject> = [];
 
     /**
      * 工厂初始化
@@ -142,13 +149,13 @@ class InstanceFactory{
      * @param cfg   实例配置对象
      * @returns     undefined或添加的实例
      */
-    static addInstance(cfg:InstanceCfg):any{
+    static addInstance(cfg:IInstanceCfg):any{
         if(this.factory.has(cfg.name)){
             console.log(new NoomiError("1002",cfg.name));
             return;
         }
         
-        let insObj:InstanceObj;
+        let insObj:IInstance;
         let path:string;
         //单例模式，默认true
         let singleton = cfg.singleton!==undefined?cfg.singleton:true;
@@ -243,7 +250,7 @@ class InstanceFactory{
      * @returns     实例化的对象或null  
      */
     static getInstance(name:string,param?:Array<any>):any{
-        let ins:InstanceObj = this.factory.get(name);
+        let ins:IInstance = this.factory.get(name);
         if(!ins){
             return null;
         }
@@ -272,7 +279,7 @@ class InstanceFactory{
      * @returns         实例  
      */
     static getInstanceByClass(clazz:any,param?:Array<any>):any{
-        let insObj:InstanceObj;
+        let insObj:IInstance;
         
         for(let ins of this.factory.values()){
             if(ins.class === clazz){
@@ -306,7 +313,7 @@ class InstanceFactory{
      * @param name  实例名
      * @returns     实例对象
      */
-    static getInstanceObj(name:string):InstanceObj{
+    static getInstanceObj(name:string):IInstance{
         return this.factory.get(name);
     }
 
@@ -345,7 +352,7 @@ class InstanceFactory{
     static parseFile(path:string){
         //读取文件
         let jsonStr:string = App.fs.readFileSync(path,'utf-8');
-        let json:InstanceFileCfg = null;
+        let json:IInstanceFileCfg = null;
 
         try{
             json = App.JSON.parse(jsonStr);
@@ -360,7 +367,7 @@ class InstanceFactory{
      * 处理配置对象
      * @param json      实例对象
      */
-    private static handleJson(json:InstanceFileCfg){
+    private static handleJson(json:IInstanceFileCfg){
         if(json.module_path){
             if(Array.isArray(json.module_path)){
                 json.module_path.forEach((item)=>{
@@ -447,9 +454,9 @@ class InstanceFactory{
      * 获取instance工厂
      * @returns     实例工厂
      */
-    static getFactory():Map<string,InstanceObj>{
+    static getFactory():Map<string,IInstance>{
         return this.factory;
     }
 }
 
-export {InstanceFactory,InstanceObj,InstanceCfg,InstanceProperty};
+export {InstanceFactory,IInstance,IInstanceCfg,IInstanceProperty};

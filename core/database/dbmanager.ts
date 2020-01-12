@@ -7,7 +7,7 @@ import { App } from "../tools/application";
 import { OracleConnectionManager } from "./oracleconnectionmanager";
 import { MssqlConnectionManager } from "./mssqlconnectionmanager";
 import { TypeormConnectionManager } from "./typeormconnectionmanager";
-import { ConnectionManager } from "./connectionmanager";
+import { IConnectionManager } from "./connectionmanager";
 
 /**
  * 数据库管理器
@@ -106,7 +106,7 @@ class DBManager{
      * 获取connection manager
      * @returns    connection manager
      */
-    static getConnectionManager():ConnectionManager{
+    static getConnectionManager():IConnectionManager{
         return InstanceFactory.getInstance(this.connectionManagerName);
     }
 

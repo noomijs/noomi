@@ -32,9 +32,9 @@ class NoomiMain{
     /**
      * 构造器
      * 初始化一个noomi应用
-     * @param port          //http port,默认 3000
-     * @param sslPort       //https port，默认4000
-     * @param configPath    //配置文件路径，默认 /config
+     * @param port          http端口,默认3000
+     * @param configPath    配置文件路径，默认 /config，相对于项目根目录
+     * @param sslPort       https端口，默认4000
      */
     constructor(port?:number,configPath?:string,sslPort?:number){
         this.port = port || 3000;
@@ -225,10 +225,11 @@ class NoomiMain{
 }
 
 /**
- * 框架主方法
- * @param port          http port,默认 3000
- * @param sslPort       https port，默认4000
- * @param configPath    配置文件路径，默认 /config
+ * 框架主函数
+ * @param port          http端口,默认3000
+ * @param configPath    配置文件路径，默认 /config，相对于项目根目录
+ * @param sslPort       https端口，默认4000
+ * @returns             NoomiMain对象
  */
 function noomi(port?:number,contextPath?:string,sslPort?:number):NoomiMain{
     return new NoomiMain(port,contextPath,sslPort);

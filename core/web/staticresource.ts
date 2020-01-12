@@ -1,5 +1,4 @@
 import { HttpResponse } from "./httpresponse";
-import { PageFactory } from "../tools/pagefactory";
 import { WebCache } from "./webcache";
 import { WebConfig } from "./webconfig";
 import { HttpRequest } from "./httprequest";

@@ -5,23 +5,9 @@ import { NoomiError } from "./errorfactory";
 import { NCache } from "./ncache";
 import { Session,SessionFactory } from "../web/sessionfactory";
 import { DBManager } from "../database/dbmanager";
-import { ConnectionManager } from "../database/connectionmanager";
+import { IConnectionManager } from "../database/connectionmanager";
 import { App } from "./application";
 import { FilterFactory } from "../web/filterfactory";
-
-/**
- * resource 对象
- */
-// interface ResourceObj{
-//     /**
-//      * 资源url
-//      */
-//     url:string;          
-//     /**
-//      * 组id列表
-//      */      
-//     auths:Array<number>; 
-// }
 
 /**
  * 安全工厂
@@ -255,7 +241,7 @@ class SecurityFactory{
         async function handleMysql(cfg:any,ids:any):Promise<Array<any>>{
             let conn;
             let arr:Array<any> = [];
-            let cm:ConnectionManager = null;
+            let cm:IConnectionManager = null;
             try{
                 if(!cfg){ //cfg为空，直接使用dbmanager的connection manager
                     cm = DBManager.getConnectionManager();
@@ -350,7 +336,7 @@ class SecurityFactory{
         async function handleMssql(cfg:any,ids:any):Promise<Array<any>>{
             let conn;
             let arr:Array<any> = [];
-            let cm:ConnectionManager = null;
+            let cm:IConnectionManager = null;
             if(!cfg){
                 cm = DBManager.getConnectionManager();
                 if(!cm){
@@ -420,7 +406,7 @@ class SecurityFactory{
         async function handleOracle(cfg:any,ids:any):Promise<Array<any>>{
             let conn;
             let arr:Array<any> = [];
-            let cm:ConnectionManager = null;
+            let cm:IConnectionManager = null;
             if(!cfg){
                 cm = DBManager.getConnectionManager();
                 if(!cm){

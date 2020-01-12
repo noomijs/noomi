@@ -8,7 +8,7 @@ import { App } from "../../tools/application";
 /**
  * 路由配置类型
  */
-interface RouteCfg{
+interface IRouteCfg{
     /**
      * 路由路径
      */
@@ -28,13 +28,13 @@ interface RouteCfg{
     /**
      * 路由执行结果数组
      */
-    results?:Array<RouteResult>;
+    results?:Array<IRouteResult>;
 }
 
 /**
  * 路由结果类型
  */
-interface RouteResult{
+interface IRouteResult{
     /**
      * 结果类型，包括:redirect(重定向),chain(路由链,和redirect不同，url不会改变,json(ajax json数据),none(什么都不做)。默认json
      */
@@ -55,7 +55,7 @@ interface RouteResult{
 /**
  * 路由对象
  */
-interface RouteObj{
+interface IRoute{
     /**
      * 路由对应实例
      */
@@ -67,7 +67,7 @@ interface RouteObj{
     /**
      * 路由处理结果集
      */
-    results?:Array<RouteResult>;
+    results?:Array<IRouteResult>;
 }
 
 /**
@@ -76,13 +76,13 @@ interface RouteObj{
  */
 class RouteFactory{
     /**
-     * 带通配符的路由集合
+     * 动态路由(带通配符)路由集合
      */
-    static dynaRouteArr:RouteCfg[] = new Array();
+    static dynaRouteArr:IRouteCfg[] = new Array();
     /**
-     * 不带通配符的路由
+     * 静态路由(不带通配符)路由集合
      */
-    static staticRouteMap:Map<string,RouteCfg> = new Map();
+    static staticRouteMap:Map<string,IRouteCfg> = new Map();
 
     /**
      * 添加路由
@@ -91,7 +91,7 @@ class RouteFactory{
      * @param method    方法，path中包含*，则不设置
      * @param results   路由处理结果集
      */
-    static addRoute(path:string,clazz:string,method?:string,results?:Array<RouteResult>){
+    static addRoute(path:string,clazz:string,method?:string,results?:Array<IRouteResult>){
         if(results && results.length>0){
             for(let r of results){
                 if((r.type === 'chain' || r.type === 'redirect') && (!r.url || typeof r.url !=='string' || (r.url = r.url.trim())=== '')){
@@ -126,8 +126,8 @@ class RouteFactory{
      * @param path      url路径
      * @returns         路由对象 
      */
-    static getRoute(path:string):RouteObj{
-        let item:RouteCfg;
+    static getRoute(path:string):IRoute{
+        let item:IRouteCfg;
         let method:string; //方法名
         //下查找非通配符map
         if(this.staticRouteMap.has(path)){
@@ -169,8 +169,8 @@ class RouteFactory{
      * @param res           response 对象
      * @returns             错误码或0
      */
-    static handleRoute(pathOrRoute:string|RouteObj,params:object,req:HttpRequest,res:HttpResponse):number{
-        let route:RouteObj;
+    static handleRoute(pathOrRoute:string|IRoute,params:object,req:HttpRequest,res:HttpResponse):number{
+        let route:IRoute;
         if(typeof pathOrRoute === 'string'){
             route = this.getRoute(pathOrRoute);
         }else{
@@ -225,14 +225,14 @@ class RouteFactory{
      * @param instance  路由对应实例
      * @param results   route结果数组    
      */
-    static handleResult(res:HttpResponse,data:any,instance:any,results:Array<RouteResult>):void{
+    static handleResult(res:HttpResponse,data:any,instance:any,results:Array<IRouteResult>):void{
         if(results && results.length > 0){
             //单个结果，不判断返回值
             if(results.length === 1){
                 this.handleOneResult(res,results[0],data,instance);
                 return;
             }else{
-                let r:RouteResult;
+                let r:IRouteResult;
                 for(r of results){
                     //result不带value，或找到返回值匹配，则处理
                     if(r.value === undefined || data && data == r.value){
@@ -253,7 +253,7 @@ class RouteFactory{
      * @param data          路由执行结果
      * @param instance      路由实例
      */
-    static handleOneResult(res:HttpResponse,result:RouteResult,data:any,instance?:any):void{
+    static handleOneResult(res:HttpResponse,result:IRouteResult,data:any,instance?:any):void{
         let url:string;
         switch(result.type){
             case "redirect": //重定向
@@ -414,5 +414,5 @@ class RouteFactory{
     }
 }
 
-export {RouteFactory,RouteObj,RouteCfg,RouteResult};
+export {RouteFactory,IRoute,IRouteCfg,IRouteResult};
 

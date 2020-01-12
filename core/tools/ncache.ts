@@ -6,7 +6,7 @@ import { App } from "./application";
 /**
  * cache item类型，用于cache操作参数传递
  */
-interface CacheItem{
+interface ICacheItem{
     /**
      * 键
      */
@@ -28,7 +28,7 @@ interface CacheItem{
 /**
  * cache配置类型，初始化cache时使用
  */
-interface CacheCfg{
+interface ICacheCfg{
     /**
      * cache 名
      */
@@ -90,7 +90,7 @@ export class NCache{
      * 构造器
      * @param cfg   cache初始化参数
      */
-    constructor(cfg:CacheCfg){
+    constructor(cfg:ICacheCfg){
         //如果为App为集群，则saveType为1，否则为设置值
         if(App.isCluster){
             this.saveType = 1;
@@ -116,7 +116,7 @@ export class NCache{
      * @param extra     附加信息
      * @param timeout   超时时间(秒)         
      */
-    async set(item:CacheItem,timeout?:number){
+    async set(item:ICacheItem,timeout?:number){
         if(this.saveType === 0){ //数据存到内存
             this.memoryCache.set(item,timeout);
         }else{//数据存到redis
@@ -131,7 +131,7 @@ export class NCache{
      * @returns             value或null
      */
     async get(key:string,subKey?:string,changeExpire?:boolean):Promise<any>{
-        let ci:CacheItem = null;
+        let ci:ICacheItem = null;
         if(this.saveType === 0){
             return this.memoryCache.get(key,subKey,changeExpire);
         }else{
@@ -146,7 +146,7 @@ export class NCache{
      * @return              object或null
      */
     async getMap(key:string,changeExpire?:boolean):Promise<any>{
-        let ci:CacheItem = null;
+        let ci:ICacheItem = null;
         if(this.saveType === 0){
             return this.memoryCache.getMap(key,changeExpire);
         }else{
@@ -263,7 +263,7 @@ export class NCache{
      * @param item      cache item
      * @param timeout   超时时间
      */
-    private async addToRedis(item:CacheItem,timeout?:number){
+    private async addToRedis(item:ICacheItem,timeout?:number){
         //存储timeout
         if(typeof timeout==='number' && timeout>0){
             await RedisFactory.set(
@@ -374,7 +374,7 @@ class MemoryCache{
      * 构造器
      * @param cfg 
      */
-    constructor(cfg:CacheCfg){
+    constructor(cfg:ICacheCfg){
         this.storeMap = new Map();
         this.maxSize = cfg.maxSize;
         this.size = 0;
@@ -385,7 +385,7 @@ class MemoryCache{
      * @param item      cache item
      * @param timeout   超时时间
      */
-    set(item:CacheItem,timeout?:number){
+    set(item:ICacheItem,timeout?:number){
         //检查空间并清理
         this.checkAndClean(item);
         let ci:MemoryItem = this.storeMap.get(item.key);
@@ -681,7 +681,7 @@ class MemoryCache{
      * 检查和清理空间
      * @param item  cacheitem
      */
-    checkAndClean(item:CacheItem){
+    checkAndClean(item:ICacheItem){
         let size:number = this.getRealSize(item.value);
         if(this.maxSize>0 && size + this.size>this.maxSize){
             this.cleanup(size + this.size - this.maxSize);

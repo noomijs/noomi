@@ -6,27 +6,31 @@ import { Util } from "../tools/util";
 import { App } from "../tools/application";
 
 /**
- * AOP 工厂
+ * Aop通知类型
  */
-
-/**
- * 通知配置
- */
-interface AopAdvice{
-    //切点
+interface IAopAdvice{
+    /**
+     * 切点
+     */
     pointcut_id?:string;
-    //类型 (before,after,return,throw,around)
+    /**
+     * 通知类型 (before,after,return,throw,around)
+     */
     type:string;
-    //切面对应的方法
+    /**
+     * 对应的切面方法
+     */
     method:string;
-    //切面对应的实例名或实例对象
-    instance:any; 
+    /**
+     * 切面对应的实例名或实例对象
+     */
+    instance:any;
 }
 
 /**
- * 切面类型
+ * Aop切面类型
  */
-interface AopAspect{
+interface IAopAspect{
     /**
      * 实例名
      */
@@ -38,13 +42,13 @@ interface AopAspect{
     /** 
      * 通知数组
      */
-    advices:Array<AopAdvice>;
+    advices:Array<IAopAdvice>;
 }
 
 /** 
  * 切点数据对象
  */
-interface PointcutCfg{
+interface IPointcut{
     /**
      * 切点id
      */
@@ -54,13 +58,15 @@ interface PointcutCfg{
      */
     expressions:Array<string>;
 }
+
 /**
+ * @exclude
  * aop文件配置对象
  */
-interface AopCfg{
+interface IAopCfg{
     files:Array<string>;            //引入文件
-    pointcuts:Array<PointcutCfg>;   //切点
-    aspects:Array<AopAspect>;       //切面
+    pointcuts:Array<IPointcut>;     //切点集合
+    aspects:Array<IAopAspect>;      //切面集合
 }
 
  /**
@@ -80,7 +86,7 @@ class AopPointcut{
     /**
      * 通知数组
      */
-    advices:Array<AopAdvice> = [];
+    advices:Array<IAopAdvice> = [];
 
     /**
      * 构造器
@@ -124,7 +130,7 @@ class AopPointcut{
      * 给切点添加通知
      * @param advice    通知对象
      */
-    addAdvice(advice:AopAdvice):void{
+    addAdvice(advice:IAopAdvice):void{
         this.advices.push(advice);
     }
 }
@@ -151,7 +157,7 @@ class AopFactory{
      * 添加一个切面
      * @param cfg   切面对象 
      */ 
-    static addAspect(cfg:AopAspect):void{
+    static addAspect(cfg:IAopAspect):void{
         if(this.aspects.has(cfg.instance)){
             throw new NoomiError("2005",cfg.instance); 
         }
@@ -221,7 +227,7 @@ class AopFactory{
      * 为切点添加一个通知
      * @param advice 通知配置
      */
-    static addAdvice(advice:AopAdvice):void{
+    static addAdvice(advice:IAopAdvice):void{
         let pc:AopPointcut = AopFactory.getPointcutById(advice.pointcut_id);
         if(!pc){
             throw new NoomiError("2002",advice.pointcut_id);
@@ -237,7 +243,7 @@ class AopFactory{
     static parseFile(path:string):void{
         //读取文件
         let jsonStr:string = App.fs.readFileSync(path,'utf-8');
-        let json:AopCfg = null;
+        let json:IAopCfg = null;
         try{
             json = App.JSON.parse(jsonStr);
         }catch(e){
@@ -250,17 +256,17 @@ class AopFactory{
      * 初始化切面工厂
      * @param config 配置对象，包含切点集合、切面集合(含通知集合)
      */
-    static init(config:AopCfg){
+    static init(config:IAopCfg){
         //切点数组
         if(Array.isArray(config.pointcuts)){
-            config.pointcuts.forEach((item:PointcutCfg)=>{
+            config.pointcuts.forEach((item:IPointcut)=>{
                 this.addPointcut(item.id,item.expressions);
             });
         }
 
         //切面数组
         if(Array.isArray(config.aspects)){
-            config.aspects.forEach((item:AopAspect)=>{
+            config.aspects.forEach((item:IAopAspect)=>{
                 this.addAspect(item);
             });
         }
@@ -430,4 +436,4 @@ class AopFactory{
 
 }
 
-export{AopFactory,AopAdvice,AopAspect,AopPointcut,AopCfg,PointcutCfg};
+export{AopFactory,IAopAdvice,IAopAspect,AopPointcut,IAopCfg,IPointcut};

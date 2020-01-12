@@ -14,7 +14,8 @@ import { NoomiError } from './errorfactory';
  * instance装饰器，添加实例到实例工厂，装饰类
  * @param cfg:object|string 如果为string，则表示实例名
  *          name:string     实例名，必填
- *          singleton:bool  是否单例，默认false
+ *          singleton:bool  是否单例，默认true
+ *          params:object   参数
  */
 function Instance(cfg){
     return (target) =>{
@@ -26,7 +27,7 @@ function Instance(cfg){
             singleton = true;
         }else if(typeof cfg === 'object'){
             instanceName = cfg.name;
-            singleton = cfg.singleton;
+            singleton = cfg.singleton!==undefined?cfg.singleton:true;
             params = cfg.params;
         }
         if(!instanceName){
@@ -38,7 +39,7 @@ function Instance(cfg){
             name:instanceName,  //实例名
             class:target,
             params:params,
-            singleton:singleton || true
+            singleton:singleton
         });
     }
 }

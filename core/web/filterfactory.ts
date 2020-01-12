@@ -8,7 +8,7 @@ import { HttpResponse } from "./httpresponse";
 /**
  * 过滤器配置类型
  */
-interface FilterConfig{
+interface IFilterCfg{
     /**
      * 实例名(与instance二选一)
      */
@@ -35,7 +35,7 @@ interface FilterConfig{
 /**
  * filter类型
  */
-interface Filter{
+interface IFilter{
     /**
      * 实例或实例名
      */
@@ -64,13 +64,13 @@ class FilterFactory{
     /**
      * 过滤器实例数组
      */
-    static filters:Array<Filter> = [];
+    static filters:Array<IFilter> = [];
 
     /**
      * 添加过滤器到工厂
      * @param cfg   过滤器配置项
      */
-    static addFilter(cfg:FilterConfig):void{
+    static addFilter(cfg:IFilterCfg):void{
         let ins:any = cfg.instance || cfg.instance_name;
         let ptns:Array<RegExp> = [];
         //默认 "/*"
@@ -116,12 +116,12 @@ class FilterFactory{
 
     /**
      * 初始化
-     * @param config {filters:[{FilterConfig1},...]}
+     * @param config {filters:[{IFilterCfg1},...]}
      */
     static init(config){
         //处理filters
         if(Array.isArray(config.filters)){
-            config.filters.forEach((item:FilterConfig)=>{
+            config.filters.forEach((item:IFilterCfg)=>{
                 this.addFilter(item);
             });
         }
@@ -131,9 +131,9 @@ class FilterFactory{
      * @param url   资源url 
      * @returns     filter数组
      */
-    static getFilterChain(url:string):Array<Filter>{
-        let arr:Array<Filter> = [];
-        this.filters.forEach((item:Filter)=>{
+    static getFilterChain(url:string):Array<IFilter>{
+        let arr:Array<IFilter> = [];
+        this.filters.forEach((item:IFilter)=>{
             let reg:RegExp;
             for(reg of item.patterns){
                 //找到匹配
@@ -154,7 +154,7 @@ class FilterFactory{
      * @param           全部执行完为true，否则为false
      */
     static async doChain(url:string,request:HttpRequest,response:HttpResponse):Promise<boolean>{
-        let arr:Array<Filter> = FilterFactory.getFilterChain(url);
+        let arr:Array<IFilter> = FilterFactory.getFilterChain(url);
         if(arr.length === 0){
             return true;
         }

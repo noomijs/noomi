@@ -1,12 +1,12 @@
 import { TransactionManager } from "./transactionmanager";
-import { ConnectionManager } from "./connectionmanager";
+import { IConnectionManager } from "./connectionmanager";
 import { EntityManager } from "typeorm";
 
 
 /**
  * mysql连接管理器
  */
-class MysqlConnectionManager implements ConnectionManager{
+class MysqlConnectionManager implements IConnectionManager{
     /**
      * 连接池
      */

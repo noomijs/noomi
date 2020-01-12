@@ -6,7 +6,7 @@ import { WebConfig } from "./webconfig";
 /**
  * response回写配置项
  */
-interface ResponseWriteCfg{
+interface IResponseWriteCfg{
     /**
      * 待写数据，可以是数据串或stream
      */
@@ -42,7 +42,7 @@ export class HttpResponse extends ServerResponse{
      * 写到浏览器(客户)端
      * @param config    回写配置项
      */
-    writeToClient(config:ResponseWriteCfg):void{
+    writeToClient(config:IResponseWriteCfg):void{
         let data:any = config.data || '';
         if(typeof data === 'object'){
             data = JSON.stringify(data);
@@ -76,7 +76,7 @@ export class HttpResponse extends ServerResponse{
      * 写数据流到浏览器(客户端)
      * @param config    回写配置项
      */
-    writeStreamToClient(config:ResponseWriteCfg):void{
+    writeStreamToClient(config:IResponseWriteCfg):void{
         let charset = config.charset || 'utf8';
         let status = config.statusCode || 200;
         let type = config.type || 'text/html';

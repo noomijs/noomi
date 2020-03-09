@@ -1,7 +1,7 @@
 # Noomi
 一个基于node的企业级框架，基于typescript开发，支持路由、过滤器、IoC、Aop、事务及嵌套、安全框架、缓存、集群。  
 Noomi全面支持typescript，提供快捷简单的注解编写方式和丰富的配置处理能力。   
-**框架官网：[www.noomi.cn](http://www.nodom.cn:3005)。**
+**框架官网：[www.noomi.cn](http://www.noomi.cn)。**
 ## 快速接入
 支持[noomi-cli](https://www.npmjs.com/package/noomi-cli)一键安装，完成noomi及其依赖包的安装，同时建立项目框架。
 ## 核心模块
@@ -114,4 +114,4 @@ noomi提供内置安全框架，用户只需提供对应的数据表和配置相
     "login_url":"***"         
 }
 ```
-更多使用细节请参考[Noomi官网](http://www.nodom.cn:3005)。
+更多使用细节请参考[Noomi官网](http://www.noomi.cn)。

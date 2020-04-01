@@ -14,7 +14,7 @@ interface IAopAdvice{
      */
     pointcut_id?:string;
     /**
-     * 通知类型 (before,after,return,throw,around)
+     * 通知类型 (before,after,after-return,after-throw,around)
      */
     type:string;
     /**

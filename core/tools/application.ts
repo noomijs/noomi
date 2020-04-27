@@ -47,6 +47,15 @@ export class App {
      * redis 对象
      */
     static redis = require('redis');
+
+    /**
+     * stream 对象
+     */
+    static stream = require('stream');
+    /**
+     * zlib 对象
+     */
+    static zlib = require('zlib');
     /**
      * json5 对象
      */

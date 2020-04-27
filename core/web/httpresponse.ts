@@ -27,6 +27,11 @@ interface IResponseWriteCfg{
      * 跨域配置串，多个域名用','分割，默认用webconfig中配置的网址数组，如果都没配置，则使用*
      */
     crossDomain?:string;    
+
+    /**
+     * 压缩类型，包括br,gzip,deflate
+     */
+    zip?:string;  
 }
 
 export class HttpResponse extends ServerResponse{
@@ -43,8 +48,8 @@ export class HttpResponse extends ServerResponse{
      * @param config    回写配置项
      */
     writeToClient(config:IResponseWriteCfg):void{
-        let data:any = config.data || '';
-        if(typeof data === 'object'){
+        let data:string|Buffer|object = config.data || '';
+        if(!(data instanceof Buffer) && typeof data === 'object'){
             data = JSON.stringify(data);
         }
         let charset = config.charset || 'utf8';
@@ -65,10 +70,13 @@ export class HttpResponse extends ServerResponse{
         
         //contenttype 和 字符集
         headers['Content-Type'] = type + ';charset=' + charset;
-        //数据长度
-        headers['Content-Length'] = Buffer.byteLength(data);
+        //压缩
+        if(config.zip){
+            headers['Content-Encoding'] = config.zip;
+            headers['Vary'] = 'Accept-Encoding';
+        }
         this.srcRes.writeHead(status, headers);
-        this.srcRes.write(data,charset);
+        this.srcRes.write(data);
         this.srcRes.end();
     }
 

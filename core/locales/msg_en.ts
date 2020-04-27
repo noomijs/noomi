@@ -1,6 +1,7 @@
 var NoomiErrorTip_en = {
     "0000":"unknown error",
     "0001":"Error in configuration process,noomi.ini may be invalid",
+    "0050":"file is not exist",
     "0100":"Error in exception configuration file,Please read the official documentation!",
     "0500":"Error in web configuration file,Please read the official documentation!",
     "0600":"Lack of redis config!",

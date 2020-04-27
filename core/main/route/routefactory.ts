@@ -33,12 +33,39 @@ interface IRouteCfg{
 
 /**
  * 路由结果类型
+ * @since 0.0.6
+ */
+enum ERouteResultType{
+    /**
+     * 重定向
+     */
+    REDIRECT='redirect',
+    /**
+     * 路由链,和redirect不同，浏览器地址不会改变
+     */
+    CHAIN='chain',  
+    /**
+     * 文件流，主要用于文件下载
+     */    
+    STREAM='stream',
+    /**
+     * 什么都不做
+     */
+    NONE='none', 
+    /**
+     * json数据,默认类型
+     */
+    JSON='json'  
+}
+
+/**
+ * 路由结果类型
  */
 interface IRouteResult{
     /**
-     * 结果类型，包括:redirect(重定向),chain(路由链,和redirect不同，url不会改变,json(ajax json数据),none(什么都不做)。默认json
+     * 结果类型
      */
-    type?:string;
+    type?:ERouteResultType;
     /**
      * 返回值，当返回值与value一致时，将执行此结果
      */
@@ -94,7 +121,8 @@ class RouteFactory{
     static addRoute(path:string,clazz:string,method?:string,results?:Array<IRouteResult>){
         if(results && results.length>0){
             for(let r of results){
-                if((r.type === 'chain' || r.type === 'redirect') && (!r.url || typeof r.url !=='string' || (r.url = r.url.trim())=== '')){
+                if((r.type === ERouteResultType.CHAIN || r.type === ERouteResultType.REDIRECT) 
+                    && (!r.url || typeof r.url !=='string' || (r.url = r.url.trim())=== '')){
                     throw new NoomiError("2101");
                 }
             }
@@ -256,7 +284,7 @@ class RouteFactory{
     static handleOneResult(res:HttpResponse,result:IRouteResult,data:any,instance?:any):void{
         let url:string;
         switch(result.type){
-            case "redirect": //重定向
+            case ERouteResultType.REDIRECT: //重定向
                 url = handleParamUrl(instance,result.url);
                 let pa = [];
                 //参数属性
@@ -278,7 +306,7 @@ class RouteFactory{
                 }
                 res.redirect(url);
                 return;
-            case "chain": //路由器链
+            case ERouteResultType.CHAIN: //路由器链
                 url = handleParamUrl(instance,result.url);
                 let url1 = App.url.parse(url).pathname;
                 let params = App.qs.parse(App.url.parse(url).query);
@@ -294,7 +322,6 @@ class RouteFactory{
                 }
                 const route = this.getRoute(url1);
                 if(route !== null){
-                    
                     //调用
                     try{
                         let re = route.instance[route.method](params);
@@ -312,8 +339,28 @@ class RouteFactory{
                     }
                 }
                 return;
-            case "none": //什么都不做
+            case ERouteResultType.NONE:    //什么都不做
                 break;
+            case ERouteResultType.STREAM:  //文件流
+                //文件名
+                let pn:string = result.params[0];
+                if(pn){
+                    let fn:string = getValue(instance,pn);
+                    if(fn){
+                        fn = Util.getAbsPath([fn]);
+                        if(!App.fs.existsSync(fn)){
+                            throw new NoomiError('0050');
+                        }
+                        let stream = App.fs.createReadStream(fn);
+                        if(stream){
+                            res.writeStreamToClient({
+                                data:stream,
+                                type:'application/octet-stream'
+                            });
+                        }
+                    }
+                }
+                return;
             default: //json
                 res.writeToClient({
                     data:data
@@ -414,5 +461,5 @@ class RouteFactory{
     }
 }
 
-export {RouteFactory,IRoute,IRouteCfg,IRouteResult};
+export {RouteFactory,IRoute,IRouteCfg,IRouteResult,ERouteResultType};
 

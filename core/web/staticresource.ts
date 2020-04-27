@@ -25,7 +25,15 @@ class StaticResource{
     static async load(request:HttpRequest,response:HttpResponse,path:string):Promise<number>{
         
         let finded:boolean = false;
-        
+        // gzip
+        let gzip:string = <string>request.getHeader("accept-encoding");
+        if(gzip.indexOf('gzip') !== -1){
+            gzip = 'gzip';
+        }else if(gzip.indexOf('br') !== -1){
+            gzip = 'br';
+        }else if(gzip.indexOf('deflate') !== -1){
+            gzip = 'deflate';
+        }
         //检测路径是否在static map中
         for(let p of this.staticMap){
             if(p[1].test(path)){
@@ -44,12 +52,13 @@ class StaticResource{
     
         let filePath = Util.getAbsPath([path]);
         if(WebConfig.useServerCache){ //从缓存取，如果用浏览器缓存数据，则返回0，不再操作
-            let ro:number|object = await WebCache.load(request,response,path);
+            let ro:number|object = await WebCache.load(request,response,path,gzip);
             if(ro === 0){
                 //回写没修改标志
                 response.writeToClient({
                     statusCode:304
                 });
+                return;
             }else if(ro !== undefined){
                 data = ro['data'];
                 mimeType = ro['type'];
@@ -62,7 +71,7 @@ class StaticResource{
                 let cacheData:object;
                 //存到cache
                 if(WebConfig.useServerCache){
-                    cacheData = await WebCache.add(path,filePath,response);
+                    cacheData = await WebCache.add(path,filePath,response,gzip);
                 }
                 //文件流输出
                 if(cacheData === undefined){
@@ -72,13 +81,18 @@ class StaticResource{
                         data:stream,
                         type:mimeType
                     });
-                }else{
-                    response.writeToClient({
-                        data:cacheData['data'],
-                        type:cacheData['type']
-                    });
+                }else{ //存储数据用于回写到client
+                    data = cacheData['data'];
+                    mimeType = cacheData['type'];
                 }
             }
+        }
+        if(data){
+            response.writeToClient({
+                data:data,
+                type:mimeType,
+                zip:gzip
+            });
         }
         return errCode || 0;
     }

@@ -49,10 +49,10 @@ class StaticResource{
         let data:string;           //file data
         let mimeType:string;    //mimetype
         //静态资源
-    
+        
         let filePath = Util.getAbsPath([path]);
         if(WebConfig.useServerCache){ //从缓存取，如果用浏览器缓存数据，则返回0，不再操作
-            let ro:number|object = await WebCache.load(request,response,path,gzip);
+            let ro:number|object = await WebCache.load(request,response,path);
             if(ro === 0){
                 //回写没修改标志
                 response.writeToClient({
@@ -60,7 +60,13 @@ class StaticResource{
                 });
                 return;
             }else if(ro !== undefined){
-                data = ro['data'];
+                //有的数据没压缩
+                if(gzip && ro['zipData']){
+                    data = ro['zipData'];
+                }else if(ro['data']){
+                    data = ro['data'];
+                    gzip = undefined;
+                }
                 mimeType = ro['type'];
             }
         }
@@ -82,7 +88,12 @@ class StaticResource{
                         type:mimeType
                     });
                 }else{ //存储数据用于回写到client
-                    data = cacheData['data'];
+                    if(gzip && cacheData['zip']){
+                        data = cacheData['zipData'];
+                    }else{
+                        data = cacheData['data'];
+                        gzip = undefined;
+                    }
                     mimeType = cacheData['type'];
                 }
             }

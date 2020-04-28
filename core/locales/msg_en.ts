@@ -36,8 +36,8 @@ var NoomiErrorTip_en = {
     "2800":"Error in data source configuration file,Please read the official documentation!",
 
     "3002":"Attempt to allocate Buffer larger than maximum size",
-    "3010":"key already exists，it cannot be defined as object"
-
+    "3010":"key already exists，it cannot be defined as object",
+    "3011":"need value"
 }
 
 var NoomiTip_en = {

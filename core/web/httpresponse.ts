@@ -2,6 +2,7 @@ import { ServerResponse, OutgoingHttpHeaders, IncomingMessage } from "http";
 import { HttpCookie } from "./httpcookie";
 import { ReadStream } from "fs";
 import { WebConfig } from "./webconfig";
+import { App } from "../tools/application";
 
 /**
  * response回写配置项
@@ -34,12 +35,22 @@ interface IResponseWriteCfg{
     zip?:string;  
 }
 
+/** 
+ * response类
+ * @remarks
+ * 在ServerResponse基础上增加了写客户端方法，更适合直接使用
+ */ 
 export class HttpResponse extends ServerResponse{
     srcRes:ServerResponse;                  //源response
     request:IncomingMessage;                //源request
     cookie:HttpCookie = new HttpCookie();   //cookie
     
-    init(req,res){
+    /**
+     * 初始化response对象
+     * @param req   源request对象
+     * @param res   源response对象
+     */
+    init(req:IncomingMessage,res:ServerResponse){
         this.request = req;
         this.srcRes = res;
     }
@@ -83,12 +94,10 @@ export class HttpResponse extends ServerResponse{
     /**
      * 写数据流到浏览器(客户端)
      * @param config    回写配置项
+     *              data:file path
+     * @since           0.3.3
      */
-    writeStreamToClient(config:IResponseWriteCfg):void{
-        let charset = config.charset || 'utf8';
-        let status = config.statusCode || 200;
-        let type = config.type || 'text/html';
-
+    writeFileToClient(config:IResponseWriteCfg):void{
         //设置cookie
         this.writeCookie();
         let headers:OutgoingHttpHeaders = {};
@@ -97,20 +106,53 @@ export class HttpResponse extends ServerResponse{
             headers['Access-Control-Allow-Origin'] = '*';
             headers['Access-Control-Allow-Headers'] = 'Content-Type';
         }
+        //文件路径
+        let path:string = config.data;
+        //mime类型
+        let type = App.mime.getType(path);
         
-        //contenttype 和 字符集
-        headers['Content-Type'] = type + ';charset=' + charset;
-        let stream:ReadStream = config.data;
-        //数据长度
-        this.srcRes.writeHead(status, headers);
-        stream.on('data',(chunk)=>{
-            this.srcRes.write(chunk);
-        });
-
-        stream.on('end',()=>{
-            this.srcRes.end();
-        });
+        //contenttype
+        headers['Content-Type'] = type;
+        
+        let req:IncomingMessage = this.request;
+        let res = this.srcRes;
+        let range = req.headers.range;
+        // 带range的请求
+        if (range) {
+            let byteName:string;
+            let arr = range.split('=');
+            byteName = arr[0];
+            var positions = arr[1].split("-");
+            var start = parseInt(positions[0], 10);
+            let stats = App.fs.statSync(path);
+            let total = stats.size;
+            let end = positions[1] ? parseInt(positions[1], 10) : total - 1;
+            let size = (end - start) + 1;
+            
+            res.writeHead(206, {
+                "Content-Range":byteName + ' ' + start + '-' + (start+size-1)  + "/" + total,
+                "Accept-Ranges": byteName,
+                "Content-Length":size,
+                "Content-Type": type
+            });    
+            
+            let stream = App.fs.createReadStream(path, { start: start, end: end })
+                .on("open", function() {
+                    stream.pipe(res);
+                }).on("error", function(err) {
+                    res.end(err);
+                });
+        }else{
+            res.writeHead(200, headers);
+            let stream = App.fs.createReadStream(path)
+                .on("open", function() {
+                    stream.pipe(res)})
+                .on('end', ()=>{
+                    res.end();
+                });
+        }
     }
+
     /**
      * 设置回传header
      * @param key       键

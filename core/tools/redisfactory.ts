@@ -57,6 +57,10 @@ class RedisFactory{
      */
     static clientMap:Map<string,any> = new Map();
     /**
+     * buffer data 前缀，用于识别buffer
+     */
+    static bufferPrefix:string = '@@BF_DT@@';
+    /**
      * 添加redis client到clientMap
      * @param cfg   redis配置项
      */
@@ -91,31 +95,51 @@ class RedisFactory{
         if(client === null){
             throw new NoomiError("2601",clientName);
         }
+
+        if(!item.value){
+            throw new NoomiError("3011");
+        }
         //合并pre
         let key:string=item.pre?item.pre+item.key:item.key;
-        
+        //buffer 转 string
+        let value = item.value;
+        if(value instanceof Buffer){
+            //需要增加buffer data前缀，用于识别
+            value = this.bufferPrefix + value.toString('hex');
+        }
         if(item.subKey){
             await new Promise((resolve,reject)=>{
-                client.hset(key,item.subKey,item.value,(err,v)=>{
+                
+                client.hset(key,item.subKey,value,(err,v)=>{
                     resolve(v);
                 });
             })
         }else{
-            if(Array.isArray(item.value)){//多个键，值组成的数组
+            if(Array.isArray(value)){//多个键，值组成的数组
+                for(let i=0;i<value.length;i++){
+                    if(value[i] instanceof Buffer){
+                        value[i] = this.bufferPrefix + value[i].toString('hex');
+                    }
+                }
                 await new Promise((resolve,reject)=>{
-                    client.hmset.apply(client,[key].concat(item.value),(err,v)=>{
+                    client.hmset.apply(client,[key].concat(value),(err,v)=>{
                         resolve(v);
                     });
                 });
-            }else if(typeof item.value === 'object'){//对象用set存储
+            }else if(typeof value === 'object'){//对象用set存储
+                for(let p in value){
+                    if(value[p] instanceof Buffer){
+                        value[p] = this.bufferPrefix + value[p].toString('hex');
+                    }
+                }
                 await new Promise((resolve,reject)=>{
-                    client.hmset(key,item.value,(err,v)=>{
+                    client.hmset(key,value,(err,v)=>{
                         resolve(v);
                     });
                 });
             }else{
                 await new Promise((resolve,reject)=>{
-                    client.set(key,item.value,(err,v)=>{
+                    client.set(key,value,(err,v)=>{
                         resolve(v);
                     });
                 });
@@ -160,6 +184,11 @@ class RedisFactory{
             });
         }
         this.setTimeout(client,key,item.timeout);
+        //去掉前缀，并转buffer
+        if(retValue && retValue.startsWith(this.bufferPrefix)){
+            retValue = Buffer.from(retValue.substr(this.bufferPrefix.length),'hex');
+        }
+        
         return retValue;
     }
 
@@ -219,7 +248,7 @@ class RedisFactory{
         if(client === null){
             throw new NoomiError("2601",clientName);
         }
-        let r = new Promise((resolve,reject)=>{
+        let r:any = await new Promise((resolve,reject)=>{
             client.hgetall(key,(err,value)=>{
                 if(!err){
                     resolve(value);
@@ -229,6 +258,13 @@ class RedisFactory{
         
         if(item.timeout && item.timeout>0){
             this.setTimeout(clientName,item.key,item.timeout);
+        }
+
+        //去掉前缀，并转buffer
+        for(let o in r){
+            if(typeof r[o] === 'string' && r[o].startsWith(this.bufferPrefix)){
+                r[o] = Buffer.from(r[o].substr(this.bufferPrefix.length),'hex');
+            }
         }
         return r;
     }

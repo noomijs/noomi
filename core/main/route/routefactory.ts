@@ -351,13 +351,9 @@ class RouteFactory{
                         if(!App.fs.existsSync(fn)){
                             throw new NoomiError('0050');
                         }
-                        let stream = App.fs.createReadStream(fn);
-                        if(stream){
-                            res.writeStreamToClient({
-                                data:stream,
-                                type:'application/octet-stream'
-                            });
-                        }
+                        res.writeFileToClient({
+                            data:fn
+                        });
                     }
                 }
                 return;

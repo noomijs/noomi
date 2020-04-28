@@ -83,9 +83,8 @@ class StaticResource{
                 if(cacheData === undefined){
                     mimeType = App.mime.getType(filePath);
                     let stream:ReadStream = App.fs.createReadStream(filePath);
-                    response.writeStreamToClient({
-                        data:stream,
-                        type:mimeType
+                    response.writeFileToClient({
+                        data:filePath
                     });
                 }else{ //存储数据用于回写到client
                     if(gzip && cacheData['zip']){
@@ -98,6 +97,7 @@ class StaticResource{
                 }
             }
         }
+
         if(data){
             response.writeToClient({
                 data:data,

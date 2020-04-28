@@ -35,7 +35,7 @@ class HttpRequest extends IncomingMessage{
         this.srcReq = req;
         //response 初始化
         this.response = new HttpResponse(req);
-        this.response.init(this,res);
+        this.response.init(req,res);
         this.url = req.url;
         this.method = req.method;
         this.initQueryString();

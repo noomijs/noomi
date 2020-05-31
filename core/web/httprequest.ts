@@ -145,14 +145,29 @@ class HttpRequest extends IncomingMessage{
     formHandle():Promise<object>{
         let req:IncomingMessage = this.srcReq;
         //非文件multipart/form-data方式
-        if(req.headers['content-type'].indexOf('multipart/form-data') === -1){
+        let contentType:string[] = req.headers['content-type'].split(';');
+        if(contentType[0] !== 'multipart/form-data'){
             return new Promise((resolve,reject)=>{
                 let lData:Buffer = Buffer.from('');
                 req.on('data',(chunk:Buffer)=>{
                     lData = Buffer.concat([lData,chunk]);
                 });
                 req.on('end',()=>{
-                    let r = App.qs.parse(lData.toString('utf8'))
+                    let r;
+                    //处理charset
+                    let charset = 'utf8';
+                    if(contentType.length>1){
+                        let a1:string[] = contentType[1].split('=');
+                        if(a1.length>1){
+                            charset = a1[1].trim();
+                        }
+                    }
+                    let data:string = lData.toString(charset);
+                    if(contentType[0] === 'application/json'){
+                        r = JSON.parse(data);
+                    }else{
+                        r = App.qs.parse(data);
+                    }
                     resolve(r);
                 });
             });

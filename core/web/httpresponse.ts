@@ -77,6 +77,7 @@ export class HttpResponse extends ServerResponse{
             headers['Access-Control-Allow-Origin'] = crossDomain;
             headers['Access-Control-Allow-Headers'] = 'Content-Type,x-requested-with';
             headers['Access-Control-Allow-Credentials'] = 'true';
+            headers['Access-Control-Allow-Methods'] = 'PUT,POST,GET,OPTIONS';
         }
         
         //contenttype 和 字符集

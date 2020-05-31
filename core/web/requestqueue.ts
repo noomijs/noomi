@@ -69,6 +69,39 @@ class RequestQueue{
      */
     
     static handleOne(request:HttpRequest){
+        switch (request.method){
+            case 'OPTIONS':
+                request.response.writeToClient({
+                    statusCode:200,
+                    data:''
+                });
+            return;
+            case 'DELETE':
+                request.response.writeToClient({
+                    statusCode:501
+                });
+                return;
+            case 'PUT':
+                request.response.writeToClient({
+                    statusCode:501
+                });
+                return;
+            case 'HEAD':
+                request.response.writeToClient({
+                    statusCode:501
+                });
+                return;    
+            case 'TRACE':
+                request.response.writeToClient({
+                    statusCode:501
+                });
+                return;        
+            case 'PATCH':
+                request.response.writeToClient({
+                    statusCode:501
+                });
+                return;    
+        }
         let path = App.url.parse(request.url).pathname;
         if(path === '' || path ==='/'){
             //默认页面

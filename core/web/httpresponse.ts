@@ -1,6 +1,5 @@
 import { ServerResponse, OutgoingHttpHeaders, IncomingMessage } from "http";
 import { HttpCookie } from "./httpcookie";
-import { ReadStream } from "fs";
 import { WebConfig } from "./webconfig";
 import { App } from "../tools/application";
 
@@ -30,6 +29,10 @@ interface IResponseWriteCfg{
     crossDomain?:string;    
 
     /**
+     * 数据长度
+     */
+    size?:number;
+    /**
      * 压缩类型，包括br,gzip,deflate
      */
     zip?:string;  
@@ -41,9 +44,18 @@ interface IResponseWriteCfg{
  * 在ServerResponse基础上增加了写客户端方法，更适合直接使用
  */ 
 export class HttpResponse extends ServerResponse{
-    srcRes:ServerResponse;                  //源response
-    request:IncomingMessage;                //源request
-    cookie:HttpCookie = new HttpCookie();   //cookie
+    /**
+     * 源response
+     */
+    srcRes:ServerResponse;                  
+    /**
+     * 源request
+     */
+    request:IncomingMessage;
+    /**
+     * cookie
+     */
+    cookie:HttpCookie = new HttpCookie();
     
     /**
      * 初始化response对象
@@ -59,35 +71,34 @@ export class HttpResponse extends ServerResponse{
      * @param config    回写配置项
      */
     writeToClient(config:IResponseWriteCfg):void{
+        this.writeCookie();
+        this.setCorsHead();
+
         let data:string|Buffer|object = config.data || '';
         if(!(data instanceof Buffer) && typeof data === 'object'){
             data = JSON.stringify(data);
         }
+        
         let charset = config.charset || 'utf8';
         let status = config.statusCode || 200;
         let type = config.type || 'text/html';
-
-        //设置cookie
-        this.writeCookie();
-        let headers:OutgoingHttpHeaders = {};
-        //默认*
-        let crossDomain:string = config.crossDomain || WebConfig.crossDomain || '*';
-        //跨域
-        if(config.crossDomain || WebConfig.crossDomain){
-            headers['Access-Control-Allow-Origin'] = crossDomain;
-            headers['Access-Control-Allow-Headers'] = 'Content-Type,x-requested-with';
-            headers['Access-Control-Allow-Credentials'] = 'true';
-            headers['Access-Control-Allow-Methods'] = 'PUT,POST,GET,OPTIONS';
-        }
-        
+        let size:number = config.size || data.length;
         //contenttype 和 字符集
-        headers['Content-Type'] = type + ';charset=' + charset;
+        this.setHeader('Content-Type',type + ';charset=' + charset);
+        this.setHeader('Content-Length',size);
+        
         //压缩
         if(config.zip){
-            headers['Content-Encoding'] = config.zip;
-            headers['Vary'] = 'Accept-Encoding';
+            this.setHeader('Content-Encoding',config.zip);
+            this.setHeader('Vary','Accept-Encoding');
         }
-        this.srcRes.writeHead(status, headers);
+0
+        //处理method = head
+        if(this.doHead(config)){
+            return;
+        }
+        
+        this.srcRes.writeHead(status, {});
         this.srcRes.write(data);
         this.srcRes.end();
     }
@@ -96,24 +107,25 @@ export class HttpResponse extends ServerResponse{
      * 写数据流到浏览器(客户端)
      * @param config    回写配置项
      *              data:file path
+     * @param mimeType  mime 类型
      * @since           0.3.3
      */
     writeFileToClient(config:IResponseWriteCfg):void{
-        //设置cookie
         this.writeCookie();
-        let headers:OutgoingHttpHeaders = {};
-        //跨域
-        if(config.crossDomain){
-            headers['Access-Control-Allow-Origin'] = '*';
-            headers['Access-Control-Allow-Headers'] = 'Content-Type';
-        }
+        this.setCorsHead();
+        
         //文件路径
         let path:string = config.data;
         //mime类型
-        let type = App.mime.getType(path);
-        
-        //contenttype
-        headers['Content-Type'] = type;
+        if(!config.type){
+            config.type = App.mime.getType(path);
+        }
+        this.setContentType(config.type);
+        this.setContentLength(config.size);
+        //处理method=head
+        if(this.doHead(config)){
+            return;
+        }
         
         let req:IncomingMessage = this.request;
         let res = this.srcRes;
@@ -123,19 +135,17 @@ export class HttpResponse extends ServerResponse{
             let byteName:string;
             let arr = range.split('=');
             byteName = arr[0];
-            var positions = arr[1].split("-");
-            var start = parseInt(positions[0], 10);
+            let positions = arr[1].split("-");
+            let start = parseInt(positions[0], 10);
             let stats = App.fs.statSync(path);
             let total = stats.size;
             let end = positions[1] ? parseInt(positions[1], 10) : total - 1;
             let size = (end - start) + 1;
-            
+            this.setContentLength(size);
             res.writeHead(206, {
                 "Content-Range":byteName + ' ' + start + '-' + (start+size-1)  + "/" + total,
-                "Accept-Ranges": byteName,
-                "Content-Length":size,
-                "Content-Type": type
-            });    
+                "Accept-Ranges": byteName
+            });
             
             let stream = App.fs.createReadStream(path, { start: start, end: end })
                 .on("open", function() {
@@ -144,7 +154,7 @@ export class HttpResponse extends ServerResponse{
                     res.end(err);
                 });
         }else{
-            res.writeHead(200, headers);
+            res.writeHead(200, {});
             let stream = App.fs.createReadStream(path)
                 .on("open", function() {
                     stream.pipe(res)})
@@ -202,5 +212,73 @@ export class HttpResponse extends ServerResponse{
             this.srcRes.setHeader('Set-Cookie',str);
         }
         return str;
+    }
+
+    /**
+     * 设置跨域头
+     */
+    setCorsHead(){
+        if(!this.request.headers['origin'] || !WebConfig.cors || !WebConfig.cors['domain']){
+            return;
+        }
+        //来源域
+        let domain:string = WebConfig.cors['domain'].trim();
+        if(domain === ''){
+            return;
+        }
+        this.setHeader('Access-Control-Allow-Origin',domain);
+        this.setHeader('Access-Control-Allow-Headers',WebConfig.cors['allow_headers']||'');
+        this.setHeader('Access-Control-Allow-Method',"POST,GET,HEAD,OPTIONS");
+        if(domain !== '*'){
+            this.setHeader('Access-Control-Allow-Credentials','true');
+        }
+        this.setHeader('Access-Control-Max-Age',WebConfig.cors['access_max_age']||86400);
+    }
+
+    /**
+     * 设置回写类型
+     * @param type      类型
+     */
+    setContentType(type:string){
+        this.setHeader('Content-Type',type);
+    }
+    /**
+     * 设置content length
+     * @param length    内容长度
+     */
+    setContentLength(length:number){
+        this.setHeader('Content-Length',length);
+    }
+    /**
+     * 处理head方法请求
+     * @param config    response config
+     * @returns         如果请方法为head，则返回true，否则返回false
+     */
+    doHead(config:IResponseWriteCfg):boolean{
+        if(this.request.method === 'HEAD'){
+            this.srcRes.writeHead(200, {});
+            this.srcRes.write('');
+            this.srcRes.end();
+            return true;
+        }
+        return false;
+    }
+
+    doTrace(config:IResponseWriteCfg){
+        this.setContentType("message/http");
+        this.setContentLength(0);
+    }
+
+    /**
+     * 处理options
+     */
+    doOptions(){
+        this.setHeader('Allow','GET, POST, OPTIONS, HEAD');
+        this.writeCookie();
+        this.setCorsHead();
+        this.setContentLength(0);
+        this.srcRes.writeHead(200,{});
+        // this.srcRes.write('');
+        this.srcRes.end();
     }
 }

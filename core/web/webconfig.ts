@@ -32,9 +32,9 @@ export class WebConfig{
      */
     static httpsCfg:object;
     /**
-     * 跨域域名，多个域名用','分割
+     * 跨域设置
      */
-    static crossDomain:string;
+    static cors:object;
     /**
      * 欢迎页面，访问根目录时跳转到该页面
      */
@@ -62,7 +62,7 @@ export class WebConfig{
             if(cfg.hasOwnProperty('static_path')){
                 StaticResource.addPath(cfg['static_path']);
             }
-            this.crossDomain = cfg['cross_domain'];
+            this.cors = cfg['cors'];
             this.welcomePage = cfg['welcome'];
             this.config = cfg;
             //cache

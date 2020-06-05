@@ -155,7 +155,7 @@ class HttpRequest extends IncomingMessage{
                 req.on('end',()=>{
                     let r;
                     //处理charset
-                    let charset = 'utf8';
+                    let charset:string = 'utf8';
                     if(contentType.length>1){
                         let a1:string[] = contentType[1].split('=');
                         if(a1.length>1){

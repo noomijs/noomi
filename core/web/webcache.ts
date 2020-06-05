@@ -56,14 +56,6 @@ class WebCache{
      */
     // static excludeFileTypes:Array<string> = ["audio/","video/"];
     /**
-     * 可压缩类型
-     */
-    static cacheTypes:Array<RegExp> = [
-        /^text\/\S+$/,
-        /^application\/\S*script$/,
-        /^application\/json$/
-    ]
-    /**
      * 初始化
      * @param cfg   配置项，包括:
      *                  file_type           缓存文件类型，默认[*]
@@ -98,129 +90,23 @@ class WebCache{
 
     /**
      * 添加资源到缓存中
-     * @param url       url请求url
-     * @param path      url对应路径
-     * @param response  response对象
-     * @param gzip      压缩类型 gzip,br,deflate
-     * @returns         {data:文件内容,type:mime type}
+     * @param url           url请求url
+     * @param cacheData     待缓存数据
+     * @param dontSaveData  不缓存文件数据
      */
-    static async add(url:string,path:string,response:HttpResponse,gzip:string):Promise<Object>{
-        const fs = App.fs;
-        let addFlag:boolean = false;
-        //未压缩数据buffer
-        let srcBuf:Buffer;
-        //压缩数据buffer
-        let zipBuf:Buffer;
-        //是否需要压缩
-        let needZip:boolean = false;
-        let needCache:boolean = false;
-        
-        //获取lastmodified
-        let stat:Stats = await new Promise((resolve,reject)=>{
-            fs.stat(path,(err,data)=>{
-                resolve(data);
-            });
+    static async add(url:string,cacheData:object,dontSaveData?:boolean){
+        //存到cache
+        await this.cache.set({
+            key:url,
+            value:{
+                etag:cacheData['etag'],
+                lastModified:cacheData['lastModified'],
+                type:cacheData['type'],
+                size:cacheData['size'],
+                data:!dontSaveData?cacheData['data']:undefined,
+                zipData:!dontSaveData?cacheData['zipData']:undefined
+            }
         });
-        //mime 类型
-        let mimeType:string = App.mime.getType(path);
-
-        needCache = this.checkNeedCache(mimeType);
-        //超出最大尺寸
-        addFlag = needCache && this.maxSingleSize > 0 && stat.size < this.maxSingleSize;
-        
-        if(addFlag){
-            const stream = App.stream;
-            const zlib = App.zlib;
-            const util = App.util;
-            const pipeline = util.promisify(stream.pipeline);
-            //源文件流
-            let srcStream:Stream;
-            //zip文件流
-            let zipStream:Stream;
-            let srcBufs = [];
-            let zipBufs = [];
-            let tmpFn:string;
-
-            needZip = gzip && needCache;
-            
-            if(needZip){
-                //生成临时文件
-                tmpFn = App.path.resolve(App.path.dirname(path),App.uuid.v1());
-                //zip对象
-                let zip;
-                //根据不同类型压缩
-                switch(gzip){
-                    case 'br':
-                        zip = zlib.createBrotliDecompress();
-                        break;
-                    case 'gzip':
-                        zip = zlib.createGzip();
-                        break;
-                    case 'deflate':
-                        zip = zlib.createInflate();
-                        break;
-                }
-                
-                //创建压缩管道
-                await pipeline(fs.createReadStream(path),zip,App.fs.createWriteStream(tmpFn));
-                //创建压缩输入流
-                zipStream = fs.createReadStream(tmpFn);
-                //从zip输入流读数据
-                zipBuf = await new Promise((res,rej)=>{
-                    zipStream.on('data',(buf)=>{
-                        zipBufs.push(buf);
-                    });
-                    zipStream.on('end',()=>{
-                        res(Buffer.concat(zipBufs));
-                        //删除临时压缩文件
-                        fs.unlink(tmpFn,(err)=>{
-                            console.log(err);
-                        });
-                    });
-                });
-            }
-            
-            //创建输入流
-            srcStream = fs.createReadStream(path);
-
-            //从源输入流读数据
-            srcBuf = await new Promise((res,rej)=>{
-                srcStream.on('data',(buf)=>{
-                    srcBufs.push(buf);
-                });
-                srcStream.on('end',()=>{
-                    res(Buffer.concat(srcBufs));
-                });
-            });
-            
-            //最后修改 
-            let lastModified:string = stat.mtime.toUTCString();
-            //计算hash
-            const hash = App.crypto.createHash('md5');
-            hash.update(srcBuf,'utf8');
-            let etag:string = hash.digest('hex');
-            //存到cache
-            await this.cache.set({
-                key:url,
-                value:{
-                    etag:etag,
-                    lastModified:lastModified,
-                    data:srcBuf,
-                    zipData:zipBuf,
-                    type:mimeType
-                }
-            });
-        
-            if(response){
-                this.writeCacheToClient(response,etag,lastModified);
-            }
-        }else{
-            this.writeCacheToClient(response);
-        }
-        
-        if(srcBuf){
-            return {data:srcBuf,zipData:zipBuf,type:mimeType,zip:needZip};
-        }
     }
 
     /**
@@ -241,27 +127,9 @@ class WebCache{
                 let map = await this.cache.getMap(url);
                 if(map !== null){
                     this.writeCacheToClient(response,map.etag,map.lastModified);
-                    return {
-                        data:map.data,
-                        zipData:map.zipData,
-                        type:map.type
-                    }
+                    return map;
                 }
         }
-    }
-
-    /**
-     * 检查mime类型文件是否需要压缩
-     * @param mimeType 
-     */
-    static checkNeedCache(mimeType:string):boolean{
-        //判断是否为可压缩类型
-        for(let reg of this.cacheTypes){
-            if(reg.exec(mimeType) !== null){
-                return true;
-            }
-        }
-        return false;
     }
     /**
      * 写cache到客户端

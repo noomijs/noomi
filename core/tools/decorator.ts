@@ -76,14 +76,13 @@ function Router(cfg?:any){
             class:target,
             singleton:false
         });
-
         //如果配置了path，则追加到路由，对所有方法有效
         if(cfg && cfg.path){
             let path:string = cfg.path;
             if(typeof path==='string' && (path=path.trim()) !== ''){
                 setImmediate(()=>{
                     //延迟到Route注解后，便于先处理非*的路由
-                    RouteFactory.addRoute(namespace + path+'*',instanceName,null,cfg.results);
+                    RouteFactory.addRoute(namespace + path + '(?!\\S+/)*',instanceName,null,cfg.results);
                 });
             }
         }

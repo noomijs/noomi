@@ -139,6 +139,7 @@ class RouteFactory{
                 results:results
             });
         }else{ //有通配符
+            let reg = Util.toReg(path,3);
             this.dynaRouteArr.push({
                 path:path,
                 reg:Util.toReg(path,3),
@@ -168,7 +169,7 @@ class RouteFactory{
                 if(item.reg.test(path)){
                     method = item.method;
                     if(!method){
-                        let index = item.path.indexOf("*");
+                        let index = item.path.indexOf("(");
                         //通配符处理
                         if(index !== -1){
                             //通配符方法

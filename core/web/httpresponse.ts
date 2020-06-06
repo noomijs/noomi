@@ -1,4 +1,4 @@
-import { ServerResponse, OutgoingHttpHeaders, IncomingMessage } from "http";
+import { ServerResponse, IncomingMessage } from "http";
 import { HttpCookie } from "./httpcookie";
 import { WebConfig } from "./webconfig";
 import { App } from "../tools/application";
@@ -14,7 +14,7 @@ interface IResponseWriteCfg{
     /**
      * 字符集，默认utf8
      */             
-    charset?:string;   
+    charset?:BufferEncoding;   
     /**
      * 数据类型，默认text/html
      */
@@ -73,19 +73,22 @@ export class HttpResponse extends ServerResponse{
     writeToClient(config:IResponseWriteCfg):void{
         this.writeCookie();
         this.setCorsHead();
-
         let data:string|Buffer|object = config.data || '';
-        if(!(data instanceof Buffer) && typeof data === 'object'){
-            data = JSON.stringify(data);
+        let charset:BufferEncoding = config.charset || 'utf8';
+        if(!(data instanceof Buffer)){
+            if(typeof data === 'object'){
+                data = JSON.stringify(data);
+            }
         }
         
-        let charset = config.charset || 'utf8';
         let status = config.statusCode || 200;
         let type = config.type || 'text/html';
-        let size:number = config.size || data.length;
         //contenttype 和 字符集
         this.setHeader('Content-Type',type + ';charset=' + charset);
-        this.setHeader('Content-Length',size);
+        
+        if(config.size){
+            this.setHeader('Content-Length',config.size);
+        }
         
         //压缩
         if(config.zip){

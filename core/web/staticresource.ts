@@ -152,7 +152,7 @@ class StaticResource{
      *                      type:mimeType,
      *                      data:srcBuf,     未压缩数据
      *                      zipData:srcBuf   压缩数据
-     *                      size:contentLength
+     *                      size:content length
      *                      saveData:是否可缓存数据
      *                  }
      */
@@ -183,8 +183,22 @@ class StaticResource{
         let srcBufs = [];
         let zipBufs = [];
         let tmpFn:string;
+        
+        //创建输入流
+        srcStream = fs.createReadStream(path);
+
+        //从源输入流读数据
+        srcBuf = await new Promise((res,rej)=>{
+            srcStream.on('data',(buf)=>{
+                srcBufs.push(buf);
+            });
+            srcStream.on('end',()=>{
+                res(Buffer.concat(srcBufs));
+            });
+        });
         //不缓存数据标志
         let saveData:boolean = this.checkNeedZip(mimeType);
+        
         if(zip && saveData){
             //生成临时文件
             tmpFn = App.path.resolve(App.path.dirname(path),App.uuid.v1());
@@ -223,19 +237,6 @@ class StaticResource{
                 });
             });
         }
-        
-        //创建输入流
-        srcStream = fs.createReadStream(path);
-
-        //从源输入流读数据
-        srcBuf = await new Promise((res,rej)=>{
-            srcStream.on('data',(buf)=>{
-                srcBufs.push(buf);
-            });
-            srcStream.on('end',()=>{
-                res(Buffer.concat(srcBufs));
-            });
-        });
         
         //最后修改 
         let lastModified:string = stat.mtime.toUTCString();

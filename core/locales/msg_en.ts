@@ -59,7 +59,9 @@ var NoomiTip_en = {
     "0115":"security initing ...",
     "0116":"security inition finished",
     "0117":"server started!",
-    "0118":"address is in used，trying again ..."
+    "0118":"address is in used，trying again ...",
+    "0119":"check and execute launch hooks ...",
+    "0120":"launch hooks execution finished!"
 }
 
 export{NoomiErrorTip_en,NoomiTip_en}

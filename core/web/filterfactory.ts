@@ -160,7 +160,8 @@ class FilterFactory{
         }
         
         //过滤器方法集合
-        let methods:Array<Function> = [];
+        let methods:Array<Array<any>> = [];
+
         //根据过滤器名找到过滤器实例
         arr.forEach(item=>{
             //可能是实例名，需要从实例工厂中获得
@@ -169,13 +170,13 @@ class FilterFactory{
                 return;
             }
             if(typeof ins[item.method] === 'function'){
-                methods.push(ins[item.method]);
+                methods.push([ins,item.method]);
             }
         });
 
         //全部通过才通过
         for(let i=0;i<methods.length;i++){
-            if(!await methods[i](request,response)){
+            if(!await InstanceFactory.exec(methods[i][0],methods[i][1],[request,response])){
                 return false;
             }
         }

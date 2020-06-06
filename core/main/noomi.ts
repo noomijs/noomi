@@ -16,6 +16,7 @@ import { NoomiTip_en } from "../locales/msg_en";
 import { Util } from "../tools/util";
 import { App } from "../tools/application";
 import { SecurityFactory } from "../tools/securityfactory";
+import { LaunchHookManager } from "../tools/launchhookmanager";
 
 /**
  * 框架主类
@@ -104,6 +105,18 @@ class NoomiMain{
             console.log(msgTip["0104"]);
         }
 
+        //数据源初始化
+        if(iniJson.hasOwnProperty('database')){
+            console.log(msgTip["0111"]);
+            let cfg = iniJson['database'];
+            if(typeof cfg === 'object'){  //配置为对象
+                DBManager.init(cfg);    
+            }else{          //配置为路径
+                DBManager.parseFile(Util.getAbsPath([basePath,cfg]));
+            }
+            console.log(msgTip["0112"]);
+        }
+        
         //实例初始化
         if(iniJson.hasOwnProperty('instance')){
             console.log(msgTip["0105"]);
@@ -139,20 +152,6 @@ class NoomiMain{
             console.log(msgTip["0110"]);
         }
 
-        //数据源初始化
-        if(iniJson.hasOwnProperty('database')){
-            console.log(msgTip["0111"]);
-            let cfg = iniJson['database'];
-
-            if(typeof cfg === 'object'){  //配置为对象
-                DBManager.init(cfg);    
-            }else{          //配置为路径
-                DBManager.parseFile(Util.getAbsPath([basePath,cfg]));
-            }
-            
-            console.log(msgTip["0112"]);
-        }
-        
         //aop初始化
         if(iniJson.hasOwnProperty('aop')){
             console.log(msgTip["0113"]);
@@ -176,6 +175,20 @@ class NoomiMain{
             }
             console.log(msgTip["0116"]);
         }
+
+        //启动钩子执行
+        if(iniJson.hasOwnProperty('launchhook')){
+            console.log(msgTip["0119"]);
+            let cfg = iniJson['launchhook'];
+            if(typeof cfg === 'object'){  //配置为对象
+                LaunchHookManager.init(cfg);    
+            }else{          //配置为路径
+                LaunchHookManager.parseFile(Util.getAbsPath([basePath,cfg]));
+            }
+            await LaunchHookManager.run();
+            console.log(msgTip["0120"]);
+        }        
+
         //如果web config 配置为only https，则不创建http server
         if(!WebConfig.httpsCfg || !WebConfig.httpsCfg['only_https']){
             // http 服务器

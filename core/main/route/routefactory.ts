@@ -4,6 +4,7 @@ import { HttpResponse } from "../../web/httpresponse";
 import { NoomiError } from "../../tools/errorfactory";
 import { Util } from "../../tools/util";
 import { App } from "../../tools/application";
+import { RouteErrorHandler } from "./routeerrorhandler";
 
 /**
  * 路由配置类型
@@ -110,7 +111,11 @@ class RouteFactory{
      * 静态路由(不带通配符)路由集合
      */
     static staticRouteMap:Map<string,IRouteCfg> = new Map();
-
+    /**
+     * 异常处理器实例名
+     * @since 0.3.7
+     */
+    static errorHandler:string;
     /**
      * 添加路由
      * @param path      路由路径，支持通配符*，需要method支持
@@ -401,10 +406,10 @@ class RouteFactory{
      * @param e     异常
      */
     static handleException(res:HttpResponse,e:any){
-        let msg = e;
-        res.writeToClient({
-            data:"<h1>" +  new NoomiError('2102') + "</h1><h3>Error Message:" + msg + "</h3>"
-        });
+        let eh:RouteErrorHandler = InstanceFactory.getInstance(this.errorHandler);
+        if(eh){
+            eh.handle(res,e);
+        }
     }
 
     /**
@@ -413,7 +418,20 @@ class RouteFactory{
      * @param ns        命名空间（上级路由路径） 
      */
     static init(config:any,ns?:string){
-        let ns1 = config.namespace? config.namespace.trim():'';
+        //初始化errorHandler
+        if(!this.errorHandler){
+            if(config.route_error_handler){
+                this.errorHandler = config.route_error_handler;
+            }else{
+                InstanceFactory.addInstance({
+                    name:'noomi_route_error_handler',
+                    instance:new RouteErrorHandler(),
+                    class:RouteErrorHandler
+                });
+                this.errorHandler = 'noomi_route_error_handler';
+            }
+        }
+        let ns1:string = config.namespace? config.namespace.trim():'';
         //设置命名空间，如果是子文件，需要连接上级文件
         let pa = ns?[ns,ns1]:[ns1]; 
         ns = Util.getAbsPath(pa);
@@ -441,9 +459,10 @@ class RouteFactory{
      */
     static parseFile(path:string,ns?:string){
         interface RouteJSON{
-            namespace:string;       //命名空间
-            files:Array<string>;    //引入文件
-            routes:Array<any>;      //实例配置数组
+            namespace:string;           //命名空间
+            route_error_handler:string; //路由异常处理器
+            files:Array<string>;        //引入文件
+            routes:Array<any>;          //实例配置数组
         }
         
         //读取文件

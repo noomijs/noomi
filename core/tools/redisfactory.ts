@@ -102,36 +102,22 @@ class RedisFactory{
         //合并pre
         let key:string=item.pre?item.pre+item.key:item.key;
         //buffer 转 string
-        let value = item.value;
-        if(value instanceof Buffer){
-            //需要增加buffer data前缀，用于识别
-            value = this.bufferPrefix + value.toString('hex');
-        }
+        let value = this.preHandle(item.value);
         if(item.subKey){
             await new Promise((resolve,reject)=>{
-                
                 client.hset(key,item.subKey,value,(err,v)=>{
                     resolve(v);
                 });
             })
         }else{
             if(Array.isArray(value)){//多个键，值组成的数组
-                for(let i=0;i<value.length;i++){
-                    if(value[i] instanceof Buffer){
-                        value[i] = this.bufferPrefix + value[i].toString('hex');
-                    }
-                }
+                
                 await new Promise((resolve,reject)=>{
                     client.hmset.apply(client,[key].concat(value),(err,v)=>{
                         resolve(v);
                     });
                 });
             }else if(typeof value === 'object'){//对象用set存储
-                for(let p in value){
-                    if(value[p] instanceof Buffer){
-                        value[p] = this.bufferPrefix + value[p].toString('hex');
-                    }
-                }
                 await new Promise((resolve,reject)=>{
                     client.hmset(key,value,(err,v)=>{
                         resolve(v);
@@ -285,6 +271,34 @@ class RedisFactory{
         }else{
             client.del(key);
         }
+    }
+
+    /**
+     * 预处理value
+     * @param value     待处理值
+     * @returns         已处理值
+     */
+    private static preHandle(value:any):any{
+        if(value instanceof Buffer){
+            //需要增加buffer data前缀，用于识别
+            value = this.bufferPrefix + value.toString('hex');
+        }else if(Array.isArray(value)){
+            for(let i=0;i<value.length;i++){
+                if(value[i] instanceof Buffer){
+                    value[i] = this.bufferPrefix + value[i].toString('hex');
+                }
+            }
+        }else if(typeof value === 'object'){
+            for(let p in value){
+                if(value[p] === undefined){
+                    delete value[p];
+                }
+                if(value[p] instanceof Buffer){
+                    value[p] = this.bufferPrefix + value[p].toString('hex');
+                }
+            }
+        }
+        return value;
     }
 
     /**

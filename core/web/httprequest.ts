@@ -162,7 +162,8 @@ class HttpRequest extends IncomingMessage{
                             charset = a1[1].trim();
                         }
                     }
-                    let data:string = lData.toString(charset);
+                    
+                    let data:string = lData.toString(<BufferEncoding>charset);
                     if(contentType[0] === 'application/json'){
                         r = JSON.parse(data);
                     }else{

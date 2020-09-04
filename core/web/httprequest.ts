@@ -2,7 +2,7 @@ import { IncomingMessage, ServerResponse} from "http";
 import { SessionFactory, Session } from "./sessionfactory";
 import { HttpResponse } from "./httpresponse";
 import { WebConfig } from "./webconfig";
-import { WriteStream } from "fs";
+import { WriteStream, fstat } from "fs";
 import { App } from "../tools/application";
 import { Util } from "../tools/util";
 import { Socket } from "net";
@@ -176,11 +176,17 @@ class HttpRequest extends IncomingMessage{
 
         let contentLen:number = parseInt(req.headers['content-length']);
         let maxSize:number = WebConfig.get('upload_max_size');
-        let tmpDir:string = WebConfig.get('upload_tmp_dir');
         
         //不能大于max size
         if(maxSize > 0 && contentLen > maxSize){
             return Promise.reject( "上传内容大小超出限制");
+        }
+        //临时目录，默认 /upload/tmp
+        let tmpDir:string = WebConfig.get('upload_tmp_dir') || '/upload/tmp';
+        let tmpDir1 = Util.getAbsPath([tmpDir]);
+        //如果临时目录不存在，则生成临时目录
+        if(!App.fs.existsSync(tmpDir1)){
+            App.fs.mkdirSync(tmpDir1,{recursive:true});
         }
 
         let dispLineNo:number = 0;          //字段分割行号，共三行
@@ -315,7 +321,9 @@ class HttpRequest extends IncomingMessage{
                             let fn = a1[1].trim();
                             let fn1 = fn.substring(1,fn.length-1);
                             let fn2 = App.uuid.v1() + fn1.substr(fn1.lastIndexOf('.'));
+                            //得到绝对路径
                             let filePath = Util.getAbsPath([tmpDir,fn2]);
+
                             value = {
                                 fileName:fn1,
                                 path:filePath
@@ -326,7 +334,7 @@ class HttpRequest extends IncomingMessage{
                         return;
                     case 2: //第二行（空或者文件类型）
                         if(isFile){  //文件字段
-                            value['fileType'] = line.substr(line.indexOf(':')).trim();
+                            value['fileType'] = line.substr(line.indexOf(':')+1).trim();
                         }
                         dispLineNo = 3;
                         return;

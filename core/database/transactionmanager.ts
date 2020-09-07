@@ -156,8 +156,8 @@ class TransactionManager{
      */
     static addTransaction(instance:any,methodName:any){
         let pc = AopFactory.getPointcutById(this.pointcutId);
-        let name:string = typeof instance === 'string'?instance:instance.__name;
-        let expr:string = name + '.' + methodName;
+        let name:string = typeof instance === 'string'?instance:instance.__instanceName;
+        let expr:string = '^' + name + '.' + methodName + '$';
         if(pc){ //pointcut存在，直接加入表达式
             AopFactory.addExpression(this.pointcutId,expr);
         }else{  //pointcut不存在，加入待处理队列

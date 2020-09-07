@@ -256,7 +256,10 @@ function Transactioner(methodReg?:any){
  */ 
 function Transaction(){
     return (target:any,name:string,desc:any)=>{
-        TransactionManager.addTransaction(target,name);    
+        //方法注解先于类注解，尚无实例名，延迟执行
+        setImmediate(()=>{
+            TransactionManager.addTransaction(target,name);
+        });
     }
 }
 export {Instance,Router,Route,WebFilter,Inject,Aspect,Pointcut,Before,After,Around,AfterReturn,AfterThrow,Transactioner,Transaction}

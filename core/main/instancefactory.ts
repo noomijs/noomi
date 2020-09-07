@@ -4,10 +4,6 @@ import { Util } from "../tools/util";
 import { App } from "../tools/application";
 
 /**
- * 实例工厂
- */
-
-/**
  * 实例属性
  */
 interface IInstanceProperty{
@@ -129,6 +125,11 @@ class InstanceFactory{
     static injectList:Array<IInject> = [];
 
     /**
+     * 初始化后操作数组(实例工厂初始化结束后执行) {func:Function,thisObj:func this指向}
+     * @since 0.4.0
+     */
+    static afterInitOperations:Array<object> = [];
+    /**
      * 工厂初始化
      * @param config    配置项
      */
@@ -139,10 +140,8 @@ class InstanceFactory{
             this.parseFile(config);
         }
         
-        //延迟注入
-        process.nextTick(()=>{
-            InstanceFactory.finishInject();
-        });
+        //执行后处理
+        this.doAfterInitOperations();
     }
     /**
      * 添加单例到工厂
@@ -218,20 +217,17 @@ class InstanceFactory{
      * @param injectName    注入的实例名
      */
     static addInject(instance:any,propName:string,injectName:string):void{
-        let inj = InstanceFactory.getInstance(injectName);
-        if(inj){
-            instance[propName] = inj;
-        }else{
-            this.injectList.push({
-                instance:instance,
-                propName:propName,
-                injectName:injectName
-            });
-        }
+        this.injectList.push({
+            instance:instance,
+            propName:propName,
+            injectName:injectName
+        });
+        //添加注入操作到初始化后处理
+        this.addAfterInitOperation(this.finishInject,this);
     }
 
     /**
-     * 完成待注入列表的注入操作
+     * 完成注入操作
      */
     static finishInject():void{
         for(let item of this.injectList){
@@ -456,6 +452,32 @@ class InstanceFactory{
      */
     static getFactory():Map<string,IInstance>{
         return this.factory;
+    }
+
+    /**
+     * 添加初始化结束后操作
+     * @param foo   待执行操作
+     * @since 0.4.0
+     */
+    static addAfterInitOperation(foo:Function,thisObj:any){
+        //已添加操作不再添加
+        if(this.afterInitOperations.find(item=>item['func'] === foo)){
+            return;
+        }
+        this.afterInitOperations.push({
+            func:foo,
+            thisObj:thisObj
+        });
+    }
+
+    /**
+     * 执行初始化操作
+     * @since 0.4.0
+     */
+    static doAfterInitOperations(){
+        for(let foo of this.afterInitOperations){
+            foo['func'].apply(foo['thisObj']);
+        }
     }
 }
 

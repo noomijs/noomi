@@ -81,7 +81,6 @@ class AopProxy{
                                 await item.instance[item.method].apply(item.instance,aopParams);
                             }
                         }
-                        
                         result = e;
                     }
         

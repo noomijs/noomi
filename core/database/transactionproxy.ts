@@ -25,7 +25,11 @@ class TransactionProxy{
                     retValue = await new Promise(async (resolve,reject)=>{
                         TransactionManager.namespace.run(async ()=>{
                             let v = await doSequelize();
-                            resolve(v);
+                            if(v instanceof Error){
+                                reject(v)
+                            }else{
+                                resolve(v);
+                            }
                         });
                     });
                     break;
@@ -33,7 +37,11 @@ class TransactionProxy{
                     retValue = await new Promise(async (resolve,reject)=>{
                         TransactionManager.namespace.run(async ()=>{
                             let v = await doTypeorm();
-                            resolve(v);
+                            if(v instanceof Error){
+                                reject(v)
+                            }else{
+                                resolve(v);
+                            }
                         });
                     });
                     break;
@@ -41,7 +49,11 @@ class TransactionProxy{
                     retValue = await new Promise((resolve,reject)=>{
                         TransactionManager.namespace.run(async ()=>{
                             let v = await doDataScource();
-                            resolve(v);
+                            if(v instanceof Error){
+                                reject(v)
+                            }else{
+                                resolve(v);
+                            }
                         });
                     });
             }
@@ -71,7 +83,7 @@ class TransactionProxy{
                 }catch(e){
                     //异常aop执行
                     await adviceInstance.afterThrow.apply(adviceInstance);
-                    result = e;
+                    result = handleErr(e);
                 }
                 return result;
             }
@@ -85,21 +97,20 @@ class TransactionProxy{
                     //保存transaction id
                     TransactionManager.setIdToLocal();
                     let trOpt:any = TransactionManager.transactionOption||{};
-                    
                     let sequelize = await getConnection();
                     result = await new Promise((res,rej)=>{
                         sequelize.transaction(trOpt,async (t)=>{
                             let v = await func.apply(instance,params);
                             res(v);
                         }).catch((e)=>{
-                            res(e);
+                            res(handleErr(e));
                         });
                     });
                 }else{
                     try{
                         result = await func.apply(instance,params);
                     }catch(e){
-                        result = e;
+                        result = handleErr(e);
                     }
                 }
                 return result;
@@ -123,27 +134,39 @@ class TransactionProxy{
                     await queryRunner.startTransaction(isoLevel);
                     let tr = TransactionManager.get(true);
                     tr.manager = queryRunner.manager;
-                    let r;
                     try{
-                        r = await func.apply(instance,params);
+                        result = await func.apply(instance,params);
                         await queryRunner.commitTransaction();
                     }catch(e){
-                        r = e;
+                        result = handleErr(e);
                         await queryRunner.rollbackTransaction();
                     }finally{
                         await queryRunner.release();
                         //从头事务管理器删除事务
                         TransactionManager.del(tr);
                     }
-                    return r;
                 }else{
                     try{
                         result = await func.apply(instance,params);
                     }catch(e){
-                        result = e;
+                        //异常信息，非error对象
+                        result = handleErr(e);
                     }
                 }
                 return result;
+            }
+
+            /**
+             * 处理异常
+             * @param e 
+             */
+            function handleErr(e){
+                //异常信息，非error对象
+                if(typeof e === 'string'){
+                    return new Error(e);
+                }else{
+                    return e;
+                }
             }
         }
     }

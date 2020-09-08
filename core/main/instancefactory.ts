@@ -141,9 +141,9 @@ class InstanceFactory{
         }
         
         //执行后处理
-        // setImmediate(()=>{
+        setImmediate(()=>{
             this.doAfterInitOperations();
-        // });
+        });
     }
     /**
      * 添加单例到工厂
@@ -257,7 +257,6 @@ class InstanceFactory{
         }else{
             let mdl = ins.class;
             param = param || ins.params || [];
-            // let instance = new mdl(param);
             let instance = Reflect.construct(mdl,param);
             
             //注入属性

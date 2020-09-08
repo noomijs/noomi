@@ -258,7 +258,7 @@ function Transaction(){
     return (target:any,name:string,desc:any)=>{
         //方法注解先于类注解，尚无实例名，延迟执行
         setImmediate(()=>{
-            TransactionManager.addTransaction(target,name);
+            TransactionManager.addTransaction(target.__instanceName,name);
         });
     }
 }

@@ -141,7 +141,9 @@ class InstanceFactory{
         }
         
         //执行后处理
-        this.doAfterInitOperations();
+        // setImmediate(()=>{
+            this.doAfterInitOperations();
+        // });
     }
     /**
      * 添加单例到工厂
@@ -477,7 +479,9 @@ class InstanceFactory{
     static doAfterInitOperations(){
         for(let foo of this.afterInitOperations){
             foo['func'].apply(foo['thisObj']);
-        }
+        } 
+        //清理初始化后操作
+        this.afterInitOperations = [];   
     }
 }
 

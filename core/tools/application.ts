@@ -8,6 +8,10 @@ export class App {
      */
     static appName:string='APP';
     /**
+     * 是否打开file watcher
+     */
+    static openWatcher:boolean = false;
+    /**
      * node http 对象
      */
     static http = require('http');

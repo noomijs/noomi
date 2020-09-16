@@ -144,14 +144,15 @@ class RouteFactory{
                 results:results
             });
         }else{ //有通配符
-            let reg = Util.toReg(path,3);
-            this.dynaRouteArr.push({
-                path:path,
-                reg:Util.toReg(path,3),
-                instanceName:clazz.trim(),
-                method:method,
-                results:results
-            });
+            if(!this.dynaRouteArr.find(item=>item.path === path)){
+                this.dynaRouteArr.push({
+                    path:path,
+                    reg:Util.toReg(path,3),
+                    instanceName:clazz.trim(),
+                    method:method,
+                    results:results
+                });
+            }
         }
     }
 

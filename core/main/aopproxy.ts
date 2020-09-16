@@ -51,7 +51,6 @@ class AopProxy{
                     //before aop执行
                     if(advices !== null){
                         for(let item of advices.before){
-                            //instance可能为实例对象，也可能是实例名
                             await item.instance[item.method].apply(item.instance,aopParams);
                         }
                     }

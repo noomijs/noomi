@@ -131,6 +131,14 @@ class WebCache{
                 }
         }
     }
+
+    /**
+     * 获取cache data
+     * @param url   缓存的url
+     */
+    static async getCacheData(url:string){
+        return this.cache.getMap(url);
+    }
     /**
      * 写cache到客户端
      * @param response          response对象

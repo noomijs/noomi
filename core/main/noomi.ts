@@ -62,6 +62,9 @@ class NoomiMain{
             throw new NoomiError("1001");
         }
         App.appName = iniJson['app_name']||'APP';
+        //设置file watcher开关
+        App.openWatcher = iniJson['open_watcher'] || false;
+        
         let language:string = iniJson['language'] || 'zh';
         let msgTip:object;
         switch(language){

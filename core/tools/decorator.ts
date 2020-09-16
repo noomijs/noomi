@@ -51,7 +51,9 @@ function Instance(cfg){
  */
 function Inject(instanceName:string){
     return (target:any,propertyName:string)=>{
-        InstanceFactory.addInject(target,propertyName,instanceName);
+        process.nextTick(()=>{
+            InstanceFactory.addInject(target,propertyName,instanceName);
+        });
     }
 }
 
@@ -80,7 +82,7 @@ function Router(cfg?:any){
         if(cfg && cfg.path){
             let path:string = cfg.path;
             if(typeof path==='string' && (path=path.trim()) !== ''){
-                setImmediate(()=>{
+                process.nextTick(()=>{
                     //延迟到Route注解后，便于先处理非*的路由
                     RouteFactory.addRoute(namespace + path + '(?!\\S+/)*',instanceName,null,cfg.results);
                 });
@@ -105,7 +107,7 @@ function Router(cfg?:any){
  */
 function Route(cfg:any){
     return (target:any,propertyName:string)=>{
-        setImmediate(()=>{
+        process.nextTick(()=>{
             let ns = target.__routeconfig?target.__routeconfig.namespace:'';
             if(typeof cfg === 'string'){ //直接配置路径，默认type json
                 RouteFactory.addRoute(ns + cfg,target.__instanceName,propertyName);    
@@ -123,11 +125,13 @@ function Route(cfg:any){
  */
 function WebFilter(pattern?:any,order?:number){
     return function(target:any,name:string){
-        FilterFactory.addFilter({
-            instance:target,
-            method_name:name,
-            url_pattern:pattern,
-            order:order
+        process.nextTick(()=>{
+            FilterFactory.addFilter({
+                instance_name:target.__instanceName,
+                method_name:name,
+                url_pattern:pattern,
+                order:order
+            })
         });
     } 
 }
@@ -138,7 +142,15 @@ function WebFilter(pattern?:any,order?:number){
  */
 function Aspect(){
     return (target)=>{
+        let instanceName:string = target.name.substr(0,1).toLowerCase() + target.name.substr(1);
+        //设置aspect属性
         target.prototype.__isAspect = true;
+        //添加到实例工厂
+        InstanceFactory.addInstance({
+            name:instanceName,  //实例名
+            class:target,
+            singleton:true
+        });
     }
 }
 
@@ -152,7 +164,11 @@ function Aspect(){
  */
 function Pointcut(expressions:any){
     return (target:any,name:string)=>{
-        AopFactory.addPointcut(name+'()',expressions);
+        process.nextTick(()=>{
+            if(target.__isAspect){
+                AopFactory.addPointcut(name+'()',expressions);
+            }
+        });
     }
 }
 
@@ -163,11 +179,15 @@ function Pointcut(expressions:any){
  */
 function Before(pointcutId:string){
     return (target:any,name:string,desc:any)=>{
-        AopFactory.addAdvice({
-            pointcut_id:pointcutId,
-            type:'before',
-            instance:target,
-            method:name
+        process.nextTick(()=>{
+            if(target.__isAspect){
+                AopFactory.addAdvice({
+                    pointcut_id:pointcutId,
+                    type:'before',
+                    instance:target,
+                    method:name
+                });
+            }
         });
     }
 }
@@ -179,11 +199,15 @@ function Before(pointcutId:string){
  */
 function After(pointcutId:string){
     return (target:any,name:string,desc:any)=>{
-        AopFactory.addAdvice({
-            pointcut_id:pointcutId,
-            type:'after',
-            instance:target,
-            method:name
+        process.nextTick(()=>{
+            if(target.__isAspect){
+                AopFactory.addAdvice({
+                    pointcut_id:pointcutId,
+                    type:'after',
+                    instance:target,
+                    method:name
+                });
+            }
         });
     }
 }
@@ -195,11 +219,15 @@ function After(pointcutId:string){
  */
 function Around(pointcutId:string){
     return (target:any,name:string,desc:any)=>{
-        AopFactory.addAdvice({
-            pointcut_id:pointcutId,
-            type:'around',
-            instance:target,
-            method:name
+        process.nextTick(()=>{
+            if(target.__isAspect){
+                AopFactory.addAdvice({
+                    pointcut_id:pointcutId,
+                    type:'around',
+                    instance:target,
+                    method:name
+                });
+            }
         });
     }
 }
@@ -210,11 +238,15 @@ function Around(pointcutId:string){
  */
 function AfterReturn(pointcutId:string){
     return (target:any,name:string,desc:any)=>{
-        AopFactory.addAdvice({
-            pointcut_id:pointcutId,
-            type:'after-return',
-            instance:target,
-            method:name
+        process.nextTick(()=>{
+            if(target.__isAspect){
+                AopFactory.addAdvice({
+                    pointcut_id:pointcutId,
+                    type:'after-return',
+                    instance:target,
+                    method:name
+                });
+            }
         });
     }
 }
@@ -226,11 +258,15 @@ function AfterReturn(pointcutId:string){
  */
 function AfterThrow(pointcutId:string){
     return (target:any,name:string,desc:any)=>{
-        AopFactory.addAdvice({
-            pointcut_id:pointcutId,
-            type:'after-throw',
-            instance:target,
-            method:name
+        process.nextTick(()=>{
+            if(target.__isAspect){
+                AopFactory.addAdvice({
+                    pointcut_id:pointcutId,
+                    type:'after-throw',
+                    instance:target,
+                    method:name
+                });
+            }
         });
     }
 }
@@ -244,6 +280,15 @@ function AfterThrow(pointcutId:string){
  */
 function Transactioner(methodReg?:any){
     return (target)=>{
+        //设置默认实例名
+        let instanceName:string = target.name.substr(0,1).toLowerCase() + target.name.substr(1);
+        //添加到实例工厂
+        InstanceFactory.addInstance({
+            name:instanceName,  //实例名
+            class:target,
+            singleton:true
+        });
+
         if(!methodReg){
             methodReg = '*';
         }
@@ -257,7 +302,7 @@ function Transactioner(methodReg?:any){
 function Transaction(){
     return (target:any,name:string,desc:any)=>{
         //方法注解先于类注解，尚无实例名，延迟执行
-        setImmediate(()=>{
+        process.nextTick(()=>{
             TransactionManager.addTransaction(target.__instanceName,name);
         });
     }

@@ -48,4 +48,17 @@ export class Util{
         }
         return App.path.resolve.apply(null,pa);
     }
+
+    /**
+     * 获取相对路径
+     * @param pa    待处理的字符串数组
+     * @returns     字符串数组构成的的绝对地址
+     */
+    static getRelPath(path:string):string{
+        let bp:string = App.path.resolve();
+        if(path.startsWith(bp)){
+            return path.substr(bp.length);
+        }
+        return path;
+    }
 }

@@ -39,7 +39,7 @@ class TransactionManager{
         });
         AopFactory.addPointcut(this.pointcutId,[]);
         //增加pointcut expression
-        setImmediate(()=>{
+        process.nextTick(()=>{
             AopFactory.addExpression(TransactionManager.pointcutId,TransactionManager.addToAopExpressions);
         });
         

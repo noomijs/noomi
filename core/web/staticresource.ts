@@ -6,6 +6,7 @@ import { Util } from "../tools/util";
 import { App } from "../tools/application";
 import { Stream } from "stream";
 import { Stats } from "fs";
+import { FileWatcher, EWatcherType } from "../tools/filewatcher";
 
 /**
  * 静态资源加载器
@@ -26,9 +27,9 @@ class StaticResource{
     ]
     /**
      * 加载静态资源
-     * @param path      文件路径
      * @param request   request
      * @param response  response
+     * @param path      文件路径
      * @returns         http异常码或0
      */
     static async load(request:HttpRequest,response:HttpResponse,path:string):Promise<number>{
@@ -131,6 +132,10 @@ class StaticResource{
             if(typeof paths === 'string'){
                 if(App.fs.existsSync(Util.getAbsPath([paths]))){
                     this.staticMap.set(paths,Util.toReg(paths,1));
+                    //添加 file watcher
+                    if(App.openWatcher){
+                        FileWatcher.addDir(Util.getAbsPath([paths]),EWatcherType.STATIC);
+                    }
                 }
             }
         }else {

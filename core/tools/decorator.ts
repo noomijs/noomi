@@ -142,7 +142,7 @@ function WebFilter(pattern?:any,order?:number){
  */
 function Aspect(){
     return (target)=>{
-        let instanceName:string = target.name.substr(0,1).toLowerCase() + target.name.substr(1);
+        let instanceName:string = target.prototype.__instanceName || (target.name.substr(0,1).toLowerCase() + target.name.substr(1));
         //设置aspect属性
         target.prototype.__isAspect = true;
         //添加到实例工厂
@@ -281,7 +281,7 @@ function AfterThrow(pointcutId:string){
 function Transactioner(methodReg?:any){
     return (target)=>{
         //设置默认实例名
-        let instanceName:string = target.name.substr(0,1).toLowerCase() + target.name.substr(1);
+        let instanceName:string = target.prototype.__instanceName || (target.name.substr(0,1).toLowerCase() + target.name.substr(1));
         //添加到实例工厂
         InstanceFactory.addInstance({
             name:instanceName,  //实例名

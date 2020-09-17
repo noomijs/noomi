@@ -64,7 +64,8 @@ export class FileWatcher {
      * @param path  目录路径
      */
     private static async watchStatic(path:string){
-        try{
+        //支持recursive
+        if(process.platform === 'darwin' || process.platform === 'win32'){
             App.fs.watch(path,{recursive:true},async (eventType,fileName)=>{
                 //文件不存在或监听类型为rename，则返回
                 if(!fileName || eventType === 'rename'){
@@ -73,7 +74,7 @@ export class FileWatcher {
                 let path1:string = App.path.resolve(path ,fileName);
                 await this.handleStaticRes(path1);
             });    
-        }catch(e){  //不支持目录递归，则需要处理所有子孙目录
+        }else{
             App.fs.watch(path,async (eventType,fileName)=>{
                 //文件不存在或监听类型为rename，则返回
                 if(!fileName || eventType === 'rename'){

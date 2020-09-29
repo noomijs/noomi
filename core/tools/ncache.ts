@@ -117,6 +117,13 @@ export class NCache{
      * @param timeout   超时时间(秒)         
      */
     async set(item:ICacheItem,timeout?:number){
+        //清除undefined和null属性值
+        let value = item.value;
+        Object.getOwnPropertyNames(value).forEach((p)=>{
+            if(value[p] === undefined || value[p] === null){
+                delete value[p];
+            }
+        });
         if(this.saveType === 0){ //数据存到内存
             this.memoryCache.set(item,timeout);
         }else{//数据存到redis

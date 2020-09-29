@@ -2,10 +2,12 @@ import { HttpRequest } from "./httprequest";
 import { WebConfig } from "./webconfig";
 import { RouteFactory, IRoute } from "../main/route/routefactory";
 import { FilterFactory } from "./filterfactory";
-import { StaticResource } from "./staticresource";
+import { StaticResource, IStaticCacheObj } from "./staticresource";
 import { App } from "../tools/application";
 import { PageFactory } from "../tools/pagefactory";
 import { HttpResponse } from "./httpresponse";
+import { Util } from "../tools/util";
+import { WebCache } from "./webcache";
 
 /**
  * @exclude
@@ -69,63 +71,99 @@ class RequestQueue{
      * @param path      url路径
      */
     
-    static handleOne(request:HttpRequest){
+    static async handleOne(request:HttpRequest){
+        let response:HttpResponse = request.response;
         switch (request.method){
             case 'OPTIONS':
-                request.response.doOptions();
+                response.doOptions();
                 return;
             case 'DELETE':
-                request.response.writeToClient({
+                response.writeToClient({
                     statusCode:405
                 });
                 return;
             case 'PUT':
-                request.response.writeToClient({
+                response.writeToClient({
                     statusCode:405
                 });
                 return;
             case 'PATCH':
-                request.response.writeToClient({
+                response.writeToClient({
                     statusCode:405
                 });
                 return;    
         }
+        // gzip
+        let zipStr:string = <string>request.getHeader("accept-encoding");
+        let gzip:boolean = zipStr.indexOf('gzip') !== -1?true:false;
+        
         let path = App.url.parse(request.url).pathname;
+        let data;
         if(path === '' || path ==='/'){
             //默认页面
             if(WebConfig.welcomePage){
-                StaticResource.load(request,request.response,WebConfig.welcomePage);
+                data = await StaticResource.load(request,response,WebConfig.welcomePage,gzip);
             }
-            return;
         }
-        //过滤器执行
-        FilterFactory.doChain(request.url,request,request.response).then(async (r)=>{
-            if(!r){
+        if(!data){
+            //过滤器执行
+            if(!await FilterFactory.doChain(request.url,request,response)){
                 return;
             }
-            let code = await StaticResource.load(request,request.response,path);
-            if(code === 404){
-                //获得路由，可能没有，则
-                let route:IRoute = RouteFactory.getRoute(path);
-                if(route === null){
-                    code = 404;
-                }else{
-                    //参数
-                    let params = await request.init();
-                    code = RouteFactory.handleRoute(route,params,request,request.response);
+            //加载静态数据
+            data = await StaticResource.load(request,response,path,gzip);
+        }
+        if(data){
+            if(typeof data === 'number'){
+                //静态资源不存在，需要看路由是否存在
+                if(data === 404){
+                    //获得路由，可能没有
+                    let route:IRoute = RouteFactory.getRoute(path);
+                    if(route !== null){
+                        //参数
+                        let params = await request.init();
+                        data = RouteFactory.handleRoute(route,params,request,response);
+                    }
                 }
-                if(code !== 0){
-                    let page = PageFactory.getErrorPage(code);
-                    if(page){
-                        request.response.redirect(page);
+                if(data !== 0){
+                    let page = PageFactory.getErrorPage(data);
+                    if(page && App.fs.existsSync(Util.getAbsPath([page]))){
+                        response.redirect(page);
                     }else{
-                        request.response.writeToClient({
-                            statusCode:code
+                        response.writeToClient({
+                            statusCode:data
                         });
                     }
                 }
+            }else if(typeof data === 'object'){
+                let cData:IStaticCacheObj = <IStaticCacheObj>data;
+                //写web cache相关参数
+                WebCache.writeCacheToClient(response,cData.etag,cData.lastModified);
+                //可能只缓存静态资源信息，所以需要判断数据
+                if(gzip && cData.zipData){
+                    response.writeToClient({
+                        data:cData.zipData,
+                        type:cData.mimeType,
+                        size:cData.zipSize,
+                        zip:'gzip',
+                        charset:'binary'
+                    });
+                }else if(cData.data){
+                    response.writeToClient({
+                        data:cData.data,
+                        type:cData.mimeType,
+                        size:cData.dataSize,
+                        charset:'binary'
+                    });
+                }else{
+                    response.writeFileToClient({
+                        data:Util.getAbsPath([path]),
+                        type:cData.mimeType,
+                        size:cData.dataSize
+                    });
+                }
             }
-        });
+        }
     }
 
     /**
@@ -135,7 +173,6 @@ class RequestQueue{
     static setCanHandle(v:boolean){
         this.canHandle = v;
     }
-
 }
 
 export {RequestQueue}

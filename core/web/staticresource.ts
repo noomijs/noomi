@@ -9,6 +9,46 @@ import { Stats } from "fs";
 import { FileWatcher, EWatcherType } from "../tools/filewatcher";
 
 /**
+ * 静态资源缓存对象
+ * @since 0.4.6
+ */
+interface IStaticCacheObj{
+    /**
+     * ETag
+     */
+    etag:string;
+    
+    /**
+     * 最后修改时间串
+     */
+    lastModified:string;
+    
+    /**
+     * 文件mime type
+     */
+    mimeType:string;
+    
+    /**
+     * 数据长度
+     */
+    dataSize?:number;
+    
+    /**
+     * 压缩数据长度
+     */
+    zipSize?:number;
+
+    /**
+     * 数据
+     */
+    data?:string;
+
+    /**
+     * 压缩数据
+     */
+    zipData?:string;
+}
+/**
  * 静态资源加载器
  */
 class StaticResource{
@@ -18,7 +58,7 @@ class StaticResource{
     static staticMap:Map<string,RegExp> = new Map();
 
     /**
-     * 可压缩类型
+     * 可压缩类型，也是缓存类型
      */
     static zipTypes:Array<RegExp> = [
         /^text\/\S+$/,
@@ -30,9 +70,10 @@ class StaticResource{
      * @param request   request
      * @param response  response
      * @param path      文件路径
-     * @returns         http异常码或0
+     * @param zip       是否压缩
+     * @returns         http code 或 缓存数据 
      */
-    static async load(request:HttpRequest,response:HttpResponse,path:string):Promise<number>{
+    static async load(request:HttpRequest,response:HttpResponse,path:string,zip?:boolean):Promise<number|IStaticCacheObj>{
         //检测路径是否在static map中
         let finded:boolean = false;
         for(let p of this.staticMap){
@@ -44,83 +85,33 @@ class StaticResource{
         if(!finded){
             return 404;
         }
-
-        // gzip
-        let gzip:string = <string>request.getHeader("accept-encoding");
-        if(gzip.indexOf('gzip') !== -1){
-            gzip = 'gzip';
-        }else if(gzip.indexOf('br') !== -1){
-            gzip = 'br';
-        }else if(gzip.indexOf('deflate') !== -1){
-            gzip = 'deflate';
-        }else{
-            gzip = undefined;
-        }
         
         //文件路径
         let filePath:string = Util.getAbsPath([path]);
-        //是否存储文件数据
-        let saveData:boolean = false;
         //缓存数据对象
         let cacheData;
         //状态码
         if(WebConfig.useServerCache){ //从缓存取，如果用浏览器缓存数据，则返回0，不再操作
             let ro:number|object = await WebCache.load(request,response,path);
             if(ro === 0){
-                //回写没修改标志
-                response.writeToClient({
-                    statusCode:304
-                });
-                return;
+                return 304;
             }else if(ro !== undefined){
                 cacheData = ro;
-                saveData = true;
             }
         }
         
-        if(cacheData === undefined){ //读取文件
+        //不存在缓存数据，或者请求为gzip但不存在zipData，需要读取文件
+        if(cacheData === undefined || (zip && !cacheData['zipData'])){ 
             if(!App.fs.existsSync(filePath) || !App.fs.statSync(filePath).isFile()){
                 return 404;
             }else{
-                cacheData = await this.readFile(filePath,gzip);
-                saveData = cacheData['saveData'];
+                cacheData = await this.readFile(filePath,zip);
                 if(WebConfig.useServerCache){
-                    await WebCache.add(path,cacheData,!saveData);
+                    await WebCache.add(path,cacheData);
                 }
             }
         }
-        
-        let data;
-        if(saveData){
-            if(cacheData['zipData']){
-                data = cacheData['zipData'];
-            }else{
-                data = cacheData['data'];
-                gzip = undefined;
-            }
-        }
-        
-        //设置文件相关头
-        if(WebConfig.useServerCache){
-            response.setHeader('ETag',cacheData['etag']);
-            response.setHeader('Last-Modified',cacheData['lastModified']);
-        }
-        
-        if(data){
-            response.writeToClient({
-                data:data,
-                type:cacheData['type'],
-                size:cacheData['size'],
-                zip:gzip
-            });
-        }else{
-            response.writeFileToClient({
-                data:filePath,
-                type:cacheData['type'],
-                size:cacheData['size']
-            });
-        }
-        return 0;
+        return cacheData;
     }
 
     /**
@@ -151,17 +142,9 @@ class StaticResource{
      * 读文件
      * @param path      绝对路径
      * @param zip       压缩方法
-     * @returns         {
-     *                      etag:etag,
-     *                      lastModified:lastModified,
-     *                      type:mimeType,
-     *                      data:srcBuf,     未压缩数据
-     *                      zipData:srcBuf   压缩数据
-     *                      size:content length
-     *                      saveData:是否可缓存数据
-     *                  }
+     * @returns         cache数据对象
      */
-    static async readFile(path:string,zip?:string):Promise<object>{
+    static async readFile(path:string,zip?:boolean):Promise<IStaticCacheObj>{
         const fs = App.fs;
         //未压缩数据buffer
         let srcBuf:Buffer;
@@ -172,12 +155,8 @@ class StaticResource{
         const zlib = App.zlib;
         const util = App.util;
         const pipeline = util.promisify(stream.pipeline);
-        //获取lastmodified
-        let stat:Stats = await new Promise((resolve,reject)=>{
-            fs.stat(path,(err,data)=>{
-                resolve(data);
-            });
-        });
+        
+        
         //mime 类型
         let mimeType:string = App.mime.getType(path);
         
@@ -210,16 +189,8 @@ class StaticResource{
             //zip对象
             let zipTool;
             //根据不同类型压缩
-            switch(zip){
-                case 'br':
-                    zipTool = zlib.createBrotliDecompress();
-                    break;
-                case 'gzip':
-                    zipTool = zlib.createGzip();
-                    break;
-                case 'deflate':
-                    zipTool = zlib.createInflate();
-                    break;
+            if(zip){
+                zipTool = zlib.createGzip();
             }
             
             //创建压缩管道
@@ -243,30 +214,51 @@ class StaticResource{
             });
         }
         
+        //文件信息
+        let stat:Stats = fs.statSync(path);
         //最后修改 
         let lastModified:string = stat.mtime.toUTCString();
         //计算hash
         const hash = App.crypto.createHash('md5');
         hash.update(srcBuf,'utf8');
         let etag:string = hash.digest('hex');
+        
+        //数据大小
+        let dataSize:number = stat.size;
+        //数据
+        let data:string;
+        //压缩大小
+        let zipSize:number;
+        //压缩数据
+        let zipData:string;
+
+        if(saveData){
+            data = srcBuf.toString('binary');
+            if(zipBuf){
+                zipSize = zipBuf.length;
+                zipData = zipBuf.toString('binary');
+            }
+        }
+
         return {
             etag:etag,
             lastModified:lastModified,
-            type:mimeType,
-            //如果压缩，则用压缩后的长度，否则用文件长度
-            size:zipBuf?zipBuf.length:stat.size,
-            data:srcBuf,
-            zipData:zipBuf,
-            saveData:saveData
+            mimeType:mimeType,
+            dataSize:dataSize,
+            zipSize:zipSize,
+            data:data,
+            zipData:zipData
         }
     }
-
 
     /**
      * 检查mime类型文件是否需要压缩
      * @param mimeType 
      */
     static checkNeedZip(mimeType:string):boolean{
+        if(!mimeType){
+            return false;
+        }
         //判断是否为可压缩类型
         for(let reg of this.zipTypes){
             if(reg.exec(mimeType) !== null){
@@ -277,4 +269,4 @@ class StaticResource{
     }
 }
 
-export {StaticResource};
+export {StaticResource,IStaticCacheObj};

@@ -64,20 +64,22 @@ export class WebConfig{
             }
             this.cors = cfg['cors'];
             this.welcomePage = cfg['welcome'];
+                    
             this.config = cfg;
-            //cache
             if(cfg.cache === true){
                 let opt = cfg.cache_option;
                 WebConfig.useServerCache = true;
                 WebCache.init({
                     save_type:opt.save_type,
                     max_age:opt.max_age,
-                    max_size:opt.max_size,
-                    max_single_size:opt.max_single_size,
+                    redis:opt.redis,
+                    expires:opt.expires,
                     public:opt.public,
+                    private:opt.private,
                     no_cache:opt.no_cache,
                     no_store:opt.no_store,
-                    file_type:opt.file_type
+                    must_revalidation:opt.must_revalidation,
+                    proxy_revalidation:opt.proxy_revalidation
                 });
             }
         }

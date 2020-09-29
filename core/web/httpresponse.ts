@@ -2,6 +2,7 @@ import { ServerResponse, IncomingMessage } from "http";
 import { HttpCookie } from "./httpcookie";
 import { WebConfig } from "./webconfig";
 import { App } from "../tools/application";
+import { Stats } from "fs";
 
 /**
  * response回写配置项
@@ -95,14 +96,14 @@ export class HttpResponse extends ServerResponse{
             this.setHeader('Content-Encoding',config.zip);
             this.setHeader('Vary','Accept-Encoding');
         }
-0
+
         //处理method = head
         if(this.doHead(config)){
             return;
         }
         
         this.srcRes.writeHead(status, {});
-        this.srcRes.write(data);
+        this.srcRes.write(data,charset);
         this.srcRes.end();
     }
 
@@ -123,6 +124,11 @@ export class HttpResponse extends ServerResponse{
         if(!config.type){
             config.type = App.mime.getType(path);
         }
+        if(!config.size){
+            let stat:Stats = App.fs.statSync(path);
+            config.size = stat.size;
+        }
+
         this.setContentType(config.type);
         this.setContentLength(config.size);
         //处理method=head
@@ -267,13 +273,16 @@ export class HttpResponse extends ServerResponse{
         return false;
     }
 
+    /**
+     * 处理trace方法请求
+     */
     doTrace(config:IResponseWriteCfg){
         this.setContentType("message/http");
         this.setContentLength(0);
     }
 
     /**
-     * 处理options
+     * 处理options请求方法
      */
     doOptions(){
         this.setHeader('Allow','GET, POST, OPTIONS, HEAD');
@@ -281,7 +290,6 @@ export class HttpResponse extends ServerResponse{
         this.setCorsHead();
         this.setContentLength(0);
         this.srcRes.writeHead(200,{});
-        // this.srcRes.write('');
         this.srcRes.end();
     }
 }

@@ -57,10 +57,6 @@ class RedisFactory{
      */
     static clientMap:Map<string,any> = new Map();
     /**
-     * buffer data 前缀，用于识别buffer
-     */
-    static bufferPrefix:string = '@@BF_DT@@';
-    /**
      * 添加redis client到clientMap
      * @param cfg   redis配置项
      */
@@ -102,7 +98,7 @@ class RedisFactory{
         //合并pre
         let key:string=item.pre?item.pre+item.key:item.key;
         //buffer 转 string
-        let value = this.preHandle(item.value);
+        let value = item.value;
         if(item.subKey){
             await new Promise((resolve,reject)=>{
                 client.hset(key,item.subKey,value,(err,v)=>{
@@ -111,7 +107,6 @@ class RedisFactory{
             })
         }else{
             if(Array.isArray(value)){//多个键，值组成的数组
-                
                 await new Promise((resolve,reject)=>{
                     client.hmset.apply(client,[key].concat(value),(err,v)=>{
                         resolve(v);
@@ -170,12 +165,33 @@ class RedisFactory{
             });
         }
         this.setTimeout(client,key,item.timeout);
-        //去掉前缀，并转buffer
-        if(retValue && retValue.startsWith(this.bufferPrefix)){
-            retValue = Buffer.from(retValue.substr(this.bufferPrefix.length),'hex');
-        }
-        
         return retValue;
+    }
+
+    /**
+     * 获取map数据
+     * @param clientName    client name
+     * @param item          IRedisItem
+     * @returns             object或null
+     */
+    static async getMap(clientName:string,item:IRedisItem){
+        let client = this.getClient(clientName);
+        let key:string = item.pre?item.pre+item.key:item.key;
+        if(client === null){
+            throw new NoomiError("2601",clientName);
+        }
+        let r:any = await new Promise((resolve,reject)=>{
+            client.hgetall(key,(err,value)=>{
+                if(!err){
+                    resolve(value);
+                }
+            }); 
+        });
+        
+        if(item.timeout && item.timeout>0){
+            this.setTimeout(clientName,item.key,item.timeout);
+        }
+        return r;
     }
 
     /**
@@ -222,39 +238,7 @@ class RedisFactory{
         client.expire(key,timeout);
     }
 
-    /**
-     * 获取map数据
-     * @param clientName    client name
-     * @param item          IRedisItem
-     * @returns             object或null
-     */
-    static async getMap(clientName:string,item:IRedisItem){
-        let client = this.getClient(clientName);
-        let key:string = item.pre?item.pre+item.key:item.key;
-        if(client === null){
-            throw new NoomiError("2601",clientName);
-        }
-        let r:any = await new Promise((resolve,reject)=>{
-            client.hgetall(key,(err,value)=>{
-                if(!err){
-                    resolve(value);
-                }
-            }); 
-        });
-        
-        if(item.timeout && item.timeout>0){
-            this.setTimeout(clientName,item.key,item.timeout);
-        }
-
-        //去掉前缀，并转buffer
-        for(let o in r){
-            if(typeof r[o] === 'string' && r[o].startsWith(this.bufferPrefix)){
-                r[o] = Buffer.from(r[o].substr(this.bufferPrefix.length),'hex');
-            }
-        }
-        return r;
-    }
-
+    
     /**
      * 删除项
      * @clientName      client name
@@ -271,34 +255,6 @@ class RedisFactory{
         }else{
             client.del(key);
         }
-    }
-
-    /**
-     * 预处理value
-     * @param value     待处理值
-     * @returns         已处理值
-     */
-    private static preHandle(value:any):any{
-        if(value instanceof Buffer){
-            //需要增加buffer data前缀，用于识别
-            value = this.bufferPrefix + value.toString('hex');
-        }else if(Array.isArray(value)){
-            for(let i=0;i<value.length;i++){
-                if(value[i] instanceof Buffer){
-                    value[i] = this.bufferPrefix + value[i].toString('hex');
-                }
-            }
-        }else if(typeof value === 'object'){
-            for(let p in value){
-                if(value[p] === undefined){
-                    delete value[p];
-                }
-                if(value[p] instanceof Buffer){
-                    value[p] = this.bufferPrefix + value[p].toString('hex');
-                }
-            }
-        }
-        return value;
     }
 
     /**

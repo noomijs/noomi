@@ -146,10 +146,7 @@ export class FileWatcher {
         let obj = await WebCache.getCacheData(url);
         //如果webcache缓存该文件，则需要加入缓存
         if(obj && (obj.data || obj.zipData)){
-            let zip;
-            if(obj.zipData){
-                zip = 'gzip';
-            }
+            let zip = obj.zipData?true:false;
             let data = await StaticResource.readFile(path,zip);
             WebCache.add(url,data);
         }

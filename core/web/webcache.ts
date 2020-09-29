@@ -4,6 +4,8 @@ import { HttpResponse } from "./httpresponse";
 import { Stats } from "fs";
 import { App } from "../tools/application";
 import { Stream } from "stream";
+import { WebConfig } from "./webconfig";
+import { IStaticCacheObj } from "./staticresource";
 
 /**
  * web 缓存类
@@ -84,7 +86,7 @@ class WebCache{
             name:'NWEBCACHE',
             maxSize:cfg.max_size || 0,
             saveType:cfg.save_type || 0,
-            redis:cfg.redis
+            redis:cfg.redis||'default'
         });
     }
 
@@ -94,18 +96,11 @@ class WebCache{
      * @param cacheData     待缓存数据
      * @param dontSaveData  不缓存文件数据
      */
-    static async add(url:string,cacheData:object,dontSaveData?:boolean){
+    static async add(url:string,cacheData:IStaticCacheObj){
         //存到cache
         await this.cache.set({
             key:url,
-            value:{
-                etag:cacheData['etag'],
-                lastModified:cacheData['lastModified'],
-                type:cacheData['type'],
-                size:cacheData['size'],
-                data:!dontSaveData?cacheData['data']:undefined,
-                zipData:!dontSaveData?cacheData['zipData']:undefined
-            }
+            value:cacheData
         });
     }
 
@@ -123,12 +118,7 @@ class WebCache{
             case 0:
                 return 0;
             case 1:
-                //从缓存获取
-                let map = await this.cache.getMap(url);
-                if(map !== null){
-                    this.writeCacheToClient(response,map.etag,map.lastModified);
-                    return map;
-                }
+                return await this.cache.getMap(url);
         }
     }
 
@@ -146,6 +136,10 @@ class WebCache{
      * @param lastModified      lasmodified     最后修改时间
      */
     static writeCacheToClient(response:HttpResponse,etag?:string,lastModified?:string){
+        //启动cache才缓存
+        if(!WebConfig.useServerCache){
+            return;
+        }
         //设置etag
         if(etag){
             response.setHeader('Etag',etag);
@@ -184,24 +178,25 @@ class WebCache{
         }
         //检测 lastmodified
         let modiSince = request.getHeader('if-modified-since');
-        let r:boolean = false;
         if(modiSince){
             let result = await this.cache.get(url,'lastModified');
-            r = (modiSince === result);
-            if(!r){
+            if(modiSince !== result){
                 return 1;
             }
+        }else{
+            return 2;
         }
         //检测etag
         let etag = request.getHeader('if-none-match');
         if(etag){
             let result = await this.cache.get(url,'etag');
-            r = (result === etag);
-            if(!r){
+            if(result !== etag){
                 return 1;
             }
+        }else{
+            return 2;
         }
-        return r?0:1;
+        return 0;
     }
 }
 

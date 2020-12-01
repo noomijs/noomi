@@ -1,4 +1,3 @@
-import { Connection, getConnectionManager, EntityManager } from 'typeorm';
 import { Util } from '../tools/util';
 import { IConnectionManager } from './connectionmanager';
 
@@ -10,7 +9,7 @@ class TypeormConnectionManager implements IConnectionManager{
     /**
      * typeorm connection
      */
-    connection:Connection;
+    connection:any;
     /**
      * 事务管理器
      */
@@ -43,6 +42,7 @@ class TypeormConnectionManager implements IConnectionManager{
                 }
             });
         }
+        const {getConnectionManager} = require('typeorm');
         this.connection = getConnectionManager().create(cfg);
     }
  
@@ -50,7 +50,7 @@ class TypeormConnectionManager implements IConnectionManager{
      * 获取连接
      * @returns connection（已连接）
      */
-    async getConnection():Promise<Connection>{
+    async getConnection():Promise<any>{
         if(!this.connection.isConnected){
             await this.connection.connect();
         }
@@ -61,7 +61,7 @@ class TypeormConnectionManager implements IConnectionManager{
      * 获取manager
      * @returns     EntityManager
      */
-    async getManager():Promise<EntityManager>{
+    async getManager():Promise<any>{
         let conn = await this.getConnection();
         return conn.manager;
     }

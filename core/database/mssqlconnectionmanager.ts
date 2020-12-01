@@ -1,6 +1,5 @@
 import { IConnectionManager } from "./connectionmanager";
 import { TransactionManager } from "./transactionmanager";
-import { EntityManager } from "typeorm";
 /**
  * mssql连接管理器
  * @remarks
@@ -12,7 +11,7 @@ class MssqlConnectionManager implements IConnectionManager{
      */
     pool:any;
     /**
-     * mysql connection对象
+     * connection对象
      */
     connection:any;
     /**
@@ -74,14 +73,6 @@ class MssqlConnectionManager implements IConnectionManager{
         }
         request.connection.close({drop:false});
     }
-
-    /**
-     * 获取EntityManager，TypeormConnectionManager有效，其它返回null
-     * @returns null
-     */
-    async getManager():Promise<EntityManager>{
-        return null;
-    };
 }
 
 export{MssqlConnectionManager}

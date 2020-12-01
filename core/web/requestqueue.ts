@@ -2,12 +2,12 @@ import { HttpRequest } from "./httprequest";
 import { WebConfig } from "./webconfig";
 import { RouteFactory, IRoute } from "../main/route/routefactory";
 import { FilterFactory } from "./filterfactory";
-import { StaticResource, IStaticCacheObj } from "./staticresource";
+import { StaticResource} from "./staticresource";
 import { App } from "../tools/application";
 import { PageFactory } from "../tools/pagefactory";
 import { HttpResponse } from "./httpresponse";
 import { Util } from "../tools/util";
-import { WebCache } from "./webcache";
+import { WebCache, IWebCacheObj } from "./webcache";
 
 /**
  * @exclude
@@ -95,36 +95,36 @@ class RequestQueue{
         }
         // gzip
         let zipStr:string = <string>request.getHeader("accept-encoding");
-        let gzip:boolean = zipStr.indexOf('gzip') !== -1?true:false;
+        let gzip:boolean = zipStr && zipStr.indexOf('gzip') !== -1?true:false;
         
         let path = App.url.parse(request.url).pathname;
         let data;
+        
+        //welcome页面
         if(path === '' || path ==='/'){
-            //默认页面
             if(WebConfig.welcomePage){
-                data = await StaticResource.load(request,response,WebConfig.welcomePage,gzip);
+                path = WebConfig.welcomePage;
             }
         }
-        if(!data){
-            //过滤器执行
-            if(!await FilterFactory.doChain(request.url,request,response)){
-                return;
-            }
-            //加载静态数据
-            data = await StaticResource.load(request,response,path,gzip);
+        
+        //过滤器执行
+        if(!await FilterFactory.doChain(request.url,request,response)){
+            return;
         }
+        //从路由查找
+        data = await RouteFactory.handleRoute(path,request,response);
+        //静态资源
+        if(!data){  
+            //从web cache获取数据
+            data = await WebCache.load(request,response,path);
+            if(!data){
+                //加载静态数据
+                data = await StaticResource.load(request,response,path,gzip);
+            }
+        }
+        
         if(data){
             if(typeof data === 'number'){
-                //静态资源不存在，需要看路由是否存在
-                if(data === 404){
-                    //获得路由，可能没有
-                    let route:IRoute = RouteFactory.getRoute(path);
-                    if(route !== null){
-                        //参数
-                        let params = await request.init();
-                        data = RouteFactory.handleRoute(route,params,request,response);
-                    }
-                }
                 if(data !== 0){
                     let page = PageFactory.getErrorPage(data);
                     if(page && App.fs.existsSync(Util.getAbsPath([page]))){
@@ -136,7 +136,9 @@ class RequestQueue{
                     }
                 }
             }else if(typeof data === 'object'){
-                let cData:IStaticCacheObj = <IStaticCacheObj>data;
+                let cData:IWebCacheObj = <IWebCacheObj>data;
+                //json格式为utf8，zip和流用binary
+                let charset = data.mimeType.indexOf('/json') === -1 || gzip&&cData.zipData?'binary':'utf8';
                 //写web cache相关参数
                 WebCache.writeCacheToClient(response,cData.etag,cData.lastModified);
                 //可能只缓存静态资源信息，所以需要判断数据
@@ -146,14 +148,14 @@ class RequestQueue{
                         type:cData.mimeType,
                         size:cData.zipSize,
                         zip:'gzip',
-                        charset:'binary'
+                        charset:charset
                     });
                 }else if(cData.data){
                     response.writeToClient({
                         data:cData.data,
                         type:cData.mimeType,
                         size:cData.dataSize,
-                        charset:'binary'
+                        charset:charset
                     });
                 }else{
                     response.writeFileToClient({
@@ -174,5 +176,4 @@ class RequestQueue{
         this.canHandle = v;
     }
 }
-
 export {RequestQueue}

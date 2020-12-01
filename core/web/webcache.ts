@@ -1,11 +1,49 @@
 import { NCache } from "../tools/ncache";
 import { HttpRequest } from "./httprequest";
 import { HttpResponse } from "./httpresponse";
-import { Stats } from "fs";
-import { App } from "../tools/application";
-import { Stream } from "stream";
 import { WebConfig } from "./webconfig";
-import { IStaticCacheObj } from "./staticresource";
+import { RedisFactory } from "../tools/redisfactory";
+
+/**
+ * 静态资源缓存对象
+ * @since 0.4.6
+ */
+interface IWebCacheObj{
+    /**
+     * ETag
+     */
+    etag?:string;
+    
+    /**
+     * 最后修改时间串
+     */
+    lastModified?:string;
+    
+    /**
+     * 文件mime type
+     */
+    mimeType:string;
+    
+    /**
+     * 数据长度
+     */
+    dataSize?:number;
+    
+    /**
+     * 压缩数据长度
+     */
+    zipSize?:number;
+
+    /**
+     * 数据
+     */
+    data?:string;
+
+    /**
+     * 压缩数据
+     */
+    zipData?:string;
+}
 
 /**
  * web 缓存类
@@ -96,7 +134,10 @@ class WebCache{
      * @param cacheData     待缓存数据
      * @param dontSaveData  不缓存文件数据
      */
-    static async add(url:string,cacheData:IStaticCacheObj){
+    static async add(url:string,cacheData:IWebCacheObj){
+        if(!this.cache){
+            return;
+        }
         //存到cache
         await this.cache.set({
             key:url,
@@ -110,13 +151,16 @@ class WebCache{
      * @param response  response
      * @param url       url
      * @param gzip      压缩类型 br,gzip,deflate
-     * @returns         0不用回写数据 或 {data:data,type:mimetype}
+     * @returns         0无缓存，异常码 或 cache数据
      */
     static async load(request:HttpRequest,response:HttpResponse,url:string):Promise<number|object>{
+        if(!this.cache){
+            return 0;
+        }
         let rCheck:number = await this.check(request,url);
         switch(rCheck){
             case 0:
-                return 0;
+                return 304;
             case 1:
                 return await this.cache.getMap(url);
         }
@@ -127,6 +171,9 @@ class WebCache{
      * @param url   缓存的url
      */
     static async getCacheData(url:string){
+        if(!this.cache){
+            return;
+        }
         return this.cache.getMap(url);
     }
     /**
@@ -172,6 +219,9 @@ class WebCache{
      * @returns         0:从浏览器获取 1:已更新 2:资源不在缓存
      */
     static async check(request:HttpRequest,url:string):Promise<number>{
+        if(!this.cache){
+            return 2;
+        }
         let exist = await this.cache.has(url);
         if(!exist){
             return 2;
@@ -200,4 +250,4 @@ class WebCache{
     }
 }
 
-export{WebCache}
+export{WebCache,IWebCacheObj}

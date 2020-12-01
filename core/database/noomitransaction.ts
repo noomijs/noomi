@@ -19,7 +19,7 @@ class NoomiTransaction{
     /**
      * 事务类型
      */
-    type:TransactionType;
+    type:ETransactionType;
     /**
      * 事务是否开始
      */
@@ -28,18 +28,23 @@ class NoomiTransaction{
     /**
      * 事务id数组，当事务嵌套时需要通过该数组判断是否执行commit和rollback
      */
-    trIds:Array<number>=[];         
+    invokeNum:number;
     
+    /**
+     * 实际的事务对象
+     */
+    tr:any;
     /**
      * 构造器
      * @param id            事务id 
      * @param connection    所属连接
      * @param type          事务类型
      */
-    constructor(id:number,connection?:any,type?:TransactionType){
+    constructor(id:number,connection?:any,type?:ETransactionType){
         this.id = id; 
         this.connection = connection;
-        this.type = type || TransactionType.NESTED;
+        this.invokeNum = 0;
+        this.type = type || ETransactionType.NESTED;
     }
     /**
      * 开始事务,继承类需要重载
@@ -61,18 +66,25 @@ class NoomiTransaction{
     async rollback(){}
 }
 
-enum TransactionType {
-    NESTED,         //嵌套（默认）
-    NEW             //新建
+/**
+ * 事务类型枚举
+ */
+enum ETransactionType {
+    NESTED=1,         //嵌套（默认）
+    NEW=2             //新建
 }
 
-enum TransactionSource{
+/**
+ * 事务源枚举类型
+ */
+enum ETransactionSource{
     MYSQL='mysql',
     ORACLE='oracle',
     MSSQL='mssql',
     MONGODB='mongodb',
     SEQUALIZE='sequalize',
-    TYPEORM='typeorm'
+    TYPEORM='typeorm',
+    RELAEN='relaen'
 }
 
-export{NoomiTransaction,TransactionType}
+export{NoomiTransaction,ETransactionType}

@@ -1,18 +1,16 @@
-import {Sequelize as SequelizeOrigin} from 'sequelize';
-import { Sequelize } from "sequelize-typescript";
-import { TransactionManager } from "./transactionmanager";
 import { Util } from '../tools/util';
 import { EntityManager } from 'typeorm';
 import { IConnectionManager } from './connectionmanager';
 
 /**
  * sequelize连接管理器
+ * @deprecated v0.4.7 sequelize-typescript没与sequelize同步升级
  */
 class SequelizeConnectionManager implements IConnectionManager{
     /**
      * sequelize对象
      */
-    sequelize:Sequelize;
+    sequelize:any;
     /**
      * 数据库配置项，示例如下：
      * ```
@@ -40,7 +38,6 @@ class SequelizeConnectionManager implements IConnectionManager{
      */
     options:object;
     
-    
     /**
      * 构造器
      * @param cfg 配置对象 {usePool:使用连接池,useTransaction:是否启用事务机制,其它配置参考options属性说明}
@@ -48,7 +45,10 @@ class SequelizeConnectionManager implements IConnectionManager{
     constructor(cfg){
         //使用cli-hooked
         // sequelize-typescript不支持cls，要用sequelize
-        SequelizeOrigin.useCLS(TransactionManager.namespace);
+        const SequelizeOrigin = require('sequelize');
+        const {Sequelize} = require('sequelize-typescript');
+        //需要cls-hooked支持
+        // SequelizeOrigin.useCLS(TransactionManager.namespace);
         //处理models路径
         if(cfg.models && Array.isArray(cfg.models)){
             cfg.models.forEach((item,i)=>{

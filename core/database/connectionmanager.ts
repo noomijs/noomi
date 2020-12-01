@@ -1,7 +1,5 @@
 import { DBManager } from "./dbmanager";
 import { TransactionManager } from "./transactionmanager";
-import { EntityManager, Connection } from "typeorm";
-import { Sequelize } from "sequelize-typescript";
 
 /**
  * 数据库连接管理器
@@ -20,19 +18,19 @@ interface IConnectionManager{
     /**
      * 获取连接
      */
-    getConnection():Promise<any>;
+    getConnection:Function;
 
     /**
      * 释放连接
      * @param conn  待释放的连接
      */
-    release(conn:any):Promise<any>;
+    release:Function;
 
     /**
      * 获取EntityManager，TypeormConnectionManager有效
      * @returns 
      */
-    getManager():Promise<EntityManager>;
+    getManager?:Function;
 }
 
 /**
@@ -41,10 +39,10 @@ interface IConnectionManager{
  *              mysql:      返回connection对象
  *              oracle:     返回connection对象
  *              mssql:      返回request对象
- *              sequelize:  返回sequelize对象
+ *              relaen:     返回connection对象
  *              typeorm:    返回connection（已连接）
  */
-async function getConnection():Promise<Sequelize|Connection|any>{
+async function getConnection():Promise<any>{
     let instance = DBManager.getConnectionManager();
     if(instance && typeof instance.getConnection === 'function'){
         let conn = await instance.getConnection();
@@ -67,18 +65,19 @@ async function closeConnection(conn:any){
     }
 }
 
-
-
 /**
  * 获取当前EntityManager
  * @returns  实体管理器,product为typeorm时有效
  */
-async function getManager():Promise<EntityManager>{
+async function getManager():Promise<any>{
     let tr = TransactionManager.get(false);
     //事务不存在或事务manager不存在，则从connection manager中获取
     if(!tr || !tr.manager){
         let cm:IConnectionManager = DBManager.getConnectionManager();
-        return await cm.getManager();
+        if(typeof cm.getManager === 'function'){
+            return await cm.getManager();
+        }
+        return null;
     }
     return tr.manager;
 }

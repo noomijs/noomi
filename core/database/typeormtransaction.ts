@@ -1,8 +1,6 @@
 import { NoomiTransaction } from "./noomitransaction";
 /**
  * typeorm 事务类
- * @remarks
- * sequelize事务通过事务代理完成开始、提交和回滚操作，不需要重载方法
  */
 class TypeormTransaction extends NoomiTransaction{
     /**
@@ -10,10 +8,19 @@ class TypeormTransaction extends NoomiTransaction{
      */
     manager:any;
     
+    /**
+     * 事务开始
+     */
     async begin(){}
 
+    /**
+     * 事务提交
+     */
     async commit(){}
 
+    /**
+     * 事务回滚
+     */
     async rollback(){}
 }
 

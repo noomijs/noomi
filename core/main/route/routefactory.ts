@@ -5,6 +5,7 @@ import { NoomiError } from "../../tools/errorfactory";
 import { Util } from "../../tools/util";
 import { App } from "../../tools/application";
 import { RouteErrorHandler } from "./routeerrorhandler";
+import { IWebCacheObj } from "../../web/webcache";
 
 /**
  * 路由配置类型
@@ -96,6 +97,19 @@ interface IRoute{
      * 路由处理结果集
      */
     results?:Array<IRouteResult>;
+    /**
+     * route 实例对应url路径
+     * @since 0.4.7
+     */
+    path?:string;
+
+    /**
+     * 参数对象
+     * @since 0.4.7
+     */
+    params?:object;
+
+
 }
 
 /**
@@ -199,12 +213,12 @@ class RouteFactory{
     /**
      * 路由方法执行
      * @param pathOrRoute   路径或路由
-     * @param params        调用参数对象
      * @param req           request 对象
      * @param res           response 对象
+     * @param params        调用参数对象
      * @returns             错误码或0
      */
-    static handleRoute(pathOrRoute:string|IRoute,params:object,req:HttpRequest,res:HttpResponse):number{
+    static async handleRoute(pathOrRoute:string|IRoute,req:HttpRequest,res:HttpResponse,params?:object):Promise<number|IWebCacheObj>{
         let route:IRoute;
         if(typeof pathOrRoute === 'string'){
             route = this.getRoute(pathOrRoute);
@@ -213,9 +227,14 @@ class RouteFactory{
         }
 
         if(!route){
-            return 404;
+            return 0;
         }
-        
+
+        //绑定path
+        if(!route.path && req){
+            route.path = req.url;
+        }
+
         //设置request
         if(typeof route.instance.setRequest === 'function'){
             route.instance.setRequest(req);
@@ -226,6 +245,10 @@ class RouteFactory{
             route.instance.setResponse(res);
         }
 
+        //初始化参数
+        if(!params){
+            params = await req.init();
+        }
         //设置model
         if(typeof route.instance.setModel === 'function'){
             route.instance.setModel(params);
@@ -237,16 +260,8 @@ class RouteFactory{
         }
         
         try{
-            let re = func.call(route.instance,params);
-            if(App.util.types.isPromise(re)){  //返回promise
-                re.then((data)=>{
-                    this.handleResult(res,data,route.instance,route.results);
-                }).catch((e)=>{
-                    this.handleException(res,e);
-                });
-            }else{      //直接返回
-                this.handleResult(res,re,route.instance,route.results);
-            }
+            let re = await func.call(route.instance,params);
+            return await this.handleResult(route,re);
         }catch(e){
             this.handleException(res,e);
         }
@@ -255,41 +270,42 @@ class RouteFactory{
 
     /**
      * 处理路由结果
-     * @param res       response 对象
+     * @param route     route对象
      * @param data      路由对应方法返回值
-     * @param instance  路由对应实例
-     * @param results   route结果数组    
      */
-    static handleResult(res:HttpResponse,data:any,instance:any,results:Array<IRouteResult>):void{
+    static async handleResult(route:IRoute,data:any):Promise<number|IWebCacheObj>{
+        const results = route.results;
         if(results && results.length > 0){
             //单个结果，不判断返回值
             if(results.length === 1){
-                this.handleOneResult(res,results[0],data,instance);
-                return;
+                return await this.handleOneResult(route,results[0],data);
             }else{
                 let r:IRouteResult;
                 for(r of results){
                     //result不带value，或找到返回值匹配，则处理
                     if(r.value === undefined || data && data == r.value){
-                        this.handleOneResult(res,r,data,instance);
-                        return;
+                        return await this.handleOneResult(route,r,data);
                     }
                 }
             }
         }
         //默认回写json
-        this.handleOneResult(res,{},data);
+        return await this.handleOneResult(route,{},data);
     }
 
     /**
      * 处理一个路由结果
-     * @param res           response 对象
+     * @param route         route对象
      * @param result        route result
      * @param data          路由执行结果
-     * @param instance      路由实例
+     * @returns             cache数据对象或0
      */
-    static handleOneResult(res:HttpResponse,result:IRouteResult,data:any,instance?:any):void{
+    static async handleOneResult(route:IRoute,result:IRouteResult,data:any):Promise<IWebCacheObj|number>{
         let url:string;
+        const instance = route.instance;
+        const res:HttpResponse = route.instance.response;
+        //返回值
+        let ret:IWebCacheObj|number = 0;
         switch(result.type){
             case ERouteResultType.REDIRECT: //重定向
                 url = handleParamUrl(instance,result.url);
@@ -312,12 +328,11 @@ class RouteFactory{
                     }
                 }
                 res.redirect(url);
-                return;
+                break;
             case ERouteResultType.CHAIN: //路由器链
                 url = handleParamUrl(instance,result.url);
                 let url1 = App.url.parse(url).pathname;
                 let params = App.qs.parse(App.url.parse(url).query);
-                
                 //参数处理
                 if(result.params && Array.isArray(result.params) && result.params.length>0){
                     for(let pn of result.params){
@@ -327,25 +342,13 @@ class RouteFactory{
                         }
                     }
                 }
-                const route = this.getRoute(url1);
-                if(route !== null){
-                    //调用
-                    try{
-                        let re = route.instance[route.method](params);
-                        if(App.util.types.isPromise(re)){
-                            re.then(data=>{
-                                this.handleResult(res,data,route.instance,route.results);
-                            }).catch(e=>{
-                                this.handleException(res,e);
-                            });
-                        }else{
-                            this.handleResult(res,re,route.instance,route.results);
-                        }
-                    }catch(e){
-                        this.handleException(res,e);
-                    }
+                let route1 = this.getRoute(url1);
+                if(route1 !== null){
+                    //设置route path
+                    route1.path = url1;
+                    return await this.handleRoute(route1,route.instance.request,res,params);
                 }
-                return;
+                break;
             case ERouteResultType.NONE:    //什么都不做
                 break;
             case ERouteResultType.STREAM:  //文件流
@@ -363,12 +366,20 @@ class RouteFactory{
                         });
                     }
                 }
-                return;
+                break;
             default: //json
-                res.writeToClient({
-                    data:data
-                });
+                //处理json对象
+                let mimeType:string = 'text/html';
+                if(typeof data === 'object'){
+                    data = JSON.stringify(data);
+                    mimeType = 'application/json';
+                }
+                ret = {
+                    data:data,
+                    mimeType:mimeType
+                };
         }
+        return ret;
         
         /**
          * 处理带参数的url，参数放在{}中

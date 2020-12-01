@@ -1,14 +1,22 @@
 import { NoomiTransaction } from "./noomitransaction";
 /**
  * sequelize 事务类
- * @remarks
- * typeorm事务通过事务代理完成开始、提交和回滚操作，不需要重载方法
+ * @deprecated v0.4.7 sequelize-typescript没与sequelize同步升级
  */
 class SequelizeTransaction extends NoomiTransaction{
+    /**
+     * 事务开始
+     */
     async begin(){}
 
+    /**
+     * 事务提交
+     */
     async commit(){}
 
+    /**
+     * 事务回滚
+     */
     async rollback(){}
 }
 

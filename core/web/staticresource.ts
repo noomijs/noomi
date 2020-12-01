@@ -1,5 +1,5 @@
 import { HttpResponse } from "./httpresponse";
-import { WebCache } from "./webcache";
+import { WebCache, IWebCacheObj } from "./webcache";
 import { WebConfig } from "./webconfig";
 import { HttpRequest } from "./httprequest";
 import { Util } from "../tools/util";
@@ -8,46 +8,6 @@ import { Stream } from "stream";
 import { Stats } from "fs";
 import { FileWatcher, EWatcherType } from "../tools/filewatcher";
 
-/**
- * 静态资源缓存对象
- * @since 0.4.6
- */
-interface IStaticCacheObj{
-    /**
-     * ETag
-     */
-    etag:string;
-    
-    /**
-     * 最后修改时间串
-     */
-    lastModified:string;
-    
-    /**
-     * 文件mime type
-     */
-    mimeType:string;
-    
-    /**
-     * 数据长度
-     */
-    dataSize?:number;
-    
-    /**
-     * 压缩数据长度
-     */
-    zipSize?:number;
-
-    /**
-     * 数据
-     */
-    data?:string;
-
-    /**
-     * 压缩数据
-     */
-    zipData?:string;
-}
 /**
  * 静态资源加载器
  */
@@ -73,7 +33,7 @@ class StaticResource{
      * @param zip       是否压缩
      * @returns         http code 或 缓存数据 
      */
-    static async load(request:HttpRequest,response:HttpResponse,path:string,zip?:boolean):Promise<number|IStaticCacheObj>{
+    static async load(request:HttpRequest,response:HttpResponse,path:string,zip?:boolean):Promise<number|IWebCacheObj>{
         //检测路径是否在static map中
         let finded:boolean = false;
         for(let p of this.staticMap){
@@ -93,9 +53,7 @@ class StaticResource{
         //状态码
         if(WebConfig.useServerCache){ //从缓存取，如果用浏览器缓存数据，则返回0，不再操作
             let ro:number|object = await WebCache.load(request,response,path);
-            if(ro === 0){
-                return 304;
-            }else if(ro !== undefined){
+            if(ro !== undefined && typeof ro === 'object'){
                 cacheData = ro;
             }
         }
@@ -144,7 +102,7 @@ class StaticResource{
      * @param zip       压缩方法
      * @returns         cache数据对象
      */
-    static async readFile(path:string,zip?:boolean):Promise<IStaticCacheObj>{
+    static async readFile(path:string,zip?:boolean):Promise<IWebCacheObj>{
         const fs = App.fs;
         //未压缩数据buffer
         let srcBuf:Buffer;
@@ -269,4 +227,4 @@ class StaticResource{
     }
 }
 
-export {StaticResource,IStaticCacheObj};
+export {StaticResource};

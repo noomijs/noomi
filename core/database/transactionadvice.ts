@@ -16,7 +16,8 @@ export class TransactionAdvice{
         if(!tr.connection){
             tr.connection = await getConnection();
         }
-        tr.trIds.push(tr.id);
+        //调用数+1
+        tr.invokeNum++;
         if(tr.isBegin){
             return;
         }
@@ -33,9 +34,8 @@ export class TransactionAdvice{
             return;
         }
         
-        tr.trIds.pop();
         //当前id为事务头，进行提交
-        if(tr.trIds.length===0){
+        if(--tr.invokeNum === 0){
             await tr.commit();
             //删除事务
             TransactionManager.del(tr);
@@ -43,7 +43,6 @@ export class TransactionAdvice{
             TransactionManager.releaseConnection(tr);
         }
     }
-
 
     /**
      * 事务方法抛出异常时通知
@@ -53,10 +52,10 @@ export class TransactionAdvice{
         if(!tr || !tr.isBegin){
             return;
         }
+        
         if(tr){
-            tr.trIds.pop();
             //最外层rollback
-            if(tr.trIds.length===0){
+            if(--tr.invokeNum === 0){
                 await tr.rollback();
                 //释放连接
                 await TransactionManager.releaseConnection(tr);

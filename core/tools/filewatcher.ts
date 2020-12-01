@@ -4,6 +4,7 @@ import { StaticResource } from "../web/staticresource";
 import { WebCache } from "../web/webcache";
 import { Util } from "./util";
 import { InstanceFactory } from "../main/instancefactory";
+import { WebConfig } from "../web/webconfig";
 
 /**
  * 文件监听类型
@@ -64,6 +65,10 @@ export class FileWatcher {
      * @param path  目录路径
      */
     private static async watchStatic(path:string){
+        //针对使用server cache的配置有效
+        if(!WebConfig.useServerCache){
+            return;
+        }
         //支持recursive
         if(process.platform === 'darwin' || process.platform === 'win32'){
             App.fs.watch(path,{recursive:true},async (eventType,fileName)=>{

@@ -1,4 +1,4 @@
-import { NoomiTransaction, TransactionType } from "./noomitransaction";
+import { NoomiTransaction, ETransactionType } from "./noomitransaction";
 import { getConnection } from "./connectionmanager";
 import { DBManager } from "./dbmanager";
 
@@ -7,7 +7,7 @@ import { DBManager } from "./dbmanager";
  */
 class MssqlTransaction extends NoomiTransaction{
     /**
-     * mysql 事务对象
+     * mssql 事务对象
      */
     tr:any;
 
@@ -17,7 +17,7 @@ class MssqlTransaction extends NoomiTransaction{
      * @param connection    所属连接
      * @param type          事务类型
      */
-    constructor(id:number,connection?:any,type?:TransactionType){
+    constructor(id:number,connection?:any,type?:ETransactionType){
         super(id,connection,type);
         let cm = DBManager.getConnectionManager();
         let pool = cm.pool;

@@ -1,7 +1,5 @@
 import { TransactionManager } from "./transactionmanager";
 import { IConnectionManager } from "./connectionmanager";
-import { EntityManager } from "typeorm";
-
 
 /**
  * mysql连接管理器
@@ -55,9 +53,9 @@ class MysqlConnectionManager implements IConnectionManager{
 
     /**
      * 获取连接
-     * @returns mysql connection 对象
+     * @returns connection 对象
      */
-    async getConnection(){
+    async getConnection():Promise<any>{
         let conn = TransactionManager.getConnection();
         if(conn){
             return conn;
@@ -78,7 +76,7 @@ class MysqlConnectionManager implements IConnectionManager{
 
     /**
      * 释放连接
-     * @param conn mysql connection对象
+     * @param conn connection对象
      */
     async release(conn:any){
         if(!conn){
@@ -94,14 +92,6 @@ class MysqlConnectionManager implements IConnectionManager{
             });
         }
     }
-
-    /**
-     * 获取EntityManager，TypeormConnectionManager有效，其它返回null
-     * @returns 
-     */
-    async getManager():Promise<EntityManager>{
-        return null;
-    };
 }
 
 

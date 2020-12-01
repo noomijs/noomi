@@ -2,7 +2,7 @@ import { DBManager } from "./dbmanager";
 import { TransactionManager } from "./transactionmanager";
 import { getConnection } from "./connectionmanager";
 import { InstanceFactory } from "../main/instancefactory";
-import { QueryRunner } from "typeorm";
+import { ThreadLocal } from "../tools/threadlocal";
 
 /**
  * 事务Aop代理
@@ -21,40 +21,44 @@ class TransactionProxy{
         return async (params)=>{
             let retValue;
             switch(DBManager.product){
+                case 'relaen':
+                    retValue = await new Promise(async (resolve,reject)=>{
+                        let v = await doRelaen();
+                        if(v instanceof Error){
+                            reject(v)
+                        }else{
+                            resolve(v);
+                        }
+                    });
+                    break;
                 case 'sequelize':
                     retValue = await new Promise(async (resolve,reject)=>{
-                        TransactionManager.namespace.run(async ()=>{
-                            let v = await doSequelize();
-                            if(v instanceof Error){
-                                reject(v)
-                            }else{
-                                resolve(v);
-                            }
-                        });
+                        let v = await doSequelize();
+                        if(v instanceof Error){
+                            reject(v)
+                        }else{
+                            resolve(v);
+                        }
                     });
                     break;
                 case 'typeorm':
                     retValue = await new Promise(async (resolve,reject)=>{
-                        TransactionManager.namespace.run(async ()=>{
-                            let v = await doTypeorm();
-                            if(v instanceof Error){
-                                reject(v)
-                            }else{
-                                resolve(v);
-                            }
-                        });
+                        let v = await doTypeorm();
+                        if(v instanceof Error){
+                            reject(v)
+                        }else{
+                            resolve(v);
+                        }
                     });
                     break;
                 default:  //datasource
-                    retValue = await new Promise((resolve,reject)=>{
-                        TransactionManager.namespace.run(async ()=>{
-                            let v = await doDataScource();
-                            if(v instanceof Error){
-                                reject(v)
-                            }else{
-                                resolve(v);
-                            }
-                        });
+                    retValue = await new Promise(async (resolve,reject)=>{
+                        let v = await doDataScource();
+                        if(v instanceof Error){
+                            reject(v);
+                        }else{
+                            resolve(v);
+                        }
                     });
             }
             if(retValue instanceof Error){
@@ -66,9 +70,31 @@ class TransactionProxy{
              * 数据源处理
              */
             async function doDataScource(){
-                if(!TransactionManager.getIdFromLocal()){
-                    //保存transaction id
-                    TransactionManager.setIdToLocal();
+                //初始化thread id
+                if(!ThreadLocal.getThreadId()){
+                    ThreadLocal.newThreadId();
+                }
+                //advices获取
+                let adviceInstance = InstanceFactory.getInstance('NoomiTransactionAdvice');
+                let result:any;
+                //before aop执行
+                await adviceInstance.before.apply(adviceInstance);
+                
+                try{
+                    result = await func.apply(instance,params);
+                    //return aop执行
+                    await adviceInstance.afterReturn.apply(adviceInstance);
+                }catch(e){
+                    //异常aop执行
+                    await adviceInstance.afterThrow.apply(adviceInstance);
+                    result = handleErr(e);
+                }
+                return result;
+            }
+
+            async function doRelaen(){
+                if(!ThreadLocal.getThreadId()){
+                    ThreadLocal.newThreadId();
                 }
                 //advices获取
                 let adviceInstance = InstanceFactory.getInstance('NoomiTransactionAdvice');
@@ -90,12 +116,13 @@ class TransactionProxy{
 
             /**
              * sequelize 处理
+             * @deprecated v0.4.7
              */
             async function doSequelize(){
                 let result:any;
-                if(!TransactionManager.getIdFromLocal()){
+                if(!ThreadLocal.getThreadId()){
+                    ThreadLocal.newThreadId();
                     //保存transaction id
-                    TransactionManager.setIdToLocal();
                     let trOpt:any = TransactionManager.transactionOption||{};
                     let sequelize = await getConnection();
                     result = await new Promise((res,rej)=>{
@@ -121,15 +148,15 @@ class TransactionProxy{
              */
             async function doTypeorm(){
                 let result:any;
-                if(!TransactionManager.getIdFromLocal()){
+                if(!ThreadLocal.getThreadId()){
+                    ThreadLocal.newThreadId();
                     //保存transaction id
-                    TransactionManager.setIdToLocal();
                     let isoLevel:any;
                     if(TransactionManager.transactionOption){
                         isoLevel = TransactionManager.transactionOption.isolationLevel;
                     }
                     let conn = await getConnection();
-                    const queryRunner:QueryRunner = conn.createQueryRunner();
+                    const queryRunner:any = conn.createQueryRunner();
 
                     await queryRunner.startTransaction(isoLevel);
                     let tr = TransactionManager.get(true);

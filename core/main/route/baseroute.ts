@@ -1,5 +1,6 @@
 import { HttpRequest} from "../../web/httprequest";
 import { HttpResponse } from "../../web/httpresponse";
+import { BaseModel } from "../../tools/model";
 /**
  * 路由基类
  * 可自动为路由类生成model(传入参数对象)，自带request和response对象
@@ -7,31 +8,62 @@ import { HttpResponse } from "../../web/httpresponse";
  */
 class BaseRoute{
     /**
+     * 模型类
+     */
+    public __modelClass:any;
+
+    /**
+     * null属性检查{方法名:待检查属性数组}
+     */
+    private __nullCheckMap:Map<string,Array<string>>;
+
+    /**
      * 数据对象
      */
-    model:any;
+    public model:any;
+
     /**
      * request对象
      */
-    request:HttpRequest;
+    public request:HttpRequest;
+    
     /**
      * response对象
      */
-    response:HttpResponse;
+    public response:HttpResponse;
+
 
     /**
      * 为model设置值
      * @param data  数据对象(由浏览器/客户端传入的数据参数)
+     * @returns     无异常null，否则返回异常字段集
      */
-    setModel(data:any){
-        this.model = data;
+    public setModel(data:any,nullArr?:Array<string>){
+        if(this.__modelClass){
+            let m:BaseModel = Reflect.construct(this.__modelClass,[]);
+            if(nullArr){
+                for(let p of nullArr){
+                    m.__addValidator(p,'nullable');
+                }
+            }
+            Object.getOwnPropertyNames(data).forEach((item)=>{
+                m[item] = data[item];
+            });
+            //数据转换和校验
+            let r = m.__handle();
+            this.model = m;
+            return r;
+        }else{
+            this.model = data;
+        }
+        return null;
     }
 
     /**
      * 设置request对象
      * @param req   request对象
      */
-    setRequest(req:HttpRequest):void{
+    public setRequest(req:HttpRequest):void{
         this.request = req;
     }
 
@@ -39,8 +71,31 @@ class BaseRoute{
      * 设置reponse对象
      * @param res   response对象
      */
-    setResponse(res:HttpResponse):void{
+    public setResponse(res:HttpResponse):void{
         this.response = res;
+    }
+
+    /**
+     * 增加nullcheck 方法
+     * @param methodName    方法名
+     * @param props         检测数组
+     */
+    public __addNullCheck(methodName:string,props:Array<string>){
+        if(!this.__nullCheckMap){
+            this.__nullCheckMap = new Map();
+        }
+        this.__nullCheckMap.set(methodName,props);
+    }
+
+    /**
+     * 获取null check 数组
+     * @param methodName 方法名
+     */
+    public __getNullCheck(methodName:string):Array<string>{
+        if(this.__nullCheckMap){
+            return this.__nullCheckMap.get(methodName);
+        }
+        return null;
     }
 }
 

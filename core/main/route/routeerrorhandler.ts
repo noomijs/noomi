@@ -14,9 +14,17 @@ export class RouteErrorHandler{
      * @param e     异常对象
      */
     handle(res:HttpResponse,e:Error){
-        let msg = e;
+        let r = {};
+        if(e.message){
+            r['message'] = e.message;
+        }else{
+            r = e;
+        }
         res.writeToClient({
-            data:"<h1>" +  new NoomiError('2102') + "</h1><h3>Error Message:" + msg + "</h3>"
+            data:{
+                success:false,
+                result:r
+            }
         });
     }
 }

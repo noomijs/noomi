@@ -8,6 +8,10 @@ export class App {
      */
     static appName:string='APP';
     /**
+     * 语言
+     */
+    static language:string = 'zh';
+    /**
      * 是否打开file watcher
      */
     static openWatcher:boolean = false;

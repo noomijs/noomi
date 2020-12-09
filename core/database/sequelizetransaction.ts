@@ -1,7 +1,8 @@
 import { NoomiTransaction } from "./noomitransaction";
 /**
  * sequelize 事务类
- * @deprecated v0.4.7 sequelize-typescript没与sequelize同步升级
+ * @deprecated  0.4.7 
+ *              sequelize-typescript没与sequelize同步升级，导致安装时需要降级安装
  */
 class SequelizeTransaction extends NoomiTransaction{
     /**

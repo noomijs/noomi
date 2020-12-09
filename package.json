@@ -1,13 +1,13 @@
 {
   "name": "noomi",
-  "version": "0.4.7",
+  "version": "0.4.8",
   "description": "一个基于node的企业级框架，支持路由、IoC、Aop、事务嵌套、安全框架、缓存、集群",
   "main": "dist/index.js",
   "types": "dist/types/index.d.ts",
   "files": [
-    "dist/types/index.d.ts",
-    "dist/core/**/*.js",
-    "dist/types/core/**/*.d.ts"
+    "dist/**/*.d.ts",
+    "dist/**/*.js",
+    "dist/**/*.js.map"
   ],
   "scripts": {
     "build": "tsc",

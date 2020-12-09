@@ -7,6 +7,7 @@ import { FilterFactory } from '../web/filterfactory';
 import { TransactionManager } from '../database/transactionmanager';
 import { RouteFactory } from '../main/route/routefactory';
 import { NoomiError } from './errorfactory';
+import { BaseModel } from './model';
 
 
 /**
@@ -307,4 +308,52 @@ function Transaction(){
         });
     }
 }
-export {Instance,Router,Route,WebFilter,Inject,Aspect,Pointcut,Before,After,Around,AfterReturn,AfterThrow,Transactioner,Transaction}
+
+/**
+ * @exclude
+ * 数据模型装饰器，装饰类
+ * @since 0.4.8
+ * @param types     验证集{validatorName:参数数组(可以是空数组)}
+ */ 
+function DataModel(clazz:object){
+    return (target)=>{
+        target.prototype.__modelClass = clazz;
+    }
+}
+
+/**
+ * @exclude
+ * 模型属性装饰器，装饰属性
+ * @since 0.4.8
+ * @param type  数据类型 number,string,boolean,array
+ */ 
+function DataType(type:string){
+    return (target:any,name:string)=>{
+        target.__setType(name,type);
+    }
+}
+
+/**
+ * @exclude
+ * 模型属性装饰器，装饰属性
+ * @since 0.4.8
+ * @param types     验证集{validatorName:参数数组(可以是空数组)}
+ */ 
+function DataValidator(types:object){
+    return (target:any,name:string)=>{
+        target.__setValidator(name,types);
+    }
+}
+
+/**
+ * @exclude
+ * 数据null检查，装饰路由方法
+ * @since 0.4.8
+ * @param props     待检查属性数组
+ */ 
+function NullCheck(props:Array<string>){
+    return (target:any,name:string)=>{
+        target.__addNullCheck(name,props);
+    }
+}
+export {Instance,Router,Route,WebFilter,Inject,Aspect,Pointcut,Before,After,Around,AfterReturn,AfterThrow,Transactioner,Transaction,DataModel,DataType,DataValidator,NullCheck}

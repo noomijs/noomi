@@ -112,9 +112,18 @@ class RequestQueue{
             return;
         }
         //从路由查找
-        data = await RouteFactory.handleRoute(path,request,response);
-        //静态资源
-        if(!data){  
+        let route:IRoute = RouteFactory.getRoute(path);
+        if(route !== null){
+            //执行
+            try{
+                data = await RouteFactory.handleRoute(route,request,response);
+            }catch(e){
+                RouteFactory.handleException(response,e);
+                //输出
+                console.log(e);
+                return;
+            }
+        }else{ //静态资源
             //从web cache获取数据
             data = await WebCache.load(request,response,path);
             if(!data){

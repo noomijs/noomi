@@ -26,8 +26,8 @@ export * from './core/web/staticresource';
 export * from './core/web/webconfig';
 export * from './core/web/webcache';
 
-export * from './core/locales/msg_en';
-export * from './core/locales/msg_zh';
+export * from './core/locales/noomitip';
+export * from './core/locales/noomimodeltip';
 
 export * from './core/main/aopfactory';
 export * from './core/main/aopproxy';
@@ -42,9 +42,11 @@ export * from './core/tools/decorator';
 export * from './core/tools/errorfactory';
 export * from './core/tools/filewatcher';
 export * from './core/tools/launchhookmanager';
+export * from './core/tools/model';
 export * from './core/tools/ncache';
 export * from './core/tools/pagefactory';
 export * from './core/tools/redisfactory';
 export * from './core/tools/securityfactory';
 export * from './core/tools/threadlocal';
 export * from './core/tools/util';
+export * from './core/tools/validator';

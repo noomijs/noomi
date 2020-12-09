@@ -4,7 +4,8 @@ import { IConnectionManager } from './connectionmanager';
 
 /**
  * sequelize连接管理器
- * @deprecated v0.4.7 sequelize-typescript没与sequelize同步升级
+ * @deprecated  0.4.7
+ *              sequelize-typescript没与sequelize同步升级，导致安装时需要降级安装
  */
 class SequelizeConnectionManager implements IConnectionManager{
     /**

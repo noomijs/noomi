@@ -70,21 +70,44 @@ class NoomiTransaction{
  * 事务类型枚举
  */
 enum ETransactionType {
-    NESTED=1,         //嵌套（默认）
-    NEW=2             //新建
+    /**
+     * 嵌套
+     */
+    NESTED=1,        
+    /**
+     * 新建
+     */ 
+    NEW=2             
 }
 
 /**
  * 事务源枚举类型
  */
 enum ETransactionSource{
+    /**
+     * mysql
+     */
     MYSQL='mysql',
+    /**
+     * oracle
+     */
     ORACLE='oracle',
+    /**
+     * mssql
+     */
     MSSQL='mssql',
+    /**
+     * mongodb
+     */
     MONGODB='mongodb',
-    SEQUALIZE='sequalize',
-    TYPEORM='typeorm',
-    RELAEN='relaen'
+    /**
+     * relaen
+     */
+    RELAEN='relaen',
+    /**
+     * typeorm
+     */
+    TYPEORM='typeorm'
 }
 
 export{NoomiTransaction,ETransactionType}

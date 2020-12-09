@@ -11,8 +11,7 @@ import { NoomiError,ErrorFactory } from "../tools/errorfactory";
 import { WebConfig } from "../web/webconfig";
 import { RequestQueue } from "../web/requestqueue";
 import { DBManager } from "../database/dbmanager";
-import { NoomiTip_zh } from "../locales/msg_zh";
-import { NoomiTip_en } from "../locales/msg_en";
+import { NoomiTip } from "../locales/noomitip";
 import { Util } from "../tools/util";
 import { App } from "../tools/application";
 import { SecurityFactory } from "../tools/securityfactory";
@@ -49,7 +48,6 @@ class NoomiMain{
      */
     async init(){
         let basePath:string = App.configPath;
-        console.log('Server is startup ...');
         let iniJson:object = null;
         try{
             let iniStr = App.fs.readFileSync(Util.getAbsPath([basePath,'noomi.json']),'utf-8');
@@ -61,22 +59,18 @@ class NoomiMain{
         if(iniJson === null){
             throw new NoomiError("1001");
         }
+
         App.appName = iniJson['app_name']||'APP';
         //设置file watcher开关
         App.openWatcher = iniJson['open_watcher'] || false;
         
-        let language:string = iniJson['language'] || 'zh';
-        let msgTip:object;
-        switch(language){
-            case 'zh':
-                msgTip = NoomiTip_zh;
-                break;
-            case 'en':
-                msgTip = NoomiTip_en;
-                break;
-        }
-        //异常
-        ErrorFactory.init(language);
+        App.language = iniJson['language'] || 'zh';
+        
+        let msgTip = NoomiTip[App.language];
+
+        //开始启动
+        console.log(msgTip["0100"]);
+        
 
         //设置是否集群
         App.isCluster = iniJson['cluster']===true?true:false;
@@ -198,7 +192,8 @@ class NoomiMain{
             this.server = App.http.createServer((req:IncomingMessage,res:ServerResponse)=>{
                 RequestQueue.handleOne(new HttpRequest(req,res));
             }).listen(this.port,(e)=>{
-                console.log(`Http Server is running,listening port ${this.port}`);
+                console.log(msgTip["0117"]);
+                console.log(Util.compileString(msgTip["0121"],[this.port]));
                 //启动队列执行
             }).on('error',(err)=>{
                 if (err.code === 'EADDRINUSE') {
@@ -222,7 +217,7 @@ class NoomiMain{
             },(req,res)=>{
                 RequestQueue.handleOne(new HttpRequest(req,res));
             }).listen(this.sslPort,(e)=>{
-                console.log(`Https Server is running,listening port ${this.sslPort}`);
+                console.log(Util.compileString(msgTip["0122"],[this.sslPort]));
                 //启动队列执行
             }).on('error',(err)=>{
                 if (err.code === 'EADDRINUSE') {

@@ -216,20 +216,13 @@ class RouteFactory{
      * @param req           request 对象
      * @param res           response 对象
      * @param params        调用参数对象
-     * @returns             错误码或0
+     * @returns             0 正常 1异常
      */
-    static async handleRoute(pathOrRoute:string|IRoute,req:HttpRequest,res:HttpResponse,params?:object):Promise<number|IWebCacheObj>{
-        let route:IRoute;
-        if(typeof pathOrRoute === 'string'){
-            route = this.getRoute(pathOrRoute);
-        }else{
-            route = pathOrRoute;
+    static async handleRoute(route:IRoute,req:HttpRequest,res:HttpResponse,params?:object):Promise<number|IWebCacheObj>{
+        //尚未初始化
+        if(!this.errorHandler){
+            this.init({});
         }
-
-        if(!route){
-            return 0;
-        }
-
         //绑定path
         if(!route.path && req){
             route.path = req.url;
@@ -249,11 +242,21 @@ class RouteFactory{
         if(!params){
             params = await req.init();
         }
+
         //设置model
         if(typeof route.instance.setModel === 'function'){
-            route.instance.setModel(params);
+            let nullArr;
+            if(route.instance.__getNullCheck){ //空属性
+                nullArr = route.instance.__getNullCheck(route.method);    
+            }
+            let r = route.instance.setModel(params,nullArr);
+            if(r !== null){  //setmodel异常
+                throw r;
+            }
         }
 
+        
+        //实际调用方法
         let func = route.instance[route.method]; 
         if(typeof func !== 'function'){
             throw new NoomiError("1010");
@@ -263,9 +266,8 @@ class RouteFactory{
             let re = await func.call(route.instance,params);
             return await this.handleResult(route,re);
         }catch(e){
-            this.handleException(res,e);
+            throw e;
         }
-        return 0;
     }
 
     /**
@@ -343,12 +345,13 @@ class RouteFactory{
                     }
                 }
                 let route1 = this.getRoute(url1);
-                if(route1 !== null){
-                    //设置route path
-                    route1.path = url1;
-                    return await this.handleRoute(route1,route.instance.request,res,params);
+                if(route1 === null){
+                    throw new NoomiError("2103",url1);
                 }
-                break;
+                
+                //设置route path
+                route1.path = url1;
+                return await this.handleRoute(route1,route.instance.request,res,params);
             case ERouteResultType.NONE:    //什么都不做
                 break;
             case ERouteResultType.STREAM:  //文件流
@@ -421,6 +424,10 @@ class RouteFactory{
         let eh:RouteErrorHandler = InstanceFactory.getInstance(this.errorHandler);
         if(eh){
             eh.handle(res,e);
+        }else{
+            res.writeToClient({
+                data:e
+            });
         }
     }
 

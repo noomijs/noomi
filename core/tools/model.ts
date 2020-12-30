@@ -27,16 +27,23 @@ interface IModelCfg{
  * 基础模型
  */
 class BaseModel{
-    private __props:Map<string,IModelCfg>;
+    /**
+     * 通过注解器注入的属性map
+     */
+    private __srcPropMap:Map<string,IModelCfg>;
 
+    /**
+     * 实际使用props
+     */
+    private __props:Map<string,IModelCfg>;
+    constructor(){
+        this.__props = new Map();
+        this.__props = Util.clone(this.__srcPropMap);
+    }
     /**
      * 转换和验证，返回数据类型或验证不正确的属性消息集合
      */
     public __handle():object{
-        if(!this.__props){
-            return null;
-        }
-        
         let errObj = {};
         for(let o of this.__props){
             let prop = o[0];
@@ -58,9 +65,6 @@ class BaseModel{
      * @returns     null或字符串(表示验证异常)
      */
     private __validate(name:string){
-        if(!this.__props){
-            return null;
-        }
         let cfg:IModelCfg = this.__props.get(name);
         if(!cfg || !cfg.validators){
             return null;
@@ -77,7 +81,7 @@ class BaseModel{
                     return Util.compileString(NoomiModelTip[App.language][vn],cfg.validators[vn]);
                 }
             }else if(this[vn] && typeof this[vn] === 'function'){ //模型自定义校验器
-                let r = this[vn](value);
+                let r = this[vn](value,cfg.validators[vn]);
                 if(r !== null){
                     return r;
                 } 
@@ -92,15 +96,23 @@ class BaseModel{
      * @returns     true 转换成功 false转换失败
      */
     private __transform(name:string):boolean{
-        if(!this.__props){
-            return true;
-        }
         let cfg:IModelCfg = this.__props.get(name);
         
         let v = this[name];
+        //不存在类型，也不存在值，则不处理
         if(!cfg || !cfg.type || v === undefined || v === null){
             return true;
         }
+        //非字符串，需要去掉两端空格
+        if(cfg.type !== 'string'){
+            v = v.trim();
+        }
+        //非字符串，且为''，则删除
+        if(v === '' && cfg.type !== 'string'){
+            delete this[name];
+            return true;
+        }
+
         switch(cfg.type){
             case 'int':         //整数
                 if(/^[1-9]\d*$/.test(v)){
@@ -147,26 +159,48 @@ class BaseModel{
      * @param validators    验证器
      */
     public __setValidator(name:string,validators:object){
-        if(!this.__props){
-            this.__props = new Map();
+        if(!this.__srcPropMap){
+            this.__srcPropMap = new Map();
         }
-        let cfg:IModelCfg = this.__props.get(name);
+        let cfg:IModelCfg = this.__srcPropMap.get(name);
         if(!cfg){
             cfg = {
                 type:'string',
                 validators:validators
             }
-            this.__props.set(name,cfg);
+            this.__srcPropMap.set(name,cfg);
         }else{
             cfg.validators = validators;
         }
     }
 
+    
+    /**
+     * 设置数据类型
+     * @param name      属性名
+     * @param type      属性类型
+     */
+    public __setType(name:string,type:string){
+        if(!this.__srcPropMap){
+            this.__srcPropMap = new Map();
+        }
+        let cfg:IModelCfg = this.__srcPropMap.get(name);
+        if(!cfg){
+            cfg = {
+                type:type,
+                validators:null
+            }
+            this.__srcPropMap.set(name,cfg);
+        }else{
+            cfg.type=type;
+        }
+    }
+
     /**
      * 给属性增加指定校验器
-     * @param name 
-     * @param validatorName 
-     * @param params 
+     * @param name              属性名
+     * @param validatorName     校验器名
+     * @param params            校验参数
      */
     public __addValidator(name:string,validatorName:string,params?:[]){
         if(!this.__props){
@@ -185,28 +219,6 @@ class BaseModel{
         //增加校验器
         cfg.validators[validatorName] = params || [];
     }   
-
-    /**
-     * 设置数据类型
-     * @param name      属性名
-     * @param type      属性类型
-     */
-    public __setType(name:string,type:string){
-        if(!this.__props){
-            this.__props = new Map();
-        }
-        let cfg:IModelCfg = this.__props.get(name);
-        if(!cfg){
-            cfg = {
-                type:type,
-                validators:null
-            }
-            this.__props.set(name,cfg);
-        }else{
-            cfg.type=type;
-        }
-    }
-
 }
 
 export{IModel,BaseModel}

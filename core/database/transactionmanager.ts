@@ -208,8 +208,8 @@ class TransactionManager{
      * 释放连接
      * @param tr 
      */
-    static releaseConnection(tr:NoomiTransaction){
-        DBManager.getConnectionManager().release(tr.connection);
+    static async releaseConnection(tr:NoomiTransaction){
+        await DBManager.getConnectionManager().release(tr.connection);
     }
 
     /**

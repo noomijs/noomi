@@ -82,5 +82,68 @@ export class Util{
         }
         return msg;
     }
+
+    /**
+     * 克隆object
+     * @param srcObj    源对象
+     * @returns         克隆后的对象
+     */
+    static clone(srcObj:object):any{
+        let map:WeakMap<object,any> = new WeakMap();
+        return clone(srcObj);
+
+        /**
+         * clone对象
+         * @param src   待clone对象
+         * @returns     克隆后的对象
+         */
+        function clone(src){
+            //非对象或函数，直接返回            
+            if(!src || typeof src !== 'object' || typeof src === 'function'){
+                return src;
+            }
+            
+            let dst;
+            
+            if(src.constructor === Object){
+                dst = new Object();
+                //把对象加入map，如果后面有新克隆对象，则用新克隆对象进行覆盖
+                map.set(src,dst);
+                Object.getOwnPropertyNames(src).forEach((prop)=>{
+                    dst[prop] = getCloneObj(src[prop]);
+                });
+            } else if(src.constructor === Map){
+                dst = new Map();
+                //把对象加入map，如果后面有新克隆对象，则用新克隆对象进行覆盖
+                src.forEach((value,key)=>{
+                    dst.set(key,getCloneObj(value));
+                });
+            }else if(Array.isArray(src)){
+                dst = new Array();
+                //把对象加入map，如果后面有新克隆对象，则用新克隆对象进行覆盖
+                src.forEach(function(item,i){
+                    dst[i] = getCloneObj(item);
+                });
+            }
+            return dst;
+        }
+
+        /**
+         * 获取clone对象
+         * @param value     待clone值
+         */
+        function getCloneObj(value){
+            if(typeof value === 'object' && typeof value !== 'function'){
+                let co = null;
+                if(!map.has(value)){  //clone新对象
+                    co = Util.clone(value);
+                }else{                //从map中获取对象
+                    co = map.get(value);
+                }
+                return co;
+            }
+            return value;
+        }
+    }
     
 }

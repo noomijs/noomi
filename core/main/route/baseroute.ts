@@ -40,7 +40,7 @@ class BaseRoute{
      */
     public setModel(data:any,nullArr?:Array<string>){
         if(this.__modelClass){
-            let m:BaseModel = Reflect.construct(this.__modelClass,[]);
+            let m:BaseModel = new this.__modelClass();
             if(nullArr){
                 for(let p of nullArr){
                     m.__addValidator(p,'nullable');

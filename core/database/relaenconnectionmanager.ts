@@ -78,7 +78,9 @@ class RelaenConnectionManager implements IConnectionManager{
      * @param conn 
      */
     async release(conn?:any){
-        conn.close();
+        if(conn){
+            await conn.close();
+        }
     }
 }
 export{RelaenConnectionManager}

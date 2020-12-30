@@ -3,7 +3,6 @@ import { TransactionManager } from "./transactionmanager";
 import { getConnection } from "./connectionmanager";
 import { InstanceFactory } from "../main/instancefactory";
 import { ThreadLocal } from "../tools/threadlocal";
-
 /**
  * 事务Aop代理
  * @remarks
@@ -25,13 +24,13 @@ class TransactionProxy{
                     retValue = await new Promise(async (resolve,reject)=>{
                         let v = await doRelaen();
                         if(v instanceof Error){
-                            reject(v)
+                            reject(v);
                         }else{
                             resolve(v);
                         }
                     });
                     break;
-                case 'sequelize':
+                case 'sequelize': //deprecated
                     retValue = await new Promise(async (resolve,reject)=>{
                         let v = await doSequelize();
                         if(v instanceof Error){
@@ -92,6 +91,9 @@ class TransactionProxy{
                 return result;
             }
 
+            /**
+             * relaen处理
+             */
             async function doRelaen(){
                 if(!ThreadLocal.getThreadId()){
                     ThreadLocal.newThreadId();
@@ -157,7 +159,6 @@ class TransactionProxy{
                     }
                     let conn = await getConnection();
                     const queryRunner:any = conn.createQueryRunner();
-
                     await queryRunner.startTransaction(isoLevel);
                     let tr = TransactionManager.get(true);
                     tr.manager = queryRunner.manager;
@@ -185,15 +186,10 @@ class TransactionProxy{
 
             /**
              * 处理异常
-             * @param e 
+             * @param e     异常对象或异常信息
              */
             function handleErr(e){
-                //异常信息，非error对象
-                if(typeof e === 'string'){
-                    return new Error(e);
-                }else{
-                    return e;
-                }
+                return typeof e === 'string'? new Error(e):e;
             }
         }
     }

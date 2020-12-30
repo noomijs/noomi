@@ -1,7 +1,6 @@
 import { TransactionManager } from "./transactionmanager";
 import { getConnection } from "./connectionmanager";
 import { NoomiTransaction } from "./noomitransaction";
-
 /**
  * 事务通知
  * 
@@ -40,7 +39,7 @@ export class TransactionAdvice{
             //删除事务
             TransactionManager.del(tr);
             //释放连接
-            TransactionManager.releaseConnection(tr);
+            await TransactionManager.releaseConnection(tr);
         }
     }
 
@@ -57,9 +56,9 @@ export class TransactionAdvice{
             //最外层rollback
             if(--tr.invokeNum === 0){
                 await tr.rollback();
+                TransactionManager.del(tr);
                 //释放连接
                 await TransactionManager.releaseConnection(tr);
-                TransactionManager.del(tr);
             }
         }
     }

@@ -78,7 +78,7 @@ export class Util{
             if(index && index !== ''){
                 index = parseInt(index);
             }
-            msg = msg.replace(r[0],param[index]);
+            msg = msg.replace(r[0],typeof param[index] === 'object'?JSON.stringify(param[index]):param[index]);
         }
         return msg;
     }

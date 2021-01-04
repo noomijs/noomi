@@ -20,6 +20,7 @@ var NoomiModelTip = {
         "url":"不是有效的url地址",
         "mobile":"不是有效的移动手机号",
         "idno":"不是有效身份证号",
+        "in":"输入值必须属于数组${0}",
         "legal":"内容不符合国内法规"
     },
     en:{
@@ -40,6 +41,7 @@ var NoomiModelTip = {
         "url":"Value is not a valid url",
         "mobile":"Value is not a valid mobile no",
         "idno":"Value is not a valid ID No",
+        "in":"Value must belong to array ${0}",
         "legal":"Value is illegal"
     }
 }

@@ -45,8 +45,7 @@ interface IConnectionManager{
 async function getConnection():Promise<any>{
     let instance = DBManager.getConnectionManager();
     if(instance && typeof instance.getConnection === 'function'){
-        let conn = await instance.getConnection();
-        return conn;
+        return await instance.getConnection();
     }
     return null;
 };
@@ -66,11 +65,11 @@ async function closeConnection(conn:any){
 }
 
 /**
- * 获取当前EntityManager
- * @returns  实体管理器,product为typeorm时有效
+ * 获取EntityManager
+ * @returns  实体管理器,product为relaen、typeorm时有效
  */
 async function getManager():Promise<any>{
-    let tr = TransactionManager.get(false);
+    let tr = await TransactionManager.get(false);
     //事务不存在或事务manager不存在，则从connection manager中获取
     if(!tr || !tr.manager){
         let cm:IConnectionManager = DBManager.getConnectionManager();

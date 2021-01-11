@@ -56,7 +56,7 @@ class MysqlConnectionManager implements IConnectionManager{
      * @returns connection 对象
      */
     async getConnection():Promise<any>{
-        let conn = TransactionManager.getConnection();
+        let conn = await TransactionManager.getConnection();
         if(conn){
             return conn;
         }

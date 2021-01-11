@@ -11,7 +11,7 @@ import { App } from "../tools/application";
 import { MssqlTransaction } from "./mssqltransaction";
 import { TypeormTransaction } from "./typeormtransaction";
 import { RelaenTransaction } from "./relaentransaction";
-import { ThreadLocal } from "../tools/threadlocal";
+import { NoomiThreadLocal } from "../tools/threadlocal";
 
 class TransactionManager{
     static transactionMap:Map<number,NoomiTransaction> = new Map();  //transaction map
@@ -83,31 +83,6 @@ class TransactionManager{
                     case "oracle":
                         clazz = OracleTransaction;
                         break;
-                    //废弃sequelize    
-                    /*case "sequelize":
-                        clazz = SequelizeTransaction;
-                        //事务选项
-                        this.transactionOption = {
-                            autocommit:false
-                        }
-                        const {Transaction} = require('sequelize');
-                        //设置隔离级别
-                        if(this.isolationLevel !== 0){
-                            switch(TransactionManager.isolationLevel){
-                                case 1:  
-                                    this.transactionOption.isolationLevel = Transaction.ISOLATION_LEVELS.READ_UNCOMMITTED;
-                                    break;
-                                case 2:
-                                    this.transactionOption.isolationLevel = Transaction.ISOLATION_LEVELS.READ_COMMITTED;
-                                    break;
-                                case 3:
-                                    this.transactionOption.isolationLevel = Transaction.ISOLATION_LEVELS.REPEATABLE_READ;
-                                    break;
-                                case 4:
-                                    this.transactionOption.isolationLevel = Transaction.ISOLATION_LEVELS.SERIALIZABLE;
-                            }
-                        }
-                        break;*/
                     case 'typeorm': //typeorm
                         clazz = TypeormTransaction;
                         this.transactionOption = {};
@@ -159,19 +134,17 @@ class TransactionManager{
      * @param newOne    如果不存在，是否新建
      * @return          transacton
      */
-    
-    static get(newOne?:boolean):NoomiTransaction{
+    static async get(newOne?:boolean):Promise<NoomiTransaction>{
         let tr:NoomiTransaction;
         //得到当前执行异步id
-        
-        let id:number = ThreadLocal.getThreadId();
-        if(!id){
-            if(newOne){
-                id = ThreadLocal.newThreadId();
-            }else{
-                return null;
-            }  
+        let id:number = NoomiThreadLocal.getThreadId();
+        if(!id && newOne){
+            id = NoomiThreadLocal.newThreadId();
         }
+        if(!id){
+            return null;
+        }
+
         if(this.transactionMap.has(id)){
             tr = this.transactionMap.get(id);
         }else if(newOne){          //父亲对象不存在，则新建
@@ -195,7 +168,7 @@ class TransactionManager{
      */
     static getConnection(id?:number){
         if(!id){
-            id = ThreadLocal.getThreadId();
+            id = NoomiThreadLocal.getThreadId();
         }
         if(!this.transactionMap.has(id)){
             return null;

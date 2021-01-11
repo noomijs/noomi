@@ -48,7 +48,7 @@ class MssqlConnectionManager implements IConnectionManager{
      * @returns mssql request对象
      */
     async getConnection(){
-        let conn = TransactionManager.getConnection();
+        let conn = await TransactionManager.getConnection();
         if(conn){
             return conn;
         }

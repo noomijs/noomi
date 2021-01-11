@@ -2,7 +2,7 @@ import { DBManager } from "./dbmanager";
 import { TransactionManager } from "./transactionmanager";
 import { getConnection } from "./connectionmanager";
 import { InstanceFactory } from "../main/instancefactory";
-import { ThreadLocal } from "../tools/threadlocal";
+import { NoomiThreadLocal} from "../tools/threadlocal";
 /**
  * 事务Aop代理
  * @remarks
@@ -25,16 +25,6 @@ class TransactionProxy{
                         let v = await doRelaen();
                         if(v instanceof Error){
                             reject(v);
-                        }else{
-                            resolve(v);
-                        }
-                    });
-                    break;
-                case 'sequelize': //deprecated
-                    retValue = await new Promise(async (resolve,reject)=>{
-                        let v = await doSequelize();
-                        if(v instanceof Error){
-                            reject(v)
                         }else{
                             resolve(v);
                         }
@@ -70,8 +60,8 @@ class TransactionProxy{
              */
             async function doDataScource(){
                 //初始化thread id
-                if(!ThreadLocal.getThreadId()){
-                    ThreadLocal.newThreadId();
+                if(!NoomiThreadLocal.getThreadId()){
+                    NoomiThreadLocal.newThreadId();
                 }
                 //advices获取
                 let adviceInstance = InstanceFactory.getInstance('NoomiTransactionAdvice');
@@ -95,8 +85,12 @@ class TransactionProxy{
              * relaen处理
              */
             async function doRelaen(){
-                if(!ThreadLocal.getThreadId()){
-                    ThreadLocal.newThreadId();
+                if(!NoomiThreadLocal.getThreadId()){
+                    NoomiThreadLocal.newThreadId();
+                }
+                const{RelaenThreadLocal} = require('relaen');
+                if(!RelaenThreadLocal.getThreadId()){
+                    RelaenThreadLocal.newThreadId();
                 }
                 //advices获取
                 let adviceInstance = InstanceFactory.getInstance('NoomiTransactionAdvice');
@@ -117,41 +111,12 @@ class TransactionProxy{
             }
 
             /**
-             * sequelize 处理
-             * @deprecated v0.4.7
-             */
-            async function doSequelize(){
-                let result:any;
-                if(!ThreadLocal.getThreadId()){
-                    ThreadLocal.newThreadId();
-                    //保存transaction id
-                    let trOpt:any = TransactionManager.transactionOption||{};
-                    let sequelize = await getConnection();
-                    result = await new Promise((res,rej)=>{
-                        sequelize.transaction(trOpt,async (t)=>{
-                            let v = await func.apply(instance,params);
-                            res(v);
-                        }).catch((e)=>{
-                            res(handleErr(e));
-                        });
-                    });
-                }else{
-                    try{
-                        result = await func.apply(instance,params);
-                    }catch(e){
-                        result = handleErr(e);
-                    }
-                }
-                return result;
-            }
-
-            /**
              * typeorm 处理
              */
             async function doTypeorm(){
                 let result:any;
-                if(!ThreadLocal.getThreadId()){
-                    ThreadLocal.newThreadId();
+                if(!NoomiThreadLocal.getThreadId()){
+                    NoomiThreadLocal.newThreadId();
                     //保存transaction id
                     let isoLevel:any;
                     if(TransactionManager.transactionOption){
@@ -160,7 +125,7 @@ class TransactionProxy{
                     let conn = await getConnection();
                     const queryRunner:any = conn.createQueryRunner();
                     await queryRunner.startTransaction(isoLevel);
-                    let tr = TransactionManager.get(true);
+                    let tr = await TransactionManager.get(true);
                     tr.manager = queryRunner.manager;
                     try{
                         result = await func.apply(instance,params);

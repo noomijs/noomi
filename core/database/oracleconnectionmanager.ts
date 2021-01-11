@@ -61,7 +61,7 @@ class OracleConnectionManager implements IConnectionManager{
      * @returns connection 对象
      */
     async getConnection(){
-        let conn = TransactionManager.getConnection();
+        let conn = await TransactionManager.getConnection();
         if(conn){
             return conn;
         }

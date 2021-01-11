@@ -14,10 +14,13 @@ class RelaenConnectionManager implements IConnectionManager{
      * 是否使用连接池
      */
     usePool:boolean;
+
     /**
      * relaen connection对象
      */
     connection:any;
+
+
     /**
      * 数据库配置项，示例如下：
      * ```
@@ -61,25 +64,34 @@ class RelaenConnectionManager implements IConnectionManager{
 
     /**
      * 获取连接
-     * @returns sequelize对象
+     * @returns relaen connection对象
      */
-    async getConnection(){
-        let conn = TransactionManager.getConnection();
+    public async getConnection():Promise<any>{
+        let conn = await TransactionManager.getConnection();
         if(conn){
             return conn;
         }
         //从 relaen获取
         const {getConnection} = require('relaen');
-        return getConnection();
+        return await getConnection();
+    }
+
+    /**
+     * 获取manager
+     * @returns     EntityManager
+     */
+    public async getManager():Promise<any>{
+        const{ getEntityManager } = require('relaen');
+        return await getEntityManager();
     }
 
     /**
      * 释放连接，不做任何操作
-     * @param conn 
+     * @param conn  连接
      */
-    async release(conn?:any){
+    public async release(conn:any){
         if(conn){
-            await conn.close();
+            await conn.close(true);
         }
     }
 }

@@ -29,19 +29,10 @@ interface IModelCfg{
  */
 class BaseModel{
     /**
-     * 通过注解器注入的属性map
-     */
-    // private __srcPropMap:Map<string,IModelCfg>;
-
-    /**
      * 实际使用props
      */
     private __props:Map<string,IModelCfg>;
     
-    constructor(){
-        // console.log(Object.getOwnPropertyNames(this.__srcPropMap));
-        // this.__props = Util.clone(this.__srcPropMap);
-    }
     /**
      * 转换和验证，返回数据类型或验证不正确的属性消息集合
      */

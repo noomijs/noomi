@@ -1,10 +1,10 @@
 
 const{AsyncLocalStorage} = require("async_hooks");
 /**
- * 线程存储
+ * 线程安全（threadlocal）
  * @since 0.4.7
  */
-class ThreadLocal{
+class NoomiThreadLocal{
     /**
      * 线程id
      */
@@ -34,4 +34,4 @@ class ThreadLocal{
     }
 }
 
-export{ThreadLocal}
+export{NoomiThreadLocal}

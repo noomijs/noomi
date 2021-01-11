@@ -1,6 +1,5 @@
 import { IConnectionManager } from "./connectionmanager";
 import { TransactionManager } from "./transactionmanager";
-
 /**
  * relaen连接管理器
  * @since 0.4.7
@@ -72,8 +71,11 @@ class RelaenConnectionManager implements IConnectionManager{
             return conn;
         }
         //从 relaen获取
-        const {getConnection} = require('relaen');
-        return await getConnection();
+        const {getConnection,getEntityManager} = require('relaen');
+        conn = await getConnection();
+        //获取entity manager，保证该connection下只有一个entitymanager
+        await getEntityManager();
+        return conn;
     }
 
     /**
@@ -91,6 +93,14 @@ class RelaenConnectionManager implements IConnectionManager{
      */
     public async release(conn:any){
         if(conn){
+            //释放entitymanager
+            const{EntityManagerFactory} = require('relaen');
+            let em = EntityManagerFactory.getCurrentEntityManager();
+            if(em){
+                await em.close(true);
+            }
+            
+            //释放connection
             await conn.close(true);
         }
     }

@@ -149,6 +149,16 @@ class BaseModel{
                     return false;
                 }
                 break;
+            case 'object':      //object类型
+                try{
+                    v = eval('(' + v + ')');
+                    if(typeof v !== 'object'){
+                        return false;
+                    }
+                }catch(e){
+                    return false;
+                }
+                break;
             default: //字符串，不处理
         }
         this[name] = v;

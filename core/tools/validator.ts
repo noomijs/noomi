@@ -91,6 +91,15 @@ Validator.addValidators({
     "betweenLength":function(value,min,max){
         return typeof value === 'string' && value.length>=min && value.length<=max;
     },
+    "date":function(value){
+        return /^\d{4}[-\/](0[1-9]|1[0-2])[-\/](0[1-9]|[12]\d|3[01])$/.test(value);
+    },
+    "datetime":function(value){
+        return /^\d{4}[-\/](0[1-9]|1[0-2])[-\/](0[1-9]|[12]\d|3[01])\s+([0-1]?[0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$/.test(value);
+    },
+    "time":function(value){
+        return /([0-1]?[0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$/.test(value);
+    },
     "email":function(value){
         return /^\w+\S*@[\w\d]+(\.\w+)+$/.test(value);
     },

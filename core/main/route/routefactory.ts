@@ -254,7 +254,6 @@ class RouteFactory{
                 throw r;
             }
         }
-
         
         //实际调用方法
         let func = route.instance[route.method]; 
@@ -263,7 +262,7 @@ class RouteFactory{
         }
         
         try{
-            let re = await func.call(route.instance,params);
+            let re = await func.call(route.instance,route.instance||params);
             return await this.handleResult(route,re);
         }catch(e){
             throw e;

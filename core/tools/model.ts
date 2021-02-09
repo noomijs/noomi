@@ -35,8 +35,9 @@ class BaseModel{
     
     /**
      * 转换和验证，返回数据类型或验证不正确的属性消息集合
+     * @param notTransform  是否不进行数据格式转换，默认false
      */
-    public __handle():object{
+    public __handle(notTransform?:boolean):object{
         let errObj = {};
         if(!this.__props){
             return null;
@@ -44,7 +45,7 @@ class BaseModel{
         for(let o of this.__props){
             let prop = o[0];
             let po:IModelCfg = o[1];
-            if(!this.__transform(prop)){ //数据格式转换
+            if(!notTransform && !this.__transform(prop)){ //数据格式转换
                 errObj[prop] =  NoomiModelTip[App.language][po.type];
             }else{ //校验
                 let r = this.__validate(prop);
@@ -95,6 +96,7 @@ class BaseModel{
      * @returns     true 转换成功 false转换失败
      */
     private __transform(name:string):boolean{
+
         if(!this.__props){
             return true;
         }
@@ -117,7 +119,7 @@ class BaseModel{
 
         switch(cfg.type){
             case 'int':         //整数
-                if(/^[1-9]\d*$/.test(v)){
+                if(/(^0$)|(^[1-9]\d*$)/.test(v)){
                     v = parseInt(v);
                 }else{
                     return false;

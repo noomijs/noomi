@@ -147,7 +147,7 @@ class RequestQueue{
             }else if(typeof data === 'object'){
                 let cData:IWebCacheObj = <IWebCacheObj>data;
                 //json格式为utf8，zip和流用binary
-                let charset = data.mimeType.indexOf('/json') === -1 || gzip&&cData.zipData?'binary':'utf8';
+                let charset = data.mimeType && data.mimeType.indexOf('/json') === -1 || gzip&&cData.zipData?'binary':'utf8';
                 //写web cache相关参数
                 WebCache.writeCacheToClient(response,cData.etag,cData.lastModified);
                 //可能只缓存静态资源信息，所以需要判断数据

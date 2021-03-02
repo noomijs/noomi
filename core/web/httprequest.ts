@@ -16,7 +16,7 @@ class HttpRequest extends IncomingMessage{
     /**
      * 源IncommingMessage对象(server listen 时传入)，某些需要操纵源IncommingMessage的情况下，可以直接使用
      */
-    srcReq:IncomingMessage;    
+    srcReq:IncomingMessage;
     /**
      * http response对象
      */

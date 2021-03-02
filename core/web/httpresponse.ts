@@ -55,7 +55,7 @@ export class HttpResponse extends ServerResponse{
     /**
      * 源response
      */
-    srcRes:ServerResponse;                  
+    srcRes:ServerResponse;
     /**
      * 源request
      */
@@ -83,6 +83,7 @@ export class HttpResponse extends ServerResponse{
         this.setCorsHead();
         let data:string|Buffer|object = config.data || '';
         let charset = config.charset || 'utf8';
+        
         if(!(data instanceof Buffer)){
             if(typeof data === 'object'){
                 data = JSON.stringify(data);
@@ -109,9 +110,9 @@ export class HttpResponse extends ServerResponse{
             return;
         }
         
-        this.srcRes.writeHead(status, {});
-        this.srcRes.write(data,charset);
-        this.srcRes.end();
+        this.srcRes.writeHead(status, {}).end(data,charset);
+        // this.srcRes.write(data,charset);
+        // this.srcRes.end();
     }
 
     /**

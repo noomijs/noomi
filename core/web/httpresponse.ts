@@ -110,9 +110,7 @@ export class HttpResponse extends ServerResponse{
             return;
         }
         
-        this.srcRes.writeHead(status, {}).end(data,charset);
-        // this.srcRes.write(data,charset);
-        // this.srcRes.end();
+        this.srcRes.writeHead(status, {}).end(data,<BufferEncoding>charset);
     }
 
     /**

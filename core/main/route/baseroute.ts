@@ -49,7 +49,12 @@ class BaseRoute{
             Object.getOwnPropertyNames(data).forEach((item)=>{
                 m[item] = data[item];
             });
-            let isJsonReq = (<string>this.request.getHeader('content-type')).startsWith('application/json');
+            let isJsonReq:boolean = false;
+            let ctType:string = <string>this.request.getHeader('content-type');
+            if(ctType){
+                isJsonReq = ctType.startsWith('application/json');
+            }
+            
             //数据转换和校验，如果request content-type为application/json，则不进行转换
             let r = m.__handle(isJsonReq);
             this.model = m;

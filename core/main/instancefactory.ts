@@ -11,11 +11,11 @@ interface IInstanceProperty{
     /**
      * 属性名
      */
-    name:string;    
+    name:string;
     /**
      * 引用实例名
      */
-    ref:string;     
+    ref:string;
 }
 
 /**
@@ -35,23 +35,23 @@ interface IInstanceCfg{
     /**
      * 实例名
      */
-    name:string;                            
+    name:string;
     /**
      * 类名或类
      */
-    class?:any;                             
+    class?:any;
     /**
      * 模块路径（相对noomi.ini配置的modulepath），与instance二选一
      */
-    path?:string;                           
+    path?:string;
     /**
      * 实例与path 二选一
      */
-    instance?:any;      
+    instance?:any;
     /**
      * 单例模式，如果为true，表示该类只创建一个实例，调用时，共享调用
      */
-    singleton?:boolean;                     
+    singleton?:boolean;
     /**
      * 参数数组，初始化时需要传入的参数
      */
@@ -69,15 +69,15 @@ interface IInstance{
     /**
      * 实例对象
      */
-    instance?:any;                          
+    instance?:any;
     /**
      * 类引用
      */
-    class?:any;                            
+    class?:any;
     /**
      * 单例标志
      */
-    singleton:boolean; 
+    singleton:boolean;
     /**
      * 构造器参数
      */
@@ -229,15 +229,22 @@ class InstanceFactory{
      * @param injectName    注入的实例名
      */
     static addInject(instance:any,propName:string,injectName:string):void{
+        // 加入注入依赖
+        let insName:string = instance.__instanceName;
+        if(!insName){
+            return;
+        }
+        let ins:IInstance = this.factory.get(insName);
+        if(!ins){
+            return;
+        }
+        //加入注入列表
         this.injectList.push({
             instance:instance,
             propName:propName,
             injectName:injectName
         });
-
-        // 加入注入依赖
-        let insName:string = instance.__instanceName;
-        let ins:IInstance = this.factory.get(insName);
+        
         if(ins.singleton){
             let arr = this.injectMap.get(injectName) || [];
             //如果不存在，则加入数组，当注入实例更新后，则需要更新注入
@@ -255,7 +262,6 @@ class InstanceFactory{
             }
             ins.properties = props;
         }
-        
         //添加到注入到初始化后操作
         this.addAfterInitOperation(this.finishInject,this);
     }
@@ -270,11 +276,10 @@ class InstanceFactory{
             if(!instance){
                 throw new NoomiError('1001',item.injectName);
             }
-            
-            //注入到实例，单例才需要注入，否则在getInstance时生成 
+            //注入到实例，单例才需要注入，否则在getInstance时生成
             let ins:IInstance = this.factory.get(instance.__instanceName);
             if(ins && ins.singleton){
-                Reflect.set(item.instance,item.propName,instance); 
+                Reflect.set(item.instance,item.propName,instance);
             }
         }
         //清空inject list
@@ -284,7 +289,7 @@ class InstanceFactory{
      * 获取实例
      * @param name  实例名
      * @param param 参数数组
-     * @returns     实例化的对象或null  
+     * @returns     实例化的对象或null
      */
     static getInstance(name:string,param?:Array<any>):any{
         let ins:IInstance = this.factory.get(name);

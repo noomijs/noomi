@@ -130,7 +130,7 @@ class NoomiMain{
             console.log(msgTip["0107"]);
             let cfg = iniJson['filter'];
             if(typeof cfg === 'object'){  //配置为对象
-                FilterFactory.init(cfg);    
+                FilterFactory.init(cfg);
             }else{          //配置为路径
                 FilterFactory.parseFile(Util.getAbsPath([basePath,cfg]));
             }

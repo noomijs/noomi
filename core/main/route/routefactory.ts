@@ -138,6 +138,9 @@ class RouteFactory{
      * @param results   路由处理结果集
      */
     static addRoute(path:string,clazz:string,method?:string,results?:Array<IRouteResult>){
+        if(!path || !clazz){
+            return;
+        }
         if(results && results.length>0){
             for(let r of results){
                 if((r.type === ERouteResultType.CHAIN || r.type === ERouteResultType.REDIRECT) 

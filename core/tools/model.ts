@@ -107,61 +107,65 @@ class BaseModel{
         if(!cfg || !cfg.type || v === undefined || v === null){
             return true;
         }
+        const tp = typeof v;
         //非字符串，需要去掉两端空格
-        if(cfg.type !== 'string'){
+        if(cfg.type !== 'string' && tp === 'string'){
             v = v.trim();
+            //非字符串，且为''，则删除
+            if(v === ''){
+                delete this[name];
+                return true;
+            }
         }
-        //非字符串，且为''，则删除
-        if(v === '' && cfg.type !== 'string'){
-            delete this[name];
-            return true;
-        }
-
-        switch(cfg.type){
-            case 'int':         //整数
-                if(/(^0$)|(^[1-9]\d*$)/.test(v)){
-                    v = parseInt(v);
-                }else{
-                    return false;
-                }
-                break;
-            case 'float':       //小数
-                if(/^\d+(\.?\d+)?$/.test(v)){
-                    v = parseFloat(v);
-                }else{
-                    return false;
-                }
-                break;
-            case 'boolean':     //bool
-                if(v === 'true'){
-                    v = true;
-                }else if(v === 'false'){
-                    v = false;
-                }else{
-                    return false;
-                }
-                break;
-            case 'array':       //数组类型
-                try{
-                    v = eval(v);
-                    if(!Array.isArray(v)){
+        
+        //类型不为string则不转换
+        if(tp === 'string'){
+            switch(cfg.type){
+                case 'int':         //整数
+                    if(/(^0$)|(^[1-9]\d*$)/.test(v)){
+                        v = parseInt(v);
+                    }else{
                         return false;
                     }
-                }catch(e){
-                    return false;
-                }
-                break;
-            case 'object':      //object类型
-                try{
-                    v = eval('(' + v + ')');
-                    if(typeof v !== 'object'){
+                    break;
+                case 'float':       //小数
+                    if(/^\d+(\.?\d+)?$/.test(v)){
+                        v = parseFloat(v);
+                    }else{
                         return false;
                     }
-                }catch(e){
-                    return false;
-                }
-                break;
-            default: //字符串，不处理
+                    break;
+                case 'boolean':     //bool
+                    if(v === 'true'){
+                        v = true;
+                    }else if(v === 'false'){
+                        v = false;
+                    }else{
+                        return false;
+                    }
+                    break;
+                case 'array':       //数组类型
+                    try{
+                        v = eval(v);
+                        if(!Array.isArray(v)){
+                            return false;
+                        }
+                    }catch(e){
+                        return false;
+                    }
+                    break;
+                case 'object':      //object类型
+                    try{
+                        v = eval('(' + v + ')');
+                        if(typeof v !== 'object'){
+                            return false;
+                        }
+                    }catch(e){
+                        return false;
+                    }
+                    break;
+                default: //字符串，不处理
+            }
         }
         this[name] = v;
         return true;

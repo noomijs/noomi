@@ -106,7 +106,12 @@ class RequestQueue{
                 path = WebConfig.welcomePage;
             }
         }
-        
+        console.log(path);
+        response.writeFileToClient({
+            data:Util.getAbsPath([path])
+        });
+        return;
+
         //过滤器执行
         if(!await FilterFactory.doChain(request.url,request,response)){
             return;

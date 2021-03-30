@@ -170,12 +170,8 @@ export class HttpResponse extends ServerResponse{
                 });
         }else{
             res.writeHead(200, {});
-            let stream = App.fs.createReadStream(path)
-                .on("open", function() {
-                    stream.pipe(res)})
-                .on('end', ()=>{
-                    res.end();
-                });
+            let stream = App.fs.createReadStream(path,{option:'r'});
+            stream.pipe(res);
         }
     }
 

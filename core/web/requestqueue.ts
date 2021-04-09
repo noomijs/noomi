@@ -120,7 +120,7 @@ class RequestQueue{
             }catch(e){
                 RouteFactory.handleException(response,e);
                 //输出
-                console.log(e);
+                console.error(e);
                 return;
             }
         }else{ //静态资源

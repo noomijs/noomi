@@ -50,7 +50,8 @@ class HttpRequest extends IncomingMessage{
         if(this.method !== 'POST'){
             return this.parameters;
         }
-        let obj = await this.formHandle();;
+        try{
+            let obj = await this.formHandle();
         if(typeof obj === 'object'){
             Object.getOwnPropertyNames(obj).forEach(key=>{
                 //已存在该key，需要做成数组
@@ -64,6 +65,10 @@ class HttpRequest extends IncomingMessage{
                 }
             });
         }
+        }catch(e){
+            console.error(e);
+        }
+        
         return this.parameters;
     }
 
@@ -196,174 +201,224 @@ class HttpRequest extends IncomingMessage{
             App.fs.mkdirSync(tmpDir1,{recursive:true});
         }
 
-        let dispLineNo:number = 0;          //字段分割行号，共三行
-        let isFile:boolean = false;         //是否文件字段
-        let dataKey:string;                 //字段名
-        let value:string|object;            //字段值
-        let dispLine:Buffer;                //分割线
-        let startField:boolean = false;     //新字段开始
-        let returnObj:object = {};          //返回对象
-        let writeStream:WriteStream;        //输出流
-        let oldRowChar:string='';           //上一行的换行符
+        let formHandler = new FormDataHandler(tmpDir);
         
         return new Promise((resolve,reject)=>{
-            let lData:Buffer;
-            let flag = false;
             req.on('data',(chunk:Buffer)=>{
-                if(!flag){
-                    flag = true;
-                }
-                lData = handleBuffer(chunk,lData);
+                formHandler.getSeparatorAndLineBreak(chunk);
+                formHandler.addBuf(chunk);
+                App.fs.writeFileSync('log.txt','\r\n$$ttt\r\n' + chunk.toString(),{flag:'a+'});
             });
             req.on('end',()=>{
                 //最后一行数据
-                if(lData){
-                    handleLine(lData);
-                }
-                resolve(returnObj);
+                resolve(formHandler.returnObj);
             });
         });
-        
-        /**
-         * 处理缓冲区
-         * @param buffer        缓冲区 
-         * @param lastData      行开始缓冲区
-         */
-        function handleBuffer(buffer:Buffer,lastData?:Buffer):Buffer{
-            let rowStartIndex:number = 0;  //行开始位置
-            let i:number = 0;
-            for(;i<buffer.length;i++){
-                let rowChar = '';
-                let ind = i;
-                if(buffer[i] === 13){
-                    if(i<buffer.length-1 && buffer[i+1] === 10){
-                        i++;
-                        rowChar = '\r\n';
-                    }else{
-                        rowChar = '\r';
-                    }
-                }else if(buffer[i] === 10){
-                    rowChar = '\n';
+    }
+}
+/**
+ * form 数据处理类
+ */
+class FormDataHandler{
+    /**
+     * 当前字段名
+     */
+    dataKey:string;
+    /**
+     * 当前字段值
+     */
+    value:Buffer|object;
+    /**
+     * 属性分隔符
+     */
+    dispLine:Buffer;
+    /**
+     * 换行符
+     */
+    rowChar:string;
+    /**
+     * 属性集
+     */
+    returnObj:object = {};
+    /**
+     * 缓冲池
+     */
+    buffers:Buffer[] = [];
+    /**
+     * 正在处理标志
+     */
+    handling:boolean;
+    /**
+     * 当前属性是否为文件
+     */
+    isFile:boolean;
+    /**
+     * 文件保存路径
+     */
+    savePath:string;
+    
+    constructor(path:string){
+        this.savePath = path;
+    }
+
+    addBuf(buf:Buffer){
+        this.buffers.push(buf);
+        this.handleBuffer();
+    }
+    /**
+     * 获取分隔符和换行符
+     * @param buf   来源buffer
+     * @returns     [属性分隔符,换行符]
+     */
+    getSeparatorAndLineBreak(buf:Buffer){
+        if(this.dispLine){
+            return;
+        }
+        let i = 0;
+        for(i=0;i<buf.length;i++){
+            if(buf[i] === 13){
+                if(i<buf.length-1 && buf[i+1] === 10){
+                    this.rowChar = '\r\n';
+                }else{
+                    this.rowChar = '\r';
                 }
-                //处理行
-                if(rowChar !== ''){
-                    let newBuf:Buffer = buffer.subarray(rowStartIndex,ind);
-                    if(lastData){
-                        newBuf = Buffer.concat([lastData,newBuf]);
-                        lastData = undefined;
-                    }
-                    handleLine(newBuf,rowChar);
-                    rowChar = '';
-                    rowStartIndex = i+1;
-                }
-            }
-            
-            //最末没出现换行符，保存下一行
-            if(rowStartIndex<buffer.length-1){
-                return buffer.subarray(rowStartIndex);
+                break;
+            }else if(buf[i] === 10){
+                this.rowChar = '\n';
+                break;
             }
         }
+        this.dispLine = buf.subarray(0,i);
+    }
+
+    /**
+     * 处理缓冲区
+     */
+    async handleBuffer(){
+        if(this.handling || this.buffers.length === 0){
+            return true;
+        }
         
-        /**
-         * 处理行
-         * @param lineBuffer    行buffer
-         * @param rowChar       换行符 
-         */
-        function handleLine(lineBuffer:Buffer,rowChar?:string){
-            //第一行，设置分割线
-            if(!dispLine){
-                dispLine = lineBuffer;
-                startField = true;
-                dispLineNo = 1;
-                return;
-            }
-            
-            //字段结束
-            if(dispLine.length === lineBuffer.length && dispLine.equals(lineBuffer) || 
-                dispLine.length+2 === lineBuffer.length && dispLine.equals(lineBuffer.subarray(0,dispLine.length))){  //新字段或结束
-                //关闭文件流
-                if(isFile){
-                    writeStream.end();
+        let buf = this.buffers.shift();
+        while(buf.length>0){
+            let index = buf.indexOf(this.dispLine);
+            //无分隔符，表示属性值从上一帧数据延续
+            if(index === -1){
+                if(!this.dataKey){
+                    return;
                 }
-                //空字符串不处理
-                if(value !== ''){
-                    if(returnObj.hasOwnProperty(dataKey)){
-                        //新建数组
-                        if(!Array.isArray(returnObj[dataKey])){
-                            returnObj[dataKey] = [returnObj[dataKey]];
-                        }
-                        //新值入数组
-                        returnObj[dataKey].push(value);
-                    }else{
-                        returnObj[dataKey] = value;
+                if(this.isFile){
+                    App.fs.writeFileSync(this.value['path'],buf,{encoding:'binary',flag:'a+'});
+                }else {
+                    this.value = Buffer.concat([<Buffer>this.value,buf]);
+                }
+                break;
+            }
+            //去掉换行符
+            let buf1 = buf.subarray(0,index-this.rowChar.length);
+            //如果键已存在，则作为数组
+            if(this.dataKey){
+                //文件结束
+                if(this.isFile){
+                    App.fs.writeFileSync(this.value['path'],buf1,{encoding:'binary',flag:'a+'});
+                }else { //值加
+                    this.value = Buffer.concat([<Buffer>this.value,buf1]);
+                }
+            
+                //buffer需要转换为数组
+                let v:any = this.value;
+                if(v instanceof Buffer){
+                    v = v.toString();
+                }
+            
+                if(this.returnObj.hasOwnProperty(this.dataKey)){
+                    //新建数组
+                    if(!Array.isArray(this.returnObj[this.dataKey])){
+                        this.returnObj[this.dataKey] = [this.returnObj[this.dataKey]];
                     }
-                }
-                
-                startField = true;
-                dispLineNo = 1;
-                isFile = false;
-                value = '';
-                oldRowChar = '';
-                return;
-            }else if(oldRowChar !== ''){//写之前的换行符
-                //写换行符
-                if(isFile){ //文件换行符
-                    writeStream.write(oldRowChar);
-                }else{ //值换行符
-                    value += oldRowChar;
+                    //新值入数组
+                    this.returnObj[this.dataKey].push(v);
+                }else{
+                    this.returnObj[this.dataKey] = v;
                 }
             }
-            oldRowChar = '';
-            
-            if(startField){
-                //buffer转utf8字符串
-                let line = lineBuffer.toString();
-                //第一行
-                switch(dispLineNo){
-                    case 1:  //第一行
-                        dispLineNo = 2;
-                        let arr = line.split(';');  
-                        //数据项
-                        dataKey = arr[1].substr(arr[1].indexOf('=')).trim();
-                        dataKey = dataKey.substring(2,dataKey.length-1);
-                        if(arr.length === 3){  //文件
-                            let a1 = arr[2].split('=');
-                            let fn = a1[1].trim();
-                            let fn1 = fn.substring(1,fn.length-1);
-                            let fn2 = App.uuid.v1() + fn1.substr(fn1.lastIndexOf('.'));
-                            //得到绝对路径
-                            let filePath = Util.getAbsPath([tmpDir,fn2]);
-                            value = {
-                                fileName:fn1,
-                                path:filePath
-                            };
-                            writeStream = App.fs.createWriteStream(filePath,'binary');
-                            isFile = true;  
-                        }
-                        return;
-                    case 2: //第二行（空或者文件类型）
-                        if(isFile){  //文件字段
-                            value['fileType'] = line.substr(line.indexOf(':')+1).trim();
-                        }
-                        dispLineNo = 3;
-                        return;
-                    case 3: //第三行（字段值或者空）
-                        if(!isFile){
-                            value = line; 
-                        }
-                        startField = false;
-                        return;
+            //重置参数
+            this.isFile = false;
+            this.value = undefined;
+        
+            let start = index + this.dispLine.length;
+            //结束符号
+            if(buf[start]===45 && buf[start+1]===45){
+                break;
+            }
+            buf = buf.subarray(start + this.rowChar.length);
+            let r = this.readLine(buf);
+            if(!r){
+                break;
+            }
+
+            this.handleProp(r[0]);
+            buf=r[1];
+            if(this.isFile){//是文件，取文件类型
+                r = this.readLine(buf);
+                if(!r || r[0] === ''){
+                    return;
                 }
-            } else{
-                if(rowChar){
-                    oldRowChar = rowChar;
-                }
-                if(isFile){  //写文件
-                    writeStream.write(lineBuffer);
-                }else{  //普通字段（textarea可能有换行符）
-                    value += lineBuffer.toString();
-                }
-            }   
+                this.value['fileType'] = r[0].substr(r[0].indexOf(':')+1).trim();
+                buf=r[1];
+            }else{
+                this.value = Buffer.from('');
+            }
+            //读空行
+            r = this.readLine(buf);
+            if(r){
+                buf = r[1];
+            }
+        }
+
+        this.handling = false;
+        //继续处理
+        this.handleBuffer();
+    }
+
+    /**
+     * 从buffer读一行
+     * @param buf   buf
+     * @returns     [行字符串,读取行后的buf]
+     */
+    readLine(buf:Buffer):any[]{
+        let index = buf.indexOf(this.rowChar);
+        if(index === -1){
+            return null;
+        }
+        let r = buf.subarray(0,index).toString();
+        buf = buf.subarray(index + this.rowChar.length);
+        return [r,buf];
+    }
+    /**
+     * 处理属性名
+     * @param line  行数据
+     */
+    handleProp(line:string){
+        if(line === ''){
+            return;
+        }
+        let arr = line.toString().split(';');
+        //数据项
+        this.dataKey = arr[1].substr(arr[1].indexOf('=')).trim();
+        this.dataKey = this.dataKey.substring(2,this.dataKey.length-1);
+        if(arr.length === 3){  //文件
+            let a1 = arr[2].split('=');
+            let fn = a1[1].trim();
+            let fn1 = fn.substring(1,fn.length-1);
+            let fn2 = App.uuid.v1() + fn1.substr(fn1.lastIndexOf('.'));
+            //得到绝对路径
+            let filePath = Util.getAbsPath([this.savePath,fn2]);
+            this.value = {
+                fileName:fn1,
+                path:filePath
+            };
+            this.isFile = true;
         }
     }
 }

@@ -6,6 +6,7 @@ import { WriteStream, fstat } from "fs";
 import { App } from "../tools/application";
 import { Util } from "../tools/util";
 import { Socket } from "net";
+import { NoomiError } from "../tools/errorfactory";
 
 /**
  * request类
@@ -188,11 +189,11 @@ class HttpRequest extends IncomingMessage{
 
         let contentLen:number = parseInt(req.headers['content-length']);
         let maxSize:number = WebConfig.get('upload_max_size');
-        
         //不能大于max size
         if(maxSize > 0 && contentLen > maxSize){
-            return Promise.reject( "上传内容大小超出限制");
+            return Promise.reject(new NoomiError('0501'));
         }
+        
         //临时目录，默认 /upload/tmp
         let tmpDir:string = WebConfig.get('upload_tmp_dir') || '/upload/tmp';
         let tmpDir1 = Util.getAbsPath([tmpDir]);
@@ -205,12 +206,11 @@ class HttpRequest extends IncomingMessage{
         
         return new Promise((resolve,reject)=>{
             req.on('data',(chunk:Buffer)=>{
-                formHandler.getSeparatorAndLineBreak(chunk);
+                formHandler.getDispAndLineBreak(chunk);
                 formHandler.addBuf(chunk);
-                App.fs.writeFileSync('log.txt','\r\n$$ttt\r\n' + chunk.toString(),{flag:'a+'});
             });
             req.on('end',()=>{
-                //最后一行数据
+                formHandler.handleBuffer();
                 resolve(formHandler.returnObj);
             });
         });
@@ -243,7 +243,9 @@ class FormDataHandler{
     /**
      * 缓冲池
      */
-    buffers:Buffer[] = [];
+    buffers:Buffer[];
+
+    buffer:Buffer;
     /**
      * 正在处理标志
      */
@@ -259,19 +261,19 @@ class FormDataHandler{
     
     constructor(path:string){
         this.savePath = path;
+        this.buffer = Buffer.from('');
     }
 
     addBuf(buf:Buffer){
-        this.buffers.push(buf);
-        this.handleBuffer();
+        this.buffer = Buffer.concat([this.buffer,buf]);
     }
     /**
-     * 获取分隔符和换行符
+     * 获取换行符
      * @param buf   来源buffer
-     * @returns     [属性分隔符,换行符]
+     * @returns
      */
-    getSeparatorAndLineBreak(buf:Buffer){
-        if(this.dispLine){
+    getDispAndLineBreak(buf:Buffer){
+        if(this.rowChar){
             return;
         }
         let i = 0;
@@ -295,28 +297,14 @@ class FormDataHandler{
      * 处理缓冲区
      */
     async handleBuffer(){
-        if(this.handling || this.buffers.length === 0){
-            return true;
-        }
-        
-        let buf = this.buffers.shift();
-        while(buf.length>0){
+        let buf = this.buffer;
+        while(buf.length > 0){
             let index = buf.indexOf(this.dispLine);
-            //无分隔符，表示属性值从上一帧数据延续
             if(index === -1){
-                if(!this.dataKey){
-                    return;
-                }
-                if(this.isFile){
-                    App.fs.writeFileSync(this.value['path'],buf,{encoding:'binary',flag:'a+'});
-                }else {
-                    this.value = Buffer.concat([<Buffer>this.value,buf]);
-                }
-                break;
+                return;
             }
             //去掉换行符
             let buf1 = buf.subarray(0,index-this.rowChar.length);
-            //如果键已存在，则作为数组
             if(this.dataKey){
                 //文件结束
                 if(this.isFile){
@@ -324,13 +312,12 @@ class FormDataHandler{
                 }else { //值加
                     this.value = Buffer.concat([<Buffer>this.value,buf1]);
                 }
-            
                 //buffer需要转换为数组
                 let v:any = this.value;
                 if(v instanceof Buffer){
                     v = v.toString();
                 }
-            
+                //如果键已存在，则作为数组
                 if(this.returnObj.hasOwnProperty(this.dataKey)){
                     //新建数组
                     if(!Array.isArray(this.returnObj[this.dataKey])){
@@ -349,12 +336,12 @@ class FormDataHandler{
             let start = index + this.dispLine.length;
             //结束符号
             if(buf[start]===45 && buf[start+1]===45){
-                break;
+                return;
             }
             buf = buf.subarray(start + this.rowChar.length);
             let r = this.readLine(buf);
             if(!r){
-                break;
+                return;
             }
 
             this.handleProp(r[0]);
@@ -375,10 +362,6 @@ class FormDataHandler{
                 buf = r[1];
             }
         }
-
-        this.handling = false;
-        //继续处理
-        this.handleBuffer();
     }
 
     /**
@@ -410,7 +393,11 @@ class FormDataHandler{
         if(arr.length === 3){  //文件
             let a1 = arr[2].split('=');
             let fn = a1[1].trim();
-            let fn1 = fn.substring(1,fn.length-1);
+            let fn1 = fn.substring(1,fn.length-1).trim();
+            //文件名为空，此项不存
+            if(a1[1] == '""'){
+                this.dataKey = undefined;
+            }
             let fn2 = App.uuid.v1() + fn1.substr(fn1.lastIndexOf('.'));
             //得到绝对路径
             let filePath = Util.getAbsPath([this.savePath,fn2]);

@@ -5,6 +5,8 @@ var NoomiErrorTip ={
         "0050":"文件不存在",
         "0100":"异常配置文件错误",
         "0500":"web配置文件错误，请参阅官方文档!",
+        "0501":"上传文件超过最大限制",
+        "0502":"form upload格式错误",
         "0600":"缺少redis配置!",
 
         "1000":"实例配置文件错误，请参阅官方文档!",
@@ -47,6 +49,8 @@ var NoomiErrorTip ={
         "0050":"file is not exist",
         "0100":"Error in exception configuration file,Please read the official documentation!",
         "0500":"Error in web configuration file,Please read the official documentation!",
+        "0501":"upload file is oversize",
+        "0502":"form submit without boundary",
         "0600":"Lack of redis config!",
     
         "1000":"Error in instance configuration file,Please read the official documentation!",

@@ -1,6 +1,6 @@
 {
   "name": "noomi",
-  "version": "0.5.3-beta4",
+  "version": "0.5.3-beta6",
   "description": "一个基于node的企业级框架，支持路由、IoC、Aop、事务嵌套、安全框架、缓存、集群",
   "main": "dist/index.js",
   "types": "dist/types/index.d.ts",
@@ -47,6 +47,10 @@
     {
       "name": "唐榜",
       "email": "244750596@qq.com"
+    },
+    {
+      "name": "赵率宏",
+      "email": "973478129@qq.com"
     }
   ]
 }

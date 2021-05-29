@@ -2,18 +2,20 @@ import { IncomingMessage, ServerResponse} from "http";
 import { SessionFactory, Session } from "./sessionfactory";
 import { HttpResponse } from "./httpresponse";
 import { WebConfig } from "./webconfig";
-import { WriteStream, fstat } from "fs";
 import { App } from "../tools/application";
 import { Util } from "../tools/util";
 import { Socket } from "net";
 import { NoomiError } from "../tools/errorfactory";
+import { PostFormHandler } from "./postformhandler";
+import { PostFileHandler } from "./postfileparamhandler";
+import { PostTextHandler } from "./posttexthandler";
 
 /**
  * request类
  * @remarks
  * 在IncomingMessage基础上增加了参数解析等方法，更适合直接使用
  */
-class HttpRequest extends IncomingMessage{
+export class HttpRequest extends IncomingMessage{
     /**
      * 源IncommingMessage对象(server listen 时传入)，某些需要操纵源IncommingMessage的情况下，可以直接使用
      */
@@ -25,7 +27,7 @@ class HttpRequest extends IncomingMessage{
     /**
      * 参数对象
      */
-    parameters:object = new Object();
+    parameters:Object = new Object();
     /**
      * 构造器
      * @param req 源IncommingMessage对象(createServer时传入)
@@ -51,8 +53,9 @@ class HttpRequest extends IncomingMessage{
         if(this.method !== 'POST'){
             return this.parameters;
         }
-        try{
-            let obj = await this.formHandle();
+        
+        let obj = await this.postHandle();
+        // 合并参数
         if(typeof obj === 'object'){
             Object.getOwnPropertyNames(obj).forEach(key=>{
                 //已存在该key，需要做成数组
@@ -66,10 +69,6 @@ class HttpRequest extends IncomingMessage{
                 }
             });
         }
-        }catch(e){
-            console.error(e);
-        }
-        
         return this.parameters;
     }
 
@@ -125,7 +124,7 @@ class HttpRequest extends IncomingMessage{
      * 获取所有paramter
      * @returns         参数object
      */
-    getAllParameters():object{
+    getAllParameters():Object{
         return this.parameters;
     }
 
@@ -147,53 +146,20 @@ class HttpRequest extends IncomingMessage{
     /**
      * POST时的参数处理
      * @returns     参数值对象
-     */ 
-    formHandle():Promise<object>{
+     */
+    postHandle():Promise<object>{
         let req:IncomingMessage = this.srcReq;
         let contentString = req.headers['content-type'];
-        let contentType:string[];
-        //multipart/form-data 提交
-        let isMultiple:boolean = false;
-        //非文件multipart/form-data方式
-        if(contentString){
-            contentType = contentString.split(';');
-            isMultiple = contentType[0] === 'multipart/form-data';
+        if(!contentString){
+            return Promise.reject(new NoomiError('0502'));
         }
-        
-        if(!isMultiple){
-            return new Promise((resolve,reject)=>{
-                let lData:Buffer = Buffer.from('');
-                req.on('data',(chunk:Buffer)=>{
-                    lData = Buffer.concat([lData,chunk]);
-                });
-                req.on('end',()=>{
-                    let r;
-                    //处理charset
-                    let charset:string = 'utf8';
-                    if(contentType && contentType.length>1){
-                        let a1:string[] = contentType[1].split('=');
-                        if(a1.length>1){
-                            charset = a1[1].trim();
-                        }
-                    }
-                    let data:string = lData.toString(<BufferEncoding>charset);
-                    if(contentType && contentType[0] === 'application/json'){
-                        r = JSON.parse(data);
-                    }else{
-                        r = App.qs.parse(data);
-                    }
-                    resolve(r);
-                });
-            });
-        }
-
+        let contentTypeObj:any = this.handleContentType(contentString);
         let contentLen:number = parseInt(req.headers['content-length']);
         let maxSize:number = WebConfig.get('upload_max_size');
         //不能大于max size
         if(maxSize > 0 && contentLen > maxSize){
             return Promise.reject(new NoomiError('0501'));
         }
-        
         //临时目录，默认 /upload/tmp
         let tmpDir:string = WebConfig.get('upload_tmp_dir') || '/upload/tmp';
         let tmpDir1 = Util.getAbsPath([tmpDir]);
@@ -201,213 +167,73 @@ class HttpRequest extends IncomingMessage{
         if(!App.fs.existsSync(tmpDir1)){
             App.fs.mkdirSync(tmpDir1,{recursive:true});
         }
-
-        let formHandler = new FormDataHandler(tmpDir);
-        
+        let fileHandler:PostFileHandler;
+        let formHandler:PostFormHandler;
+        let textHandler:PostTextHandler;
+        //post类型 2:form-data 1:文本串 2:独立文件 
+        let postType:number;
+        if(contentTypeObj.boundary){
+            formHandler = new PostFormHandler(contentTypeObj.boundary,tmpDir);
+            postType = 0;
+        }else if(contentTypeObj.type.startsWith('text/') ||
+            contentTypeObj.type === 'application/json' ||
+            contentTypeObj.type === 'application/x-www-form-urlencoded'){  //文本
+            textHandler = new PostTextHandler(contentTypeObj);
+            postType = 1;
+        }else if(contentTypeObj.type.startsWith('image') ||
+            contentTypeObj.type.startsWith('video') ||
+            contentTypeObj.type.startsWith('audio') ||
+            contentTypeObj.type.startsWith('application/')){ //独立文件
+            postType = 2;
+            fileHandler = new PostFileHandler(tmpDir,contentTypeObj.type);
+        }
         return new Promise((resolve,reject)=>{
             req.on('data',(chunk:Buffer)=>{
-                formHandler.getDispAndLineBreak(chunk);
-                formHandler.addBuf(chunk);
+                switch(postType){
+                    case 0:
+                        formHandler.handleBuf(chunk);
+                        break;
+                    case 1:
+                        textHandler.handleBuf(chunk);
+                        break;
+                    case 2:
+                        fileHandler.handleBuf(chunk);
+                }
             });
             req.on('end',()=>{
-                formHandler.handleBuffer();
-                resolve(formHandler.returnObj);
+                switch(postType){
+                    case 0:
+                        resolve(formHandler.getResult());
+                        return;
+                    case 1:
+                        resolve(textHandler.getResult());
+                        return;
+                    case 2:
+                        resolve(fileHandler.getResult());
+                }
             });
         });
     }
-}
-/**
- * form 数据处理类
- */
-class FormDataHandler{
-    /**
-     * 当前字段名
-     */
-    dataKey:string;
-    /**
-     * 当前字段值
-     */
-    value:Buffer|object;
-    /**
-     * 属性分隔符
-     */
-    dispLine:Buffer;
-    /**
-     * 换行符
-     */
-    rowChar:string;
-    /**
-     * 属性集
-     */
-    returnObj:object = {};
-    /**
-     * 缓冲池
-     */
-    buffers:Buffer[];
-
-    buffer:Buffer;
-    /**
-     * 正在处理标志
-     */
-    handling:boolean;
-    /**
-     * 当前属性是否为文件
-     */
-    isFile:boolean;
-    /**
-     * 文件保存路径
-     */
-    savePath:string;
-    
-    constructor(path:string){
-        this.savePath = path;
-        this.buffer = Buffer.from('');
-    }
-
-    addBuf(buf:Buffer){
-        this.buffer = Buffer.concat([this.buffer,buf]);
-    }
-    /**
-     * 获取换行符
-     * @param buf   来源buffer
-     * @returns
-     */
-    getDispAndLineBreak(buf:Buffer){
-        if(this.rowChar){
-            return;
-        }
-        let i = 0;
-        for(i=0;i<buf.length;i++){
-            if(buf[i] === 13){
-                if(i<buf.length-1 && buf[i+1] === 10){
-                    this.rowChar = '\r\n';
-                }else{
-                    this.rowChar = '\r';
-                }
-                break;
-            }else if(buf[i] === 10){
-                this.rowChar = '\n';
-                break;
-            }
-        }
-        this.dispLine = buf.subarray(0,i);
-    }
 
     /**
-     * 处理缓冲区
+     * 处理content-typestring
+     * @param contentTypeString     content-type
+     * @returns                     {boundary:分隔符,charset:charset,type:type} 
      */
-    async handleBuffer(){
-        let buf = this.buffer;
-        while(buf.length > 0){
-            let index = buf.indexOf(this.dispLine);
-            if(index === -1){
-                return;
-            }
-            //去掉换行符
-            let buf1 = buf.subarray(0,index-this.rowChar.length);
-            if(this.dataKey){
-                //文件结束
-                if(this.isFile){
-                    App.fs.writeFileSync(this.value['path'],buf1,{encoding:'binary',flag:'a+'});
-                }else { //值加
-                    this.value = Buffer.concat([<Buffer>this.value,buf1]);
-                }
-                //buffer需要转换为数组
-                let v:any = this.value;
-                if(v instanceof Buffer){
-                    v = v.toString();
-                }
-                //如果键已存在，则作为数组
-                if(this.returnObj.hasOwnProperty(this.dataKey)){
-                    //新建数组
-                    if(!Array.isArray(this.returnObj[this.dataKey])){
-                        this.returnObj[this.dataKey] = [this.returnObj[this.dataKey]];
-                    }
-                    //新值入数组
-                    this.returnObj[this.dataKey].push(v);
-                }else{
-                    this.returnObj[this.dataKey] = v;
-                }
-            }
-            //重置参数
-            this.isFile = false;
-            this.value = undefined;
-        
-            let start = index + this.dispLine.length;
-            //结束符号
-            if(buf[start]===45 && buf[start+1]===45){
-                return;
-            }
-            buf = buf.subarray(start + this.rowChar.length);
-            let r = this.readLine(buf);
-            if(!r){
-                return;
-            }
-
-            this.handleProp(r[0]);
-            buf=r[1];
-            if(this.isFile){//是文件，取文件类型
-                r = this.readLine(buf);
-                if(!r || r[0] === ''){
-                    return;
-                }
-                this.value['fileType'] = r[0].substr(r[0].indexOf(':')+1).trim();
-                buf=r[1];
-            }else{
-                this.value = Buffer.from('');
-            }
-            //读空行
-            r = this.readLine(buf);
-            if(r){
-                buf = r[1];
+    private handleContentType(contentTypeString:string):any{
+        let arr = contentTypeString.replace(/\s+/g,'').split(';');
+        let obj:any = {};
+        for(let t of arr){
+            if(t.startsWith('boundary=')){
+                let a = t.split('=');
+                obj.boundary = a[1];
+            }else if(t.startsWith('charset=')){
+                let a = t.split('=');
+                obj.charset = a[1];
+            }else if(t.indexOf('=') === -1){
+                obj.type = t;
             }
         }
-    }
-
-    /**
-     * 从buffer读一行
-     * @param buf   buf
-     * @returns     [行字符串,读取行后的buf]
-     */
-    readLine(buf:Buffer):any[]{
-        let index = buf.indexOf(this.rowChar);
-        if(index === -1){
-            return null;
-        }
-        let r = buf.subarray(0,index).toString();
-        buf = buf.subarray(index + this.rowChar.length);
-        return [r,buf];
-    }
-    /**
-     * 处理属性名
-     * @param line  行数据
-     */
-    handleProp(line:string){
-        if(line === ''){
-            return;
-        }
-        let arr = line.toString().split(';');
-        //数据项
-        this.dataKey = arr[1].substr(arr[1].indexOf('=')).trim();
-        this.dataKey = this.dataKey.substring(2,this.dataKey.length-1);
-        if(arr.length === 3){  //文件
-            let a1 = arr[2].split('=');
-            let fn = a1[1].trim();
-            let fn1 = fn.substring(1,fn.length-1).trim();
-            //文件名为空，此项不存
-            if(a1[1] == '""'){
-                this.dataKey = undefined;
-            }
-            let fn2 = App.uuid.v1() + fn1.substr(fn1.lastIndexOf('.'));
-            //得到绝对路径
-            let filePath = Util.getAbsPath([this.savePath,fn2]);
-            this.value = {
-                fileName:fn1,
-                path:filePath
-            };
-            this.isFile = true;
-        }
+        return obj;
     }
 }
-
-export{HttpRequest}

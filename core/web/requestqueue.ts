@@ -91,7 +91,7 @@ class RequestQueue{
                 response.writeToClient({
                     statusCode:405
                 });
-                return;    
+                return;
         }
         // gzip
         let zipStr:string = <string>request.getHeader("accept-encoding");

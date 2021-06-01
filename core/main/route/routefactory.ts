@@ -350,7 +350,6 @@ class RouteFactory{
                 if(route1 === null){
                     throw new NoomiError("2103",url1);
                 }
-                
                 //设置route path
                 route1.path = url1;
                 return await this.handleRoute(route1,route.instance.request,res,params);
@@ -373,14 +372,16 @@ class RouteFactory{
                 }
                 break;
             default: //json
+                let mimeType:string;
                 //处理json对象
-                let mimeType:string = 'text/html';
                 if(typeof data === 'object'){
                     data = JSON.stringify(data);
                     mimeType = 'application/json';
+                }else{
+                    mimeType = 'text/plain';
                 }
                 ret = {
-                    data:data,
+                    data:data, //如果无数据，则返回''
                     mimeType:mimeType
                 };
         }

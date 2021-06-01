@@ -159,18 +159,18 @@ class RequestQueue{
                         zip:'gzip',
                         charset:charset
                     });
-                }else if(cData.data){
+                }else if(cData.etag){  //文件
+                    response.writeFileToClient({
+                        data:Util.getAbsPath([path]),
+                        type:cData.mimeType,
+                        size:cData.dataSize
+                    });
+                }else{ //数据
                     response.writeToClient({
                         data:cData.data,
                         type:cData.mimeType,
                         size:cData.dataSize,
                         charset:charset
-                    });
-                }else{
-                    response.writeFileToClient({
-                        data:Util.getAbsPath([path]),
-                        type:cData.mimeType,
-                        size:cData.dataSize
                     });
                 }
             }

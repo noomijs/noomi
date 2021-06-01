@@ -189,8 +189,8 @@ class StaticResource{
         let zipSize:number;
         //压缩数据
         let zipData:string;
-
-        if(saveData){
+        //文件size<64m才进行缓存
+        if(saveData && stat.size < 67108864){
             data = srcBuf.toString('binary');
             if(zipBuf){
                 zipSize = zipBuf.length;

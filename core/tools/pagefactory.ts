@@ -1,5 +1,3 @@
-import { Code } from "typeorm";
-
 /**
  * 页面工厂
  * @remarks

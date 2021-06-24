@@ -54,7 +54,9 @@ export class PostFormHandler{
      * @param tmpDir        文件临时存储路径
      */
     constructor(boundary:string,tmpDir:string){
-        this.boundary =  Buffer.from('--'+ boundary);
+        if(boundary){
+            this.boundary =  Buffer.from('--'+ boundary);
+        }
         this.saveDir = tmpDir;
         this.returnObj = {}
     }
@@ -133,7 +135,21 @@ export class PostFormHandler{
             return;
         }
         this.lineBreak = buf.indexOf('\r\n') === -1?'\n':'\r\n';
-    }
+        let buf1 = buf;
+        while(!this.boundary && buf1.length>0){
+            let ind = buf1.indexOf(this.lineBreak);
+            if(ind === -1){
+                return;
+            }
+            let buf2 = buf1.subarray(0,ind);
+            let line = buf2.toString().trim();
+            if(line.startsWith('--')){
+                this.boundary = Buffer.from(line);
+                break;
+            }
+            buf1 = buf1.subarray(ind+this.lineBreak.length);
+        }
+ }
     /**
      * 从buffer读一行
      * @param buf   buf

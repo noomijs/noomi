@@ -170,9 +170,9 @@ export class HttpRequest extends IncomingMessage{
         let fileHandler:PostFileHandler;
         let formHandler:PostFormHandler;
         let textHandler:PostTextHandler;
-        //post类型 2:form-data 1:文本串 2:独立文件 
+        //post类型 0:form-data 1:文本串 2:独立文件 
         let postType:number;
-        if(contentTypeObj.boundary){
+        if(contentTypeObj.type.indexOf('form-data') !== -1){
             formHandler = new PostFormHandler(contentTypeObj.boundary,tmpDir);
             postType = 0;
         }else if(contentTypeObj.type.startsWith('text/') ||

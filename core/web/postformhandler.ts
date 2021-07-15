@@ -177,11 +177,11 @@ export class PostFormHandler{
             return;
         }
         //取属性
-        while(this.buf.length>0 && !this.propName){
+        if(this.buf.length>0 && !this.propName){
             this.handleProp();
         }
         if(this.value && this.value.fileName){
-            while(this.buf.length>0 && !this.value.fileType){
+            if(this.buf.length>0 && !this.value.fileType){
                 this.handleFileType();
             }
             if(this.value.fileType){
@@ -211,11 +211,18 @@ export class PostFormHandler{
      * 处理属性名
      */
     private handleProp(){
-        let line = this.readLine();
-        if(!line || line === ''){
+        let line;
+        //空行不处理
+        while((line = this.readLine()) === ''){
+            //读不到了，则返回
+            if(!line){
+                return;
+            }
+        }
+        if(!line){
             return;
         }
-        let arr = line.toString().split(';');
+        let arr = line.split(';');
         //数据项名
         let pn = arr[1].substr(arr[1].indexOf('=')).trim();
         this.propName = pn.substring(2,pn.length-1);

@@ -58,7 +58,7 @@ export class PostFormHandler{
             this.boundary =  Buffer.from('--'+ boundary);
         }
         this.saveDir = tmpDir;
-        this.returnObj = {}
+        this.returnObj = {};
     }
 
     /**
@@ -68,16 +68,15 @@ export class PostFormHandler{
     public handleBuf(buf:Buffer){
         //获取换行符，首次执行时处理
         this.getLineBreak(buf);
-
         let buf1 = this.buf?Buffer.concat([this.buf,buf]):buf;
         let ind:number = buf1.indexOf(this.boundary);
-        if(ind !== -1){
+        if(ind !== -1){ //有分隔符
+            //循环处理所有数据项
             while((ind=buf1.indexOf(this.boundary)) !== -1){
-                if(this.valueStarted) { //有值
-                    //待写内容
+                if(this.valueStarted) { //上一帧值已经开始，尚未传完
                     let buf2 = buf1.subarray(0,ind-this.lineBreak.length);
-                    if(this.isFile){
-                        if(this.value.fileName){ //文件
+                    if(this.isFile){    //文件
+                        if(this.value.fileName){
                             App.fs.writeFileSync(this.value.path,buf2,{flag:'a+'});
                         }
                     }else{ //普通串
@@ -89,7 +88,7 @@ export class PostFormHandler{
                         if(!Array.isArray(this.returnObj[this.propName])){
                             this.returnObj[this.propName] = [this.returnObj[this.propName]];
                         }
-                        //新值入数组
+                        //把新值加入数组
                         this.returnObj[this.propName].push(this.value);
                     }else{
                         this.returnObj[this.propName] = this.value;
@@ -99,29 +98,30 @@ export class PostFormHandler{
                     this.value = undefined;
                     this.valueStarted = undefined;
                     this.isFile = undefined;
+                    this.buf = buf1.subarray(ind+this.boundary.length+this.lineBreak.length);
+                }else if(ind === 0){    //最开始为分隔符，直接去掉分隔符
+                    this.buf = buf1.subarray(ind+this.boundary.length+this.lineBreak.length);
+                }else { //上一帧无法构成完整数据项
+                    this.buf = buf1;
                 }
-                //处理属性名
-                //去掉boundary
-                this.buf = buf1.subarray(ind+this.boundary.length+this.lineBreak.length);
                 //取属性
                 this.handleNewProp();
                 //更新buf1
                 buf1 = this.buf;
             }
-        }else if(this.valueStarted){ //有值
-            if(this.isFile){
-                if(this.buf && this.value.fileName){ //当前为文件
-                    //直接把上一帧写文件
+        }else if(this.valueStarted){ //无分隔符，值已开始，尚未结束
+            if(this.isFile){ //文件
+                if(this.buf && this.value.fileName){ 
+                    //直接把当前buf写文件
                     App.fs.writeFileSync(this.value.path,this.buf,{flag:'a+'});
-                    //保留当前帧
-                    this.buf = buf;
                 }
-            }else{ //不是文件，添加到buf
+                //保留当前帧，可能需要和下一帧进行合并为有效数据项
+                this.buf = buf;
+            }else{ //不是文件，添加到buf，可能需要和下一帧合并为有效数据项
                 this.buf = buf1;
             }
-        }else{
-            this.buf = buf;
-            this.handleNewProp();
+        }else{  //无分隔符，值未开始，数据项信息不完整
+            this.buf = buf1;
         }
     }
 
@@ -149,7 +149,7 @@ export class PostFormHandler{
             }
             buf1 = buf1.subarray(ind+this.lineBreak.length);
         }
- }
+    }
     /**
      * 从buffer读一行
      * @param buf   buf
@@ -213,12 +213,8 @@ export class PostFormHandler{
     private handleProp(){
         let line;
         //空行不处理
-        while((line = this.readLine()) === ''){
-            //读不到了，则返回
-            if(!line){
-                return;
-            }
-        }
+        while((line = this.readLine()) === '' && line);
+        //无行可读
         if(!line){
             return;
         }

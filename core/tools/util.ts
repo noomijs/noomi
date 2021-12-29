@@ -26,7 +26,7 @@ export class Util{
                     str = '^' + str;
                     break;
                 case 2:
-                        str = str + '$';
+                    str = str + '$';
                     break;
                 case 3:
                     str = '^' + str + '$';
@@ -37,8 +37,9 @@ export class Util{
 
     /**
      * 获取绝对路径
-     * @param pa    待处理的字符串数组
-     * @returns     字符串数组构成的的绝对地址
+     * @param pa            待处理的字符串数组
+     * @param relative      是否所有元素为相对路径，如果设置为false，且数组元素首字母为'/'，则会去掉，默认false
+     * @returns             字符串数组构成的的绝对地址
      */
     public static getAbsPath(pa:Array<string>):string{
         for(let i=0;i<pa.length;i++){
@@ -46,7 +47,23 @@ export class Util{
                 pa[i] = pa[i].substr(1);
             }
         }
-        return App.path.resolve.apply(null,pa);
+        return App.path.resolve(...pa);
+    }
+
+    /**
+     * 获取相对于根目录的url path
+     * @param pa    地址数组
+     * @returns     url path
+     */
+    public static getUrlPath(pa:Array<string>):string{
+        let path = pa.join('/');
+        path = path.replace(/\\/g,'/');
+        path = path.replace(/\/{2,}/g,'/');
+        //首字母不为"/"，则添加
+        if(path[0] !== '/'){
+            path = '/' + path;
+        }
+        return path;
     }
 
     /**
@@ -144,6 +161,15 @@ export class Util{
             }
             return value;
         }
+    }
+
+    /**
+     * eval
+     * @param evalStr   eval串
+     * @returns         eval值
+     */
+     public static eval(evalStr: string): any {
+        return new Function(`return(${evalStr})`)();
     }
     
 }

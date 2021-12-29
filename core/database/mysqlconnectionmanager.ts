@@ -84,11 +84,11 @@ class MysqlConnectionManager implements IConnectionManager{
         }
         if(this.pool){
             conn.release(err=>{
-                console.log(err);
+                console.error(err);
             });
         }else{
             conn.end(err=>{
-                console.log(err);
+                console.error(err);
             });
         }
     }

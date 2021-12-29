@@ -3,11 +3,16 @@ import { StaticResource } from "../web/staticresource";
 import { Util } from "../tools/util";
 import { App } from "../tools/application";
 import { FileWatcher, EWatcherType } from "../tools/filewatcher";
+import { TransactionManager } from "../database/transactionmanager";
+import { FilterFactory } from "../web/filterfactory";
+import { RouteFactory } from "./route/routefactory";
+import { WebAfterHandler } from "../web/webafterhandler";
+import { AopFactory } from "./aopfactory";
 
 /**
  * 实例属性
  */
-interface IInstanceProperty{
+export interface IInstanceProperty{
     /**
      * 属性名
      */
@@ -16,16 +21,6 @@ interface IInstanceProperty{
      * 引用实例名
      */
     ref:string;
-}
-
-/**
- * @exclude
- * 实例文件配置对象
- */
-interface IInstanceFileCfg{
-    module_path:any;            //模块基础路径(数组或单个字符串)
-    files:Array<string>;        //引入文件
-    instances:Array<any>;       //实例配置数组
 }
 
 /**
@@ -65,7 +60,7 @@ interface IInstanceCfg{
 /**
  * 实例对象，实例工厂中的存储元素
  */
-interface IInstance{
+export interface IInstance{
     /**
      * 实例对象
      */
@@ -91,11 +86,17 @@ interface IInstance{
 /**
  * 注入参数对象，用于存储待注入对象的参数
  */
-interface IInject{
+export interface IInject{
     /**
      * 待注入实例
      */
-    instance:any,
+    instance?:any,
+
+    /**
+     * 待注入类
+     */
+    clazz?:any,
+
     /**
      * 待注入属性名
      */
@@ -111,45 +112,26 @@ interface IInject{
  * @remarks
  * 用于管理所有的实例对象
  */
-class InstanceFactory{
+export class InstanceFactory{
     /**
      * 实例工厂map，存放所有实例对象
      */
-    static factory:Map<string,IInstance> = new Map();
-
+    public static factory:Map<string,IInstance> = new Map();
     /**
-     * 模块基础路径数组，加载实例时从该路径加载
-     */
-    static mdlBasePath:Array<string> = [];
-    /**
-     * 待注入对象数组
-     */
-    static injectList:Array<IInject> = [];
-
-    /**
-     * 注入依赖map  键为注入类实例名，值为数组，数组元素为{className:类名,propName:属性名}
+     * 注入依赖map  键为注入类名，值为数组，数组元素为{className:类名,propName:属性名}
      * @since 0.4.4
      */
-    static injectMap:Map<string,object[]> = new Map();
-    /**
-     * 初始化后操作数组(实例工厂初始化结束后执行) {func:Function,thisObj:func this指向}
-     * @since 0.4.0
-     */
-    static afterInitOperations:Array<object> = [];
+    private static injectMap:Map<string,object[]> = new Map();
+    
     /**
      * 工厂初始化
      * @param config    配置项
      */
-    static init(config:any){
-        if(typeof config === 'object'){
-            this.handleJson(config);
-        }else{
-            this.parseFile(config);
-        }
-
-        //执行后处理
+    public static async init(config:any){
+        await this.parse(config);
+        //执行后置处理
         setImmediate(()=>{
-            this.doAfterInitOperations();
+            AopFactory.updMethodProxy();
         });
     }
     /**
@@ -158,177 +140,62 @@ class InstanceFactory{
      * @param replace   替换之前的实例
      * @returns         undefined或添加的实例
      */
-    static addInstance(cfg:IInstanceCfg):any{
-        let insObj:IInstance;
-        let path:string;
-        //单例模式，默认true
-        let singleton = cfg.singleton!==undefined?cfg.singleton:true;
-        let mdl:any;
+    public static addInstance(cfg:IInstanceCfg):any{
+        cfg.class.prototype.__instanceName = cfg.name;
+        this.factory.set(cfg.name,{
+            class:cfg.class,
+            singleton:cfg.singleton!==false
+        });
+        
+        //依赖实例名的相关处理
+        AopFactory.handleInstanceAspect(cfg.name,cfg.class.name);
+        RouteFactory.handleInstanceRoute(cfg.name,cfg.class.name);
+        TransactionManager.handleInstanceTranstraction(cfg.name,cfg.class.name);
+        FilterFactory.handleInstanceFilter(cfg.name,cfg.class.name);
+        WebAfterHandler.handleInstanceHandler(cfg.name,cfg.class.name);
+    }
 
-        //从路径加载模块
-        if(cfg.path && typeof cfg.path === 'string' && (path=cfg.path.trim()) !== ''){  
-            for(let mdlPath of this.mdlBasePath){
-                mdl = require(Util.getAbsPath([mdlPath,path]));
-                //支持ts和js,ts编译后为{className:***},js直接输出为class
-                //找到则退出
-                if(mdl){
-                    if(typeof mdl === 'object'){
-                        mdl = mdl[cfg.class];
-                    }
-                    // class
-                    if(mdl.constructor !== Function){
-                        throw new NoomiError("1003");
-                    }
-                    break;
-                }
-            }
+    /**
+     * 注入
+     * @param targetClassName   目标类名
+     * @param propName          注入属性名
+     * @param injectName        注入实例名
+     */
+    public static inject(targetClassName:any,propName:string,injectName:string){
+        if(this.injectMap.has(targetClassName)){
+            this.injectMap.get(targetClassName).push({propName:propName,injectName:injectName});
         }else{
-            mdl = cfg.class;
+            this.injectMap.set(targetClassName,[{propName:propName,injectName:injectName}]);
         }
-        if(!mdl){
-            throw new NoomiError("1004",path);
-        }
-        //增加实例名
-        mdl.prototype.__instanceName = cfg.name;
-        
-        let instance:any;
-        if(singleton){
-            instance = cfg.instance||new mdl(cfg.params);
-        }
-        
-        insObj={
-            instance:instance,
-            class:mdl,
-            singleton:singleton,
-            properties:cfg.properties,
-        };
-
-        //执行后处理
-        setImmediate(()=>{
-            this.doAfterInitOperations();
-        });
-
-        this.factory.set(cfg.name,insObj);
-        if(insObj.instance){
-            //设置name
-            //有实例，需要加入注入
-            if(cfg.properties && cfg.properties.length>0){
-                cfg.properties.forEach((item)=>{
-                    this.addInject(insObj.instance,item.name,item.ref);
-                });
-            }
-            return insObj.instance;
-        }
-
     }
 
-    /**
-     * 为实例添加注入
-     * @param instance      实例类
-     * @param propName      属性名
-     * @param injectName    注入的实例名
-     */
-    static addInject(instance:any,propName:string,injectName:string):void{
-        // 加入注入依赖
-        let insName:string = instance.__instanceName;
-        if(!insName){
-            return;
-        }
-        let ins:IInstance = this.factory.get(insName);
-        if(!ins){
-            return;
-        }
-        //加入注入列表
-        this.injectList.push({
-            instance:instance,
-            propName:propName,
-            injectName:injectName
-        });
-        
-        if(ins.singleton){
-            let arr = this.injectMap.get(injectName) || [];
-            //如果不存在，则加入数组，当注入实例更新后，则需要更新注入
-            if(!arr.find(item=>item['insName'] === insName)){
-                arr.push({insName:insName,propName:propName});
-                this.injectMap.set(injectName,arr);
-            }
-        }else{  //加入属性列表
-            let props = ins.properties || [];
-            if(!props.find(item=>item.name === propName)){
-                props.push({
-                    name:propName,
-                    ref:injectName
-                });
-            }
-            ins.properties = props;
-        }
-        //添加到注入到初始化后操作
-        this.addAfterInitOperation(this.finishInject,this);
-    }
-
-    /**
-     * 完成注入操作
-     */
-    static finishInject():void{
-        for(let item of this.injectList){
-            let instance = InstanceFactory.getInstance(item.injectName);
-            // 实例不存在
-            if(!instance){
-                throw new NoomiError('1001',item.injectName);
-            }
-            //注入到实例，单例才需要注入，否则在getInstance时生成
-            let ins:IInstance = this.factory.get(instance.__instanceName);
-            if(ins && ins.singleton){
-                Reflect.set(item.instance,item.propName,instance);
-            }
-        }
-        //清空inject list
-        this.injectList = [];
-    }
     /**
      * 获取实例
      * @param name  实例名
      * @param param 参数数组
      * @returns     实例化的对象或null
      */
-    static getInstance(name:string,param?:Array<any>):any{
+    public static getInstance(name:string,param?:Array<any>):any{
         let ins:IInstance = this.factory.get(name);
         if(!ins){
             return null;
         }
-        if(ins.singleton){
+        if(ins.singleton&&ins.instance){
             return ins.instance;
         }else{
             let mdl = ins.class;
             param = param || ins.params || [];
             let instance = Reflect.construct(mdl,param);
-            //注入属性
-            if(ins.properties && ins.properties.length>0){
-                ins.properties.forEach((item)=>{
-                    instance[item.name] = this.getInstance(item.ref);
+            if(this.injectMap.has(ins.class.name)){
+                this.injectMap.get(ins.class.name).forEach((item)=>{
+                    instance[item['propName']] = this.getInstance(item['injectName']);
                 });
+            }
+            if(ins.singleton){
+                ins.instance = instance;
             }
             return instance;
         }
-    }
-
-    /**
-     * 通过类获取实例
-     * @param clazz     类
-     * @param param     参数数组
-     * @returns         实例  
-     */
-    static getInstanceByClass(clazz:any,param?:Array<any>):any{
-        return this.getInstance(clazz.prototype.__instanceName,param);
-    }
-
-    /**
-     * 获取实例对象
-     * @param name  实例名
-     * @returns     实例对象
-     */
-    static getInstanceObj(name:string):IInstance{
-        return this.factory.get(name);
     }
 
     /**
@@ -339,7 +206,7 @@ class InstanceFactory{
      * @param func          方法(与methodName二选一)
      * @returns             方法对应的结果
      */
-    static exec(instance:any,methodName:string,params:Array<any>,func?:Function):any{
+    public static exec(instance:any,methodName:string,params:Array<any>,func?:Function):any{
         //实例名，需要得到实例对象
         let instanceName = '';
         if(instance && typeof instance === 'string'){
@@ -360,131 +227,88 @@ class InstanceFactory{
 
     /**
      * @exclude
-     * 解析实例配置文件
-     * @param path      文件路径
-     */
-    static parseFile(path:string){
-        //读取文件
-        let jsonStr:string = App.fs.readFileSync(path,'utf-8');
-        let json:IInstanceFileCfg = null;
-
-        try{
-            json = App.JSON.parse(jsonStr);
-        }catch(e){
-            throw new NoomiError("1000") + '\n' + e;
-        }
-        this.handleJson(json);
-    }
-
-    /**
-     * @exclude
      * 处理配置对象
-     * @param json      实例对象
+     * @param 
      */
-    private static handleJson(json:IInstanceFileCfg){
-        if(json.module_path){
-            if(Array.isArray(json.module_path)){
-                json.module_path.forEach((item)=>{
-                    if(!this.mdlBasePath.includes(item)){
-                        //加入禁止访问路径
-                        StaticResource.addPath(item.charAt(0) === '/'?item:'/' + item);
-                        this.mdlBasePath.push(item);
+    private static async parse(path:string|string[]){
+        if(Array.isArray(path)){
+            for(let p of path){
+                await handle(p);
+            }
+        }else{
+            await handle(path);
+        }
+
+        /**
+         * 处理instance路径
+         * @param path  待解析路径
+         */
+        async function handle(path:string){
+            const basePath = process.cwd();
+            let pathArr = path.split('/');
+            let pa = [basePath];
+            let handled:boolean = false;    //是否已处理
+            for(let i=0;i<pathArr.length-1;i++){
+                const p = pathArr[i];
+                if(p.indexOf('*') === -1 && p !== ""){
+                    pa.push(p);
+                }else if(p === '**'){ //所有子孙目录
+                    handled=true;
+                    if(i<pathArr.length-2){
+                        throw new NoomiError('1000');
                     }
-                });
-            }else if(typeof json.module_path === 'string'){
-                if(!this.mdlBasePath.includes(json.module_path)){
-                    let item = json.module_path;
-                    //加入禁止访问路径
-                    StaticResource.addPath(item === '/'?item:'/' + item);
-                    this.mdlBasePath.push(item);
+                    await handleDir(pa.join('/'),pathArr[pathArr.length-1],true);
                 }
             }
-        }
-
-        //子文件
-        if(Array.isArray(json.files)){
-            json.files.forEach((item)=>{
-                this.parseFile(Util.getAbsPath([App.configPath,item]));
-            });
-        }
-
-        //实例数组
-        if(Array.isArray(json.instances)){
-            json.instances.forEach((item)=>{
-                if(typeof item === 'string'){ //模块在路径中
-                    this.addInstances(item);
-                }else{
-                    this.addInstance(item);
-                }
-            });
-        }
-    }
-
-    /**
-     * 从文件添加实例
-     * @param path  文件路径
-     */
-    static addInstances(path:string){
-        const basePath = process.cwd();
-        let pathArr = path.split('/');
-        let pa = [basePath];
-        let handled:boolean = false;    //是否已处理
-        for(let i=0;i<pathArr.length-1;i++){
-            const p = pathArr[i];
-            if(p.indexOf('*') === -1 && p !== ""){
-                pa.push(p);
-            }else if(p === '**'){ //所有子孙目录
-                handled=true;
-                if(i<pathArr.length-2){
-                    throw new NoomiError('1000');
-                }
-                handleDir(pa.join('/'),pathArr[pathArr.length-1],true);
-            }
-        }
-        if(!handled){
-            handleDir(pa.join('/'),pathArr[pathArr.length-1]);
-        }
-
-        function handleDir(dirPath:string,fileExt:string,deep?:boolean){
-            const dir = App.fs.readdirSync(dirPath,{withFileTypes:true});
-            
-            let fn:string = fileExt;
-            let reg:RegExp = Util.toReg(fn,3);
-            
-            //添加 file watcher
-            if(App.openWatcher){
-                FileWatcher.addDir(dirPath,EWatcherType.DYNAMIC);
+            if(!handled){
+                await handleDir(pa.join('/'),pathArr[pathArr.length-1]);
             }
 
-            for (const dirent of dir) {
-                if(dirent.isDirectory()){
-                    if(deep){
-                        handleDir(App.path.resolve(dirPath ,dirent.name),fileExt,deep);
-                    }
-                }else if(dirent.isFile()){
-                    // @Instance注解方式文件，自动执行instance创建操作
-                    if(reg.test(dirent.name)){
-                        require(App.path.resolve(dirPath , dirent.name));
-                    }
-                }            
+            /**
+             * 处理子目录
+             * @param dirPath   目录地址
+             * @param fileExt   文件后缀
+             * @param deep      是否深度处理
+             */
+            async function handleDir(dirPath:string,fileExt:string,deep?:boolean){
+                const dir = App.fs.readdirSync(dirPath,{withFileTypes:true});
+                let fn:string = fileExt;
+                let reg:RegExp = Util.toReg(fn,3);
+                //添加 file watcher
+                if(App.openWatcher){
+                    FileWatcher.addDir(dirPath,EWatcherType.DYNAMIC);
+                }
+                for (const dirent of dir) {
+                    if(dirent.isDirectory()){
+                        if(deep){
+                            handleDir(App.path.resolve(dirPath ,dirent.name),fileExt,deep);
+                        }
+                    }else if(dirent.isFile()){
+                        // @Instance注解方式文件，自动执行instance创建操作
+                        if(reg.test(dirent.name)){
+                            await import(App.path.resolve(dirPath , dirent.name));
+                        }
+                    }            
+                }
             }
         }
     }
+    
     /**
      * 获取instance工厂
      * @returns     实例工厂
      */
-    static getFactory():Map<string,IInstance>{
+    public static getFactory():Map<string,IInstance>{
         return this.factory;
     }
 
 
     /**
      * 更新与clazz相关的注入
-     * @param clazz 类
+     * @param clazz     实例类
      * @since 0.4.4
      */
-    static updInject(clazz:any){
+    public static updInject(clazz:any){
         //更改的instance name
         let insName = clazz.prototype.__instanceName;
         if(!insName){
@@ -503,37 +327,6 @@ class InstanceFactory{
             }
         }
     }
-
-    /**
-     * 添加初始化结束后操作
-     * @param foo   待执行操作
-     * @since 0.4.0
-     */
-    static addAfterInitOperation(foo:Function,thisObj:any){
-        //已添加操作不再添加
-        if(this.afterInitOperations.find(item=>item['func'] === foo)){
-            return;
-        }
-        this.afterInitOperations.push({
-            func:foo,
-            thisObj:thisObj
-        });
-    }
-
-    /**
-     * 执行初始化操作
-     * @since 0.4.0
-     */
-    static doAfterInitOperations(){
-        if(this.afterInitOperations.length === 0){
-            return;
-        }
-        for(let foo of this.afterInitOperations){
-            foo['func'].apply(foo['thisObj']);
-        } 
-        //清理初始化后操作
-        this.afterInitOperations = [];   
-    }
 }
 
-export {InstanceFactory,IInstance,IInstanceCfg,IInstanceProperty};
+// export {InstanceFactory,IInstance,IInstanceCfg,IInstanceProperty};

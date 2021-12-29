@@ -14,53 +14,48 @@ import { RelaenTransaction } from "./relaentransaction";
 import { NoomiThreadLocal } from "../tools/threadlocal";
 
 class TransactionManager{
-    static transactionMap:Map<number,NoomiTransaction> = new Map();  //transaction map
-    static transactionMdl:string;                               //transaction 实例名
-    static expressions:Array<string>;                           //纳入事务的过滤串
-    static pointcutId:string = 'NOOMI_TX_POINTCUT';             //切点名
-    static addToAopExpressions:Array<string> = [];              //待添加到transaction aop的表达式串
-    static isolationLevel:number=0;                             //隔离级 1read uncommited 2read commited 3repeatable read 4serializable
-    static transactionOption:any;                               //事务配置项
+    /**
+     * transaction map，用于维护事务，键为事务id，值为事务对象
+     */
+    private static transactionMap:Map<number,NoomiTransaction> = new Map(); 
+    /**
+     * transaction 实例名
+     */
+    private static transactionMdl:string;
+    
+    /**
+     * 切点名
+     */
+    public static pointcutId:string = '__NOOMI_TX_POINTCUT';   
+    
+    /**
+     * 切面名
+     */
+    public static aspectName:string = '__NOOMI_TX_ASPECT';
+    
+    /**
+     * 隔离级 1read uncommited 2read commited 3repeatable read 4serializable
+     */
+    public static isolationLevel:number=0;                             
+    
+    /**
+     * 事务配置项
+     */
+    public static transactionOption:any;                               
+    
+    /**
+     * 事务注册map，键为事务类名，值为[methodName1,methodName2,...]
+     */
+    private static registTransactionMap:Map<string,any[]> = new Map();
+
     static init(cfg:any){
-        //transaction 模块实例名
-        this.transactionMdl = cfg.transaction||'noomi_transaction';
+        this.initAdvice();
+        //transaction实例名
+        this.transactionMdl = cfg.transaction||'__noomi_transaction';
         //隔离级
         if(cfg.isolation_level && typeof cfg.isolation_level === 'number'){
             this.isolationLevel = cfg.isolation_level;
         }
-        //添加Aspect
-        let adviceInstance = InstanceFactory.addInstance({
-            name:'NoomiTransactionAdvice',           //实例名
-            instance:new TransactionAdvice(),
-            class:TransactionAdvice
-        });
-        AopFactory.addPointcut(this.pointcutId,[]);
-        //增加pointcut expression
-        process.nextTick(()=>{
-            AopFactory.addExpression(TransactionManager.pointcutId,TransactionManager.addToAopExpressions);
-        });
-        
-        //增加advice
-        AopFactory.addAdvice({
-            pointcut_id:this.pointcutId,
-            type:'before',
-            method:'before',
-            instance:adviceInstance
-        });
-
-        AopFactory.addAdvice({
-            pointcut_id:this.pointcutId,
-            type:'after-return',
-            method:'afterReturn',
-            instance:adviceInstance
-        });
-
-        AopFactory.addAdvice({
-            pointcut_id:this.pointcutId,
-            type:'after-throw',
-            method:'afterThrow',
-            instance:adviceInstance
-        });
         
         //添加transaction到实例工厂，已存在则不再添加
         let tn:string = this.transactionMdl;
@@ -114,18 +109,52 @@ class TransactionManager{
     }
 
     /**
+     * 注册事务，在addInstance时正式添加到aop
+     * @param className     类名
+     * @param methodName    方法名或方法名串，支持通配符"*"
+     */
+    public static registTransaction(className:string,methodName:string|string[]){
+        let arr = typeof methodName === 'string'?[methodName]:methodName;
+        if(this.registTransactionMap.has(className)){
+            arr = this.registTransactionMap.get(className).concat(arr);
+        }
+        this.registTransactionMap.set(className,arr);
+    }
+
+    /**
+     * 处理实例事务，用于把事务注册map的事务添加到事务aop
+     * @param instanceName      实例名
+     * @param className         类名
+     */
+    public static handleInstanceTranstraction(instanceName:string,className:string){
+        if(!this.registTransactionMap.has(className)){
+            return;
+        }
+        const methods = this.registTransactionMap.get(className);
+        if(methods){
+            this.addTransaction(instanceName,methods);
+        }
+        //删除已处理的class
+        this.registTransactionMap.delete(className);
+    }
+
+    /**
      * 添加为事务
      * @param instance      实例 或 类
      * @param methodName    方法名
      */
-    static addTransaction(instance:any,methodName:any){
+    public static addTransaction(instance:any,methodName:any){
         let pc = AopFactory.getPointcutById(this.pointcutId);
         let name:string = typeof instance === 'string'?instance:instance.__instanceName;
-        let expr:string = '^' + name + '.' + methodName + '$';
-        if(pc){ //pointcut存在，直接加入表达式
-            AopFactory.addExpression(this.pointcutId,expr);
-        }else{  //pointcut不存在，加入待处理队列
-            this.addToAopExpressions.push(expr);
+        //数组
+        if(Array.isArray(methodName)){
+            for(let n of methodName){
+                let expr:string = '^' + name + '.' + n + '$';
+                AopFactory.addExpression('TransactionAdvice',this.pointcutId,expr);
+            }
+        }else{
+            let expr:string = '^' + name + '.' + methodName + '$';
+            AopFactory.addExpression('TransactionAdvice',this.pointcutId,expr);
         }
     }
 
@@ -134,7 +163,7 @@ class TransactionManager{
      * @param newOne    如果不存在，是否新建
      * @return          transacton
      */
-    static async get(newOne?:boolean):Promise<NoomiTransaction>{
+    public static async get(newOne?:boolean):Promise<NoomiTransaction>{
         let tr:NoomiTransaction;
         //得到当前执行异步id
         let id:number = NoomiThreadLocal.getThreadId();
@@ -159,14 +188,14 @@ class TransactionManager{
      * 删除事务
      * @param tr    事务 
      */
-    static del(tr:NoomiTransaction){
+    public static del(tr:NoomiTransaction){
         this.transactionMap.delete(tr.id);
     }
     
     /**
      * 获取connection
      */
-    static getConnection(id?:number){
+    public static getConnection(id?:number){
         if(!id){
             id = NoomiThreadLocal.getThreadId();
         }
@@ -181,7 +210,7 @@ class TransactionManager{
      * 释放连接
      * @param tr 
      */
-    static async releaseConnection(tr:NoomiTransaction){
+    public static async releaseConnection(tr:NoomiTransaction){
         await DBManager.getConnectionManager().release(tr.connection);
     }
 
@@ -190,7 +219,7 @@ class TransactionManager{
      * @param path      文件路径
      * @param mdlPath   模型路径
      */
-    static parseFile(path:string){
+    public static parseFile(path:string){
         interface InstanceJSON{
             files:Array<string>;        //引入文件
             instances:Array<any>;       //实例配置数组
@@ -204,6 +233,47 @@ class TransactionManager{
             throw new NoomiError("2800") + '\n' + e;
         }
         this.init(json);
+    }
+
+    /**
+     * 初始化transaction advice
+     * @since 1.0.0
+     */
+    private static initAdvice(){
+        AopFactory.registPointcut({
+            className:'TransactionAdvice',
+            id:this.pointcutId
+        });
+
+        AopFactory.registAdvice({
+            pointcutId:this.pointcutId,
+            type:'before',
+            method:'before',
+            className:'TransactionAdvice'
+        });
+
+        AopFactory.registAdvice({
+            pointcutId:this.pointcutId,
+            type:'after-return',
+            method:'afterReturn',
+            className:'TransactionAdvice'
+        });
+
+        AopFactory.registAdvice({
+            pointcutId:this.pointcutId,
+            type:'after-throw',
+            method:'afterThrow',
+            className:'TransactionAdvice'
+        });
+
+        AopFactory.registAspect('TransactionAdvice');
+        //添加Aspect
+        InstanceFactory.addInstance({
+            name:this.aspectName,
+            class:TransactionAdvice,
+            singleton:true
+        });
+
     }
 }
 

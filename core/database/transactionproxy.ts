@@ -11,12 +11,10 @@ import { NoomiThreadLocal} from "../tools/threadlocal";
 class TransactionProxy{
     /**
      * 代理方法 
-     * @param instanceName  实例名
-     * @param methodName    方法名
      * @param func          执行函数  
      * @param instance      实例
      */
-    static invoke(instanceName:string,methodName:string,func:Function,instance:any):any{
+    static invoke(func:Function,instance:any):any{
         return async (params)=>{
             let retValue;
             switch(DBManager.product){
@@ -64,7 +62,7 @@ class TransactionProxy{
                     NoomiThreadLocal.newThreadId();
                 }
                 //advices获取
-                let adviceInstance = InstanceFactory.getInstance('NoomiTransactionAdvice');
+                let adviceInstance = InstanceFactory.getInstance(TransactionManager.aspectName);
                 let result:any;
                 //before aop执行
                 await adviceInstance.before.apply(adviceInstance);
@@ -93,7 +91,7 @@ class TransactionProxy{
                     RelaenThreadLocal.newThreadId();
                 }
                 //advices获取
-                let adviceInstance = InstanceFactory.getInstance('NoomiTransactionAdvice');
+                let adviceInstance = InstanceFactory.getInstance(TransactionManager.aspectName);
                 let result:any;
                 //before aop执行
                 await adviceInstance.before.apply(adviceInstance);

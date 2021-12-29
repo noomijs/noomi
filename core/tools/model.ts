@@ -96,7 +96,6 @@ class BaseModel{
      * @returns     true 转换成功 false转换失败
      */
     private __transform(name:string):boolean{
-
         if(!this.__props){
             return true;
         }
@@ -146,7 +145,7 @@ class BaseModel{
                     break;
                 case 'array':       //数组类型
                     try{
-                        v = eval(v);
+                        v = Util.eval(v);
                         if(!Array.isArray(v)){
                             return false;
                         }
@@ -156,7 +155,7 @@ class BaseModel{
                     break;
                 case 'object':      //object类型
                     try{
-                        v = eval('(' + v + ')');
+                        v = Util.eval('(' + v + ')');
                         if(typeof v !== 'object'){
                             return false;
                         }
@@ -236,13 +235,10 @@ class BaseModel{
      * 初始化prop map
      */
     private __initPropMap(){
-        if(!this.__props || Object.getOwnPropertyNames(this.__props).length === 0){
-            //复制原型map
-            if(this.__props && this.__props.size>0){
-                this.__props = Util.clone(this.__props);
-            }else{
-                this.__props = new Map();
-            }
+        if(!this.__props){
+            this.__props = new Map();
+        }else if(Object.getOwnPropertyNames(this.__props).length === 0){
+            this.__props = Util.clone(this.__props);
         }
     }
 }

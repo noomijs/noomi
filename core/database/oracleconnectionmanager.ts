@@ -91,7 +91,7 @@ class OracleConnectionManager implements IConnectionManager{
             try{
                 await conn.close();
             }catch(e){
-                console.log(e);
+                console.error(e);
             }
         }
     }

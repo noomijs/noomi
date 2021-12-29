@@ -58,14 +58,6 @@ export class WebConfig{
     static init(config:any){
         if(config.hasOwnProperty('web_config')){
             let cfg:any = config['web_config'];
-            //static path
-            if(cfg.hasOwnProperty('static_path')){
-                StaticResource.addPath(cfg['static_path']);
-            }
-            this.cors = cfg['cors'];
-            this.welcomePage = cfg['welcome'];
-                    
-            this.config = cfg;
             if(cfg.cache === true){
                 let opt = cfg.cache_option;
                 WebConfig.useServerCache = true;
@@ -82,6 +74,15 @@ export class WebConfig{
                     proxy_revalidation:opt.proxy_revalidation
                 });
             }
+            //static path
+            if(cfg.hasOwnProperty('static_path')){
+                StaticResource.addPath(cfg['static_path']);
+            }
+            this.cors = cfg['cors'];
+            this.welcomePage = cfg['welcome'];
+                    
+            this.config = cfg;
+            
         }
 
         if(config.hasOwnProperty('session')){

@@ -1,11 +1,11 @@
 
-import { NoomiError } from "../../tools/errorfactory";
 import { HttpResponse } from "../../web/httpresponse";
 
 /**
  * 路由异常处理类
  * 如果需要自定义输出，需要继承该类并重载handle方法
- * @since 0.3.7
+ * 在0.5.6中废弃，用WebAfterHandler处理
+ * @deprecated  1.0.0
  */
 export class RouteErrorHandler{
     /**

@@ -1,6 +1,6 @@
 import { HttpRequest } from "./httprequest";
 import { WebConfig } from "./webconfig";
-import { RouteFactory, IRoute } from "../main/route/routefactory";
+import { RouteFactory, IRoute, ERouteResultType } from "../main/route/routefactory";
 import { FilterFactory } from "./filterfactory";
 import { StaticResource} from "./staticresource";
 import { App } from "../tools/application";
@@ -8,6 +8,7 @@ import { PageFactory } from "../tools/pagefactory";
 import { HttpResponse } from "./httpresponse";
 import { Util } from "../tools/util";
 import { WebCache, IWebCacheObj } from "./webcache";
+import { WebAfterHandler } from "./webafterhandler";
 
 /**
  * @exclude
@@ -117,11 +118,14 @@ class RequestQueue{
             //执行
             try{
                 data = await RouteFactory.handleRoute(route,request,response);
+                //重定向直接返回
+                if(data === ERouteResultType.REDIRECT){
+                    return;
+                }
             }catch(e){
-                RouteFactory.handleException(response,e);
-                //输出
+                //输出异常对象
+                data = e;
                 console.error(e);
-                return;
             }
         }else{ //静态资源
             //从web cache获取数据
@@ -131,52 +135,74 @@ class RequestQueue{
                 data = await StaticResource.load(request,response,path,gzip);
             }
         }
-        
-        if(data){
-            if(typeof data === 'number'){
-                if(data !== 0){
-                    let page = PageFactory.getErrorPage(data);
-                    if(page && App.fs.existsSync(Util.getAbsPath([page]))){
-                        response.redirect(page);
-                    }else{
-                        response.writeToClient({
-                            statusCode:data
-                        });
-                    }
-                }
-            }else if(typeof data === 'object'){
-                let cData:IWebCacheObj = <IWebCacheObj>data;
-                //json格式为utf8，zip和流用binary
-                let charset = data.mimeType && data.mimeType.indexOf('/json') === -1 || gzip&&cData.zipData?'binary':'utf8';
-                //写web cache相关参数
-                WebCache.writeCacheToClient(response,cData.etag,cData.lastModified);
-                //可能只缓存静态资源信息，所以需要判断数据
-                if(gzip && cData.zipData){
+        data = await WebAfterHandler.doChain(request.url,data,request,response);
+        this.handleResult(response,data,path,gzip);
+    }
+
+    /**
+     * 处理结果
+     * @param response  response对象
+     * @param data      数据或数据对象
+     * @param path      资源路径
+     * @param isZip     是否zip
+     * @returns         void
+     * @since 0.5.5
+     */
+    private static handleResult(response:HttpResponse,data:any,path:string,isZip:boolean){
+        if(!data){
+            return;
+        }
+        if(typeof data === 'number'){
+            if(data !== 0){
+                let page = PageFactory.getErrorPage(data);
+                if(page && App.fs.existsSync(Util.getAbsPath([page]))){
+                    response.redirect(page);
+                }else{
                     response.writeToClient({
-                        data:cData.zipData,
-                        type:cData.mimeType,
-                        size:cData.zipSize,
-                        zip:'gzip',
-                        charset:charset
-                    });
-                }else if(cData.etag){  //文件
-                    response.writeFileToClient({
-                        data:Util.getAbsPath([path]),
-                        type:cData.mimeType,
-                        size:cData.dataSize
-                    });
-                }else{ //数据
-                    response.writeToClient({
-                        data:cData.data,
-                        type:cData.mimeType,
-                        size:cData.dataSize,
-                        charset:charset
+                        statusCode:data
                     });
                 }
             }
+        }else if(typeof data === 'object'){
+            let cData:IWebCacheObj = <IWebCacheObj>data;
+            //json格式为utf8，zip和流用binary
+            let charset = data.mimeType && data.mimeType.indexOf('/json') === -1 || isZip&&cData.zipData?'binary':'utf8';
+            //写web cache相关参数
+            WebCache.writeCacheToClient(response,cData.etag,cData.lastModified);
+            //可能只缓存静态资源信息，所以需要判断数据
+            if(isZip && cData.zipData){ //压缩数据
+                response.writeToClient({
+                    data:cData.zipData,
+                    type:cData.mimeType,
+                    size:cData.zipSize,
+                    zip:'gzip',
+                    charset:charset
+                });
+            }else if(cData.etag){  //文件
+                response.writeFileToClient({
+                    data:Util.getAbsPath([path]),
+                    type:cData.mimeType,
+                    size:cData.dataSize
+                });
+            }else if(cData.data){ //数据
+                response.writeToClient({
+                    data:cData.data,
+                    type:cData.mimeType,
+                    size:cData.dataSize,
+                    charset:charset
+                });
+            }else{  //数据对象
+                response.writeToClient({
+                    data:data,
+                    charset:charset
+                });
+            }
+        }else{
+            response.writeToClient({  //非对象
+                data:data
+            });
         }
     }
-
     /**
      * 设置允许处理标志
      * @param v 

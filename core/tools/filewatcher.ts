@@ -76,8 +76,7 @@ export class FileWatcher {
                 if(!fileName || eventType === 'rename'){
                     return;
                 }
-                let path1:string = App.path.resolve(path ,fileName);
-                await this.handleStaticRes(path1);
+                await this.handleStaticRes(App.path.resolve(path ,fileName));
             });    
         }else{
             App.fs.watch(path,async (eventType,fileName)=>{
@@ -85,8 +84,7 @@ export class FileWatcher {
                 if(!fileName || eventType === 'rename'){
                     return;
                 }
-                let path1:string = App.path.resolve(path ,fileName);
-                await this.handleStaticRes(path1);
+                await this.handleStaticRes(App.path.resolve(path ,fileName));
             });
 
             const dir = App.fs.readdirSync(path,{withFileTypes:true});
@@ -148,6 +146,7 @@ export class FileWatcher {
      */
     private static async handleStaticRes(path:string){
         let url:string = Util.getRelPath(path);
+        url = Util.getUrlPath([url]);
         let obj = await WebCache.getCacheData(url);
         //如果webcache缓存该文件，则需要加入缓存
         if(obj && (obj.data || obj.zipData)){

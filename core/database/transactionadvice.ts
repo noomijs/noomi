@@ -1,9 +1,9 @@
 import { TransactionManager } from "./transactionmanager";
 import { getConnection } from "./connectionmanager";
 import { NoomiTransaction } from "./noomitransaction";
+
 /**
  * 事务通知
- * 
  */
 export class TransactionAdvice{
     /**

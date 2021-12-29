@@ -1,13 +1,9 @@
 import {InstanceFactory} from "./instancefactory";
-import {RouteFactory} from "./route/routefactory";
-import { AopFactory } from "./aopfactory";
-import { FilterFactory } from "../web/filterfactory";
 import { HttpRequest } from "../web/httprequest";
 import { Server } from "net";
-
 import { IncomingMessage, ServerResponse } from "http";
 import { RedisFactory } from "../tools/redisfactory";
-import { NoomiError,ErrorFactory } from "../tools/errorfactory";
+import { NoomiError } from "../tools/errorfactory";
 import { WebConfig } from "../web/webconfig";
 import { RequestQueue } from "../web/requestqueue";
 import { DBManager } from "../database/dbmanager";
@@ -27,7 +23,7 @@ import { LaunchHookManager } from "../tools/launchhookmanager";
 class NoomiMain{
     port:number;            //http port
     sslPort:number;         //https port
-    server:Server;          // http server
+    server:Server;          //http server
     httpsServer:Server;     //https server
     /**
      * 构造器
@@ -40,7 +36,9 @@ class NoomiMain{
         this.port = port || 3000;
         this.sslPort = sslPort || 4000;
         App.configPath = configPath || '/config';
-        this.init();
+        this.init().catch(r=>{
+            console.error(r);
+        });
     }
 
     /**
@@ -49,6 +47,8 @@ class NoomiMain{
     async init(){
         let basePath:string = App.configPath;
         let iniJson:object = null;
+        //开始启动
+        console.log('read file "noomi.json".');
         try{
             let iniStr = App.fs.readFileSync(Util.getAbsPath([basePath,'noomi.json']),'utf-8');
             iniJson = App.JSON.parse(iniStr);
@@ -71,7 +71,6 @@ class NoomiMain{
         //开始启动
         console.log(msgTip["0100"]);
         
-
         //设置是否集群
         App.isCluster = iniJson['cluster']===true?true:false;
         if(App.isCluster && iniJson['redis'] === undefined){
@@ -117,50 +116,10 @@ class NoomiMain{
         //实例初始化
         if(iniJson.hasOwnProperty('instance')){
             console.log(msgTip["0105"]);
-            let cfg = iniJson['instance'];
-            if(typeof cfg === 'string'){
-                cfg = Util.getAbsPath([basePath,cfg]);
-            }
-            InstanceFactory.init(cfg);
+            await InstanceFactory.init(iniJson['instance']);
             console.log(msgTip["0106"]);
         }
-
-        //filter初始化
-        if(iniJson.hasOwnProperty('filter')){
-            console.log(msgTip["0107"]);
-            let cfg = iniJson['filter'];
-            if(typeof cfg === 'object'){  //配置为对象
-                FilterFactory.init(cfg);
-            }else{          //配置为路径
-                FilterFactory.parseFile(Util.getAbsPath([basePath,cfg]));
-            }
-            console.log(msgTip["0108"]);
-        }
-
-        //路由初始化
-        if(iniJson.hasOwnProperty('route')){
-            console.log(msgTip["0109"]);
-            let cfg = iniJson['route'];
-            if(typeof cfg === 'object'){  //配置为对象
-                RouteFactory.init(cfg);    
-            }else{          //配置为路径
-                RouteFactory.parseFile(Util.getAbsPath([basePath,cfg]));
-            }
-            console.log(msgTip["0110"]);
-        }
-
-        //aop初始化
-        if(iniJson.hasOwnProperty('aop')){
-            console.log(msgTip["0113"]);
-            let cfg = iniJson['aop'];
-            if(typeof cfg === 'object'){  //配置为对象
-                AopFactory.init(cfg);    
-            }else{          //配置为路径
-                AopFactory.parseFile(Util.getAbsPath([basePath,cfg]));
-            }
-            console.log(msgTip["0114"]);
-        }
-
+        
         //security初始化
         if(iniJson.hasOwnProperty('security')){
             console.log(msgTip["0115"]);
@@ -190,7 +149,7 @@ class NoomiMain{
         if(!WebConfig.httpsCfg || !WebConfig.httpsCfg['only_https']){
             // http 服务器
             this.server = App.http.createServer((req:IncomingMessage,res:ServerResponse)=>{
-                RequestQueue.handleOne(new HttpRequest(req,res));
+                RequestQueue.add(new HttpRequest(req,res));
             }).listen(this.port,(e)=>{
                 console.log(msgTip["0117"]);
                 console.log(Util.compileString(msgTip["0121"],[this.port]));
@@ -215,13 +174,13 @@ class NoomiMain{
                 key: App.fs.readFileSync(WebConfig.httpsCfg['key_file']),
                 cert: App.fs.readFileSync(WebConfig.httpsCfg['cert_file'])
             },(req,res)=>{
-                RequestQueue.handleOne(new HttpRequest(req,res));
+                RequestQueue.add(new HttpRequest(req,res));
             }).listen(this.sslPort,(e)=>{
                 console.log(Util.compileString(msgTip["0122"],[this.sslPort]));
                 //启动队列执行
             }).on('error',(err)=>{
                 if (err.code === 'EADDRINUSE') {
-                    console.log(msgTip["0118"]);
+                    console.error(msgTip["0118"]);
                     //1秒后重试
                     setTimeout(() => {
                       this.httpsServer.close();

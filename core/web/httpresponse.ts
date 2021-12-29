@@ -3,6 +3,7 @@ import { HttpCookie } from "./httpcookie";
 import { WebConfig } from "./webconfig";
 import { App } from "../tools/application";
 import { Stats } from "fs";
+import { ERouteResultType } from "../main/route/routefactory";
 
 /**
  * response回写配置项
@@ -195,6 +196,7 @@ export class HttpResponse extends ServerResponse{
     /**
      * 重定向
      * @param page  跳转路径url 
+     * @returns     'REDIRECT'
      */
     redirect(page:string){
         this.writeCookie();

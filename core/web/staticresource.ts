@@ -165,7 +165,7 @@ class StaticResource{
                     //删除临时压缩文件
                     fs.unlink(tmpFn,(err)=>{
                         if(err){
-                            console.log(err);
+                            console.error(err);
                         }
                     });
                 });

@@ -4,9 +4,28 @@ import { HttpResponse } from "../../web/httpresponse";
 import { NoomiError } from "../../tools/errorfactory";
 import { Util } from "../../tools/util";
 import { App } from "../../tools/application";
-import { RouteErrorHandler } from "./routeerrorhandler";
 import { IWebCacheObj } from "../../web/webcache";
 
+
+/**
+ * 路由类配置
+ */
+interface IRouteClassCfg{
+    /**
+     * 类名
+     */
+    className?:string;
+
+    /**
+     * 命名空间
+     */
+    namespace?:string;
+
+    /**
+     * 路径数组，数组元素为 {path:路径,method:方法名}
+     */
+    paths?:any[];
+}
 /**
  * 路由配置类型
  */
@@ -15,6 +34,17 @@ interface IRouteCfg{
      * 路由路径
      */
     path?:string;
+
+    /**
+     * 类名
+     */
+    className?:string;
+
+    /**
+     * 命名空间
+     */
+    namespace?:string;
+
     /**
      * 路由正则表达式
      */
@@ -22,7 +52,7 @@ interface IRouteCfg{
     /**
      * 该路由对应的实例名
      */
-    instanceName:string;
+    instanceName?:string;
     /**
      * 该路由对应的实例方法
      */
@@ -125,22 +155,59 @@ class RouteFactory{
      * 静态路由(不带通配符)路由集合
      */
     static staticRouteMap:Map<string,IRouteCfg> = new Map();
+    
     /**
-     * 异常处理器实例名
-     * @since 0.3.7
+     * 注册路由map，添加到实例工厂时统一处理
      */
-    static errorHandler:string;
+    private static registRouteMap:Map<string,IRouteClassCfg> = new Map();
+
+
     /**
-     * 添加路由
-     * @param path      路由路径，支持通配符*，需要method支持
-     * @param clazz     对应类
-     * @param method    方法，path中包含*，则不设置
-     * @param results   路由处理结果集
+     * 注册路由
+     * @param cfg   路由配置 
      */
-    static addRoute(path:string,clazz:string,method?:string,results?:Array<IRouteResult>){
-        if(!path || !clazz){
+    public static registRoute(cfg:IRouteCfg){
+        if(!this.registRouteMap.has(cfg.className)){
+            this.registRouteMap.set(cfg.className,{
+                paths:[]
+            })
+        }
+        let obj = this.registRouteMap.get(cfg.className);
+        //命名空间，针对Router注解器
+        if(cfg.namespace){
+            obj.namespace = cfg.namespace;
+        }
+        if(cfg.path){
+            obj.paths.push({path:cfg.path,method:cfg.method,results:cfg.results});
+        }
+    }
+
+    /**
+     * 处理实例路由
+     * 把注册路由添加到路由对象中
+     * @param instanceName  实例名
+     * @param className     类名
+     */
+    public static handleInstanceRoute(instanceName:string,className:string){
+        if(!this.registRouteMap.has(className)){
             return;
         }
+        let cfg = this.registRouteMap.get(className);
+        let paths = cfg.paths;
+        for(let p of paths){
+            this.addRoute(Util.getUrlPath([cfg.namespace||'',p.path]),instanceName,p.method,p.results);
+        }
+        //删除已处理的class
+        this.registRouteMap.delete(className);
+    }
+    /**
+     * 添加路由
+     * @param path          路由路径，支持通配符*，需要method支持
+     * @param className     对应类
+     * @param method        方法，path中包含*，则不设置
+     * @param results       路由处理结果集
+     */
+    private static addRoute(path:string,className:string,method?:string,results?:Array<IRouteResult>){
         if(results && results.length>0){
             for(let r of results){
                 if((r.type === ERouteResultType.CHAIN || r.type === ERouteResultType.REDIRECT) 
@@ -156,7 +223,7 @@ class RouteFactory{
         //没有通配符
         if(path.indexOf('*') === -1){
             this.staticRouteMap.set(path,{
-                instanceName:clazz.trim(),
+                instanceName:className,
                 method:method,
                 results:results
             });
@@ -165,7 +232,7 @@ class RouteFactory{
                 this.dynaRouteArr.push({
                     path:path,
                     reg:Util.toReg(path,3),
-                    instanceName:clazz.trim(),
+                    instanceName:className,
                     method:method,
                     results:results
                 });
@@ -178,7 +245,7 @@ class RouteFactory{
      * @param path      url路径
      * @returns         路由对象 
      */
-    static getRoute(path:string):IRoute{
+    public static getRoute(path:string):IRoute{
         let item:IRouteCfg;
         let method:string; //方法名
         //下查找非通配符map
@@ -192,11 +259,11 @@ class RouteFactory{
                 if(item.reg.test(path)){
                     method = item.method;
                     if(!method){
-                        let index = item.path.indexOf("(");
+                        let index = path.lastIndexOf("/");
                         //通配符处理
                         if(index !== -1){
                             //通配符方法
-                            method = path.substr(index);
+                            method = path.substr(index+1);
                         }
                     }
                     break;
@@ -221,11 +288,7 @@ class RouteFactory{
      * @param params        调用参数对象
      * @returns             0 正常 1异常
      */
-    static async handleRoute(route:IRoute,req:HttpRequest,res:HttpResponse,params?:object):Promise<number|IWebCacheObj>{
-        //尚未初始化
-        if(!this.errorHandler){
-            this.init({});
-        }
+    public static async handleRoute(route:IRoute,req:HttpRequest,res:HttpResponse,params?:object):Promise<number|IWebCacheObj|string>{
         //绑定path
         if(!route.path && req){
             route.path = req.url;
@@ -252,10 +315,7 @@ class RouteFactory{
             if(route.instance.__getNullCheck){ //空属性
                 nullArr = route.instance.__getNullCheck(route.method);    
             }
-            let r = route.instance.setModel(params,nullArr);
-            if(r !== null){  //setmodel异常
-                throw r;
-            }
+            route.instance.setModel(params,nullArr);
         }
         
         //实际调用方法
@@ -264,12 +324,8 @@ class RouteFactory{
             throw new NoomiError("1010");
         }
         
-        try{
-            let re = await func.call(route.instance,route.instance||params);
-            return await this.handleResult(route,re);
-        }catch(e){
-            throw e;
-        }
+        let re = await func.call(route.instance,route.instance||params);
+        return await this.handleResult(route,re);
     }
 
     /**
@@ -277,7 +333,7 @@ class RouteFactory{
      * @param route     route对象
      * @param data      路由对应方法返回值
      */
-    static async handleResult(route:IRoute,data:any):Promise<number|IWebCacheObj>{
+    public static async handleResult(route:IRoute,data:any):Promise<number|IWebCacheObj|string>{
         const results = route.results;
         if(results && results.length > 0){
             //单个结果，不判断返回值
@@ -304,7 +360,7 @@ class RouteFactory{
      * @param data          路由执行结果
      * @returns             cache数据对象或0
      */
-    static async handleOneResult(route:IRoute,result:IRouteResult,data:any):Promise<IWebCacheObj|number>{
+    public static async handleOneResult(route:IRoute,result:IRouteResult,data:any):Promise<IWebCacheObj|number|string>{
         let url:string;
         const instance = route.instance;
         const res:HttpResponse = route.instance.response;
@@ -332,7 +388,7 @@ class RouteFactory{
                     }
                 }
                 res.redirect(url);
-                break;
+                return ERouteResultType.REDIRECT;
             case ERouteResultType.CHAIN: //路由器链
                 url = handleParamUrl(instance,result.url);
                 let url1 = App.url.parse(url).pathname;
@@ -422,81 +478,67 @@ class RouteFactory{
      * 处理异常信息
      * @param res   response 对象
      * @param e     异常
+     * @deprecated  1.0.0
      */
-    static handleException(res:HttpResponse,e:any){
-        let eh:RouteErrorHandler = InstanceFactory.getInstance(this.errorHandler);
-        if(eh){
-            eh.handle(res,e);
-        }else{
-            res.writeToClient({
-                data:e
-            });
-        }
-    }
+    static handleException(res:HttpResponse,e:any){}
 
     /**
      * 初始化路由工厂
      * @param config    配置文件
      * @param ns        命名空间（上级路由路径） 
      */
-    static init(config:any,ns?:string){
-        //初始化errorHandler
-        if(!this.errorHandler){
-            if(config.route_error_handler){
-                this.errorHandler = config.route_error_handler;
-            }else{
-                InstanceFactory.addInstance({
-                    name:'noomi_route_error_handler',
-                    instance:new RouteErrorHandler(),
-                    class:RouteErrorHandler
-                });
-                this.errorHandler = 'noomi_route_error_handler';
-            }
-        }
-        let ns1:string = config.namespace? config.namespace.trim():'';
-        //设置命名空间，如果是子文件，需要连接上级文件
-        let pa = ns?[ns,ns1]:[ns1]; 
-        ns = Util.getAbsPath(pa);
-        
-        //处理本级路由
-        if(Array.isArray(config.routes)){
-            config.routes.forEach((item)=>{
-                //增加namespce前缀
-                let p = Util.getAbsPath([ns,item.path]);
-                this.addRoute(p,item.instance_name,item.method,item.results);
-            });
-        }
+    // static init(config:any,ns?:string){
+    //     let ns1:string = config.namespace? config.namespace.trim():undefined;
+    //     if(ns1){
+    //         if(ns){
+    //             ns = Util.getUrlPath([ns,ns1]);
+    //         }else{
+    //             ns = Util.getUrlPath([ns1])
+    //         }
+    //     }
+    //     if(!ns){
+    //         ns = '';
+    //     }
+    //     //处理本级路由
+    //     if(Array.isArray(config.routes)){
+    //         config.routes.forEach((item)=>{
+    //             //增加namespce前缀
+    //             let p = Util.getUrlPath([ns,item.path]);
+    //             this.addRoute(p,item.instance_name,item.method,item.results);
+    //         });
+    //     }
 
-        //处理子路径路由
-        if(Array.isArray(config.files)){
-            config.files.forEach((item)=>{
-                this.parseFile(Util.getAbsPath([App.configPath, item]),ns);
-            });
-        }
-    }
-    /**
-     * 解析路由文件
-     * @param path  文件路径
-     * @param ns    命名空间，默认 /
-     */
-    static parseFile(path:string,ns?:string){
-        interface RouteJSON{
-            namespace:string;           //命名空间
-            route_error_handler:string; //路由异常处理器
-            files:Array<string>;        //引入文件
-            routes:Array<any>;          //实例配置数组
-        }
+    //     //处理子路径路由
+    //     if(Array.isArray(config.files)){
+    //         config.files.forEach((item)=>{
+    //             const p = Util.getAbsPath([App.configPath, item]);
+    //             this.parseFile(p,ns);
+    //         });
+    //     }
+    // }
+    // /**
+    //  * 解析路由文件
+    //  * @param path  文件路径
+    //  * @param ns    命名空间，默认 /
+    //  */
+    // static parseFile(path:string,ns?:string){
+    //     interface RouteJSON{
+    //         namespace:string;           //命名空间
+    //         route_error_handler:string; //路由异常处理器
+    //         files:Array<string>;        //引入文件
+    //         routes:Array<any>;          //实例配置数组
+    //     }
         
-        //读取文件
-        let json:RouteJSON = null;
-        try{
-            let jsonStr:string = App.fs.readFileSync(path,'utf-8');
-            json = App.JSON.parse(jsonStr);
-        }catch(e){
-            throw new NoomiError("2100") +'\n' + e;
-        }
-        this.init(json,ns);
-    }
+    //     //读取文件
+    //     let json:RouteJSON = null;
+    //     try{
+    //         let jsonStr:string = App.fs.readFileSync(path,'utf-8');
+    //         json = App.JSON.parse(jsonStr);
+    //     }catch(e){
+    //         throw new NoomiError("2100") +'\n' + e;
+    //     }
+    //     this.init(json,ns);
+    // }
 }
 
 export {RouteFactory,IRoute,IRouteCfg,IRouteResult,ERouteResultType};

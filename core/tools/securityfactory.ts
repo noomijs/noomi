@@ -133,15 +133,20 @@ class SecurityFactory{
             this.dbOptions = config.dboption;
         }
         //初始化security filter
+        // InstanceFactory.addInstance({
+        //     name:'NoomiSecurityFilter',         //filter实例名
+        //     instance:new SecurityFilter(),
+        //     class:SecurityFilter
+        // });
         InstanceFactory.addInstance({
             name:'NoomiSecurityFilter',         //filter实例名
             instance:new SecurityFilter(),
             class:SecurityFilter
         });
         
-        FilterFactory.addFilter({
-            instance_name:'NoomiSecurityFilter',
-            url_pattern:config['expressions'],
+        FilterFactory.registFilter({
+            className:'NoomiSecurityFilter',
+            pattern:config['expressions'],
             order:1
         });
 

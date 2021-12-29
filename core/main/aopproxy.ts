@@ -57,7 +57,7 @@ class AopProxy{
                     try{
                         //方法是事务
                         if(advices.hasTransaction){
-                            result = await TransactionProxy.invoke(instanceName,methodName,func,instance)(params);
+                            result = await TransactionProxy.invoke(func,instance)(params);
                         }else{ //非事务
                             result = await func.apply(instance,params);
                         }
@@ -121,7 +121,13 @@ class AopProxy{
                 }
             }
             try{
-                result = func.apply(instance,params);
+                //方法是事务
+                if(advices.hasTransaction){
+                    result = TransactionProxy.invoke(func,instance)(params);
+                }else{ //非事务
+                    result = func.apply(instance,params);
+                }
+                
                 if(util.types.isPromise(result)){  //返回promise调用
                     result.then(re=>{
                         //带入参数

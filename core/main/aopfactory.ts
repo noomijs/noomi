@@ -3,7 +3,6 @@ import { AopProxy } from "./aopproxy";
 import { NoomiError } from "../tools/errorfactory";
 import { TransactionManager } from "../database/transactionmanager";
 import { Util } from "../tools/util";
-import { App } from "../tools/application";
 
 /**
  * Aop通知类型
@@ -12,7 +11,18 @@ interface IAopAdvice{
     /**
      * 切点
      */
-    pointcut_id?:string;
+    pointcutId?:string;
+
+    /**
+     * 实例名或实例对象
+     */
+    instance?:any;
+
+    /**
+     * 类名
+     */
+    className?:string;
+
     /**
      * 通知类型 (before,after,after-return,after-throw,around)
      */
@@ -21,10 +31,6 @@ interface IAopAdvice{
      * 对应的切面方法
      */
     method:string;
-    /**
-     * 切面对应的实例名或实例对象
-     */
-    instance:any;
 }
 
 /**
@@ -34,7 +40,7 @@ interface IAopAspect{
     /**
      * 实例名
      */
-    instance:string;
+    instance?:string;
     /** 
      * 切点数组 
      */
@@ -50,13 +56,17 @@ interface IAopAspect{
  */
 interface IPointcut{
     /**
+     * 类名
+     */
+    className:string;
+    /**
      * 切点id
      */
     id:string;
     /**
      * 表达式串
      */
-    expressions:Array<string>;
+    expressions?:Array<string>;
 }
 
 /**
@@ -95,20 +105,9 @@ class AopPointcut{
      */
     constructor(id:string,expressions:Array<string>){
         this.id = id;
-        if(!expressions){
-            throw new NoomiError("2001");
+        if(expressions){
+            this.addExpression(expressions);    
         }
-
-        if(!Array.isArray(expressions)){
-            expressions = [expressions];
-        }
-        
-        expressions.forEach((item)=>{
-            if(typeof item !== 'string'){
-                throw new NoomiError("2001");
-            }
-            this.expressions.push(Util.toReg(item));
-        });
     }
 
     /**
@@ -118,8 +117,8 @@ class AopPointcut{
      * @returns             匹配返回true，否则返回false
      */
     match(instanceName:string,methodName:string):boolean{
-        for(let i=0;i<this.expressions.length;i++){
-            if(this.expressions[i].test(instanceName + '.' + methodName)){
+        for(let exp of this.expressions){
+            if(exp.test(instanceName + '.' + methodName)){
                 return true;
             }
         }
@@ -132,6 +131,23 @@ class AopPointcut{
      */
     addAdvice(advice:IAopAdvice):void{
         this.advices.push(advice);
+    }
+
+    /**
+     * 添加表达式串
+     * @param expr  表达式串或数组
+     */
+    addExpression(expr:string|string[]){
+        if(!Array.isArray(expr)){
+            expr = [expr];
+        }
+        
+        expr.forEach((item)=>{
+            if(typeof item !== 'string'){
+                throw new NoomiError("2001");
+            }
+            this.expressions.push(Util.toReg(item));
+        });
     }
 }
 
@@ -156,116 +172,135 @@ class AopFactory{
     static proxyMethodMap:Map<string,boolean> = new Map();
 
     /**
-     * 添加一个切面
-     * @param cfg   切面对象 
-     */ 
-    static addAspect(cfg:IAopAspect):void{
-        if(this.aspects.has(cfg.instance)){
-            throw new NoomiError("2005",cfg.instance); 
-        }
-        //连接点
-        if(Array.isArray(cfg.advices)){
-            cfg.advices.forEach((item)=>{
-                if(!this.pointcuts.has(item.pointcut_id)){
-                    throw new NoomiError("2002",item.pointcut_id);
-                }
+     * 注册切面map，键为className,值为
+     *          {
+     *              isAspect:true,  //避免用了pointcut，但是未使用Aspect注解
+     *              pointCutId1:{expressions:Array<string>,advices:{type:类型,method:方法名}},
+     *              ...
+     *          }
+     */
+    private static registAspectMap:Map<string,any> = new Map();
 
-                //设置实例或实例名
-                item.instance = cfg.instance;
-                //添加到pointcut的aop数组(是否需要重复检测，待考虑)
-                this.addAdvice(item);
-            });
+    /**
+     * 注册切面
+     * @param className     切面类名
+     * @since 1.0.0
+     */
+    public static registAspect(className:string){
+        if(!this.registAspectMap.has(className)){
+            return;
         }
-        this.aspects.set(cfg.instance,cfg);
+        this.registAspectMap.get(className).isAspect = true;
+    }
+    /**
+     * 注册切点
+     * @param cfg   pointcut配置
+     * @since 1.0.0
+     */
+    public static registPointcut(cfg:IPointcut){
+        let pc = this.getRegistPointcut(cfg.className,cfg.id,true);
+        if(cfg.expressions){
+            pc.expressions = pc.expressions.concat(cfg.expressions);
+        }
     }
 
     /**
-     * 添加切点
-     * @param id            切点id 
-     * @param expressions   方法匹配表达式数组
+     * 注册advice
+     * @param cfg   advice配置 
+     * @since 1.0.0
      */
-    static addPointcut(id:string,expressions:Array<string>):void{
-        this.pointcuts.set(id,new AopPointcut(id,expressions));
-        //增加代理处理，此方法只在InstanceFactory init后执行
-        InstanceFactory.addAfterInitOperation(this.updMethodProxy,this);
+    public static registAdvice(cfg:IAopAdvice){
+        if(!this.registAspectMap.has(cfg.className)){
+            return;
+        }
+        let pc = this.registAspectMap.get(cfg.className)[cfg.pointcutId];
+        if(!pc){
+            return;
+        }
+        delete cfg.className;
+        pc.advices.push(cfg);
+    }
+
+    /**
+     * 从registAspectMap中获取注册的pointcut配置
+     * @param className     类名
+     * @param pointcutId    切点id
+     * @param create        如果不存在，是否创建，如果为true，则创建，默认false
+     * @returns             pointcut配置项
+     * @since 1.0.0
+     */
+    private static getRegistPointcut(className:string,pointcutId:string,create?:boolean):any{
+        let pc;
+        if(this.registAspectMap.has(className)){
+            let obj = this.registAspectMap.get(className);
+            pc = obj[pointcutId];
+        }else if(create){
+            this.registAspectMap.set(className,{});
+        }
+        if(!pc && create){  //新建pointcut配置项
+            let obj = this.registAspectMap.get(className);
+            pc = {
+                advices:[],
+                expressions:[]
+            };
+            obj[pointcutId] = pc;
+        }
+        return pc;
+    }
+    /**
+     * 处理实例切面
+     * 把注册的切面添加到切面列表
+     * @param instanceName  实例名
+     * @param className     类名
+     * @since 1.0.0
+     */
+    public static handleInstanceAspect(instanceName:string,className:string){
+        if(!this.registAspectMap.has(className)){
+            return;
+        }
+        let cfg = this.registAspectMap.get(className);
+        if(!cfg.isAspect){  //非aspect，不处理
+            return;
+        }
+        delete cfg.isAspect;
+        Object.keys(cfg).forEach(item=>{
+            let o = cfg[item];
+            //新建pointcut
+            let pc = new AopPointcut(item,o.expressions);
+            //加入切点集
+            this.pointcuts.set(item,pc);
+            //为切点添加advice
+            o.advices.forEach(item1=>{
+                //设置实例或实例名
+                item1.instance = instanceName;
+                //添加advice
+                pc.addAdvice(item1);
+            });
+        });
+        this.aspects.set(instanceName,cfg);
+        //删除已处理的class
+        this.registAspectMap.delete(className);
     }
 
     /**
      * 为切点添加表达式
+     * @param className     切点类名
      * @param pointcutId    切点id
      * @param expression    表达式或数组
      */
-    static addExpression(pointcutId:string,expression:string|Array<string>){
-        if(!this.pointcuts.has(pointcutId)){
-            throw new NoomiError("2002",pointcutId);
-        }
-        let pc:AopPointcut = this.pointcuts.get(pointcutId);
-        if(!Array.isArray(expression)){
-            let reg:RegExp = Util.toReg(expression);
-            pc.expressions.push(reg);
-        }else{
-            expression.forEach(item=>{
-                let reg:RegExp = Util.toReg(item);
-                pc.expressions.push(reg);
-            });
-        }
-        //把更新方法代理加入实例工厂后处理
-        InstanceFactory.addAfterInitOperation(this.updMethodProxy,this);
-    }
-
-    /**
-     * 为切点添加一个通知
-     * @param advice 通知配置
-     */
-    static addAdvice(advice:IAopAdvice):void{
-        let pc:AopPointcut = AopFactory.getPointcutById(advice.pointcut_id);
+    public static addExpression(className:string,pointcutId:string,expression:string|Array<string>){
+        // let pc = this.getRegistPointcut(className,pointcutId,true);
+        let pc = this.pointcuts.get(pointcutId);
         if(!pc){
-            throw new NoomiError("2002",advice.pointcut_id);
+            return;
         }
-        pc.addAdvice(advice);
-    }
-
-    /**
-     * @exclude
-     * 解析文件
-     * @param path  文件路径 
-     */
-    static parseFile(path:string):void{
-        //读取文件
-        let jsonStr:string = App.fs.readFileSync(path,'utf-8');
-        let json:IAopCfg = null;
-        try{
-            json = App.JSON.parse(jsonStr);
-        }catch(e){
-            throw new NoomiError("2000") + '\n' + e;
-        }
-        this.init(json);
-    }
-
-    /**
-     * 初始化切面工厂
-     * @param config 配置对象，包含切点集合、切面集合(含通知集合)
-     */
-    static init(config:IAopCfg){
-        //切点数组
-        if(Array.isArray(config.pointcuts)){
-            config.pointcuts.forEach((item:IPointcut)=>{
-                this.addPointcut(item.id,item.expressions);
-            });
-        }
-
-        //切面数组
-        if(Array.isArray(config.aspects)){
-            config.aspects.forEach((item:IAopAspect)=>{
-                this.addAspect(item);
-            });
-        }
+        pc.addExpression(expression);
     }
 
     /**
      * 更新aop匹配的方法代理，为所有aop匹配的方法设置代理
      */
-    static updMethodProxy(){
+    public static updMethodProxy(){
         if(!this.pointcuts || this.pointcuts.size === 0){
             return;
         }
@@ -285,7 +320,7 @@ class AopFactory{
      * 通过正则式给方法加代理
      * @param expr          表达式正则式
      */
-    static addProxyByExpression(expr:RegExp){
+    private static addProxyByExpression(expr:RegExp){
         //遍历instance factory设置aop代理
         let insFac = InstanceFactory.getFactory();
         for(let insName of insFac.keys()){
@@ -318,7 +353,7 @@ class AopFactory{
      * @param methodName    方法名
      * @returns             切点数组
      */
-    static getPointcut(instanceName:string,methodName:string):Array<AopPointcut>{
+    public static getPointcut(instanceName:string,methodName:string):Array<AopPointcut>{
         // 遍历iterator
         let a:Array<AopPointcut> = [];
     
@@ -336,7 +371,7 @@ class AopFactory{
      * @param pointcutId    切点id
      * @returns             切点对象
      */
-    static getPointcutById(pointcutId:string):AopPointcut{
+    public static getPointcutById(pointcutId:string):AopPointcut{
         return this.pointcuts.get(pointcutId);
     }
 
@@ -351,7 +386,7 @@ class AopFactory{
      *                          throw:[{instance:切面实例,method:切面方法},...]
      *                      }
      */
-    static getAdvices(instanceName:string,methodName:string):object{
+    public static getAdvices(instanceName:string,methodName:string):object{
         let pointcuts:Array<AopPointcut> = this.getPointcut(instanceName,methodName);
         if(pointcuts.length === 0){
             return null;

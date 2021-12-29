@@ -58,7 +58,7 @@ class RelaenConnectionManager implements IConnectionManager{
         try{
             RelaenManager.init(cfg);
         }catch(e){
-            console.log(e);
+            console.error(e);
         }
     }
 

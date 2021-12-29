@@ -39,7 +39,7 @@ class RelaenTransaction extends NoomiTransaction{
         try{
             await this.tr.rollback();
         }catch(e){
-            console.log(e);
+            console.error(e);
         }
     }
 }

@@ -157,7 +157,7 @@ class RedisFactory{
             retValue = await new Promise((resolve,reject)=>{
                 client.get(key,(err,value)=>{
                     if(err){
-                        console.log(err);
+                        console.error(err);
                         // throw err;
                     }
                     resolve(value);

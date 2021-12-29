@@ -52,16 +52,14 @@ class Validator{
             return true;
         }
         let foo = this.valiators.get(name);
-        
         let arr = [];
         //处理参数值
-        if(value !== undefined){
-            arr.push(value);
-            if(Array.isArray(paramArr)){
-                arr = arr.concat(paramArr);
-            }
+        arr.push(value);
+        if(Array.isArray(paramArr)){
+            arr = arr.concat(paramArr);
+        }else if(paramArr !== null){
+            arr.push(paramArr);
         }
-        
         return foo.apply(null,arr);
     }
 }

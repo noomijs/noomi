@@ -1,6 +1,7 @@
 import { HttpRequest} from "../../web/httprequest";
 import { HttpResponse } from "../../web/httpresponse";
 import { BaseModel } from "../../tools/model";
+import { NoomiError } from "../../tools/errorfactory";
 /**
  * 路由基类
  * 可自动为路由类生成model(传入参数对象)，自带request和response对象
@@ -57,8 +58,10 @@ class BaseRoute{
             
             //数据转换和校验，如果request content-type为application/json，则不进行转换
             let r = m.__handle(isJsonReq);
+            if(r){
+                throw new Error(JSON.stringify(r));
+            }
             this.model = m;
-            return r;
         }else{
             this.model = data;
         }

@@ -1,13 +1,12 @@
 /**
  * 装饰器（注解类）
  */
-import{InstanceFactory} from '../main/instancefactory';
+import { InstanceFactory } from '../main/instancefactory';
 import { AopFactory } from '../main/aopfactory';
 import { FilterFactory } from '../web/filterfactory';
 import { TransactionManager } from '../database/transactionmanager';
 import { RouteFactory } from '../main/route/routefactory';
-import { NoomiError } from './errorfactory';
-import { BaseModel } from './model';
+import { WebAfterHandler } from '../web/webafterhandler';
 
 
 /**
@@ -18,7 +17,7 @@ import { BaseModel } from './model';
  *          singleton:bool  是否单例，默认true
  *          params:object   参数
  */
-function Instance(cfg){
+function Instance(cfg?:any){
     return (target) =>{
         let instanceName:string;
         let singleton:boolean;
@@ -30,12 +29,9 @@ function Instance(cfg){
             instanceName = cfg.name;
             singleton = cfg.singleton!==undefined?cfg.singleton:true;
             params = cfg.params;
+        }else{  //实例名默认为类名
+            instanceName = target.name;
         }
-        if(!instanceName){
-            throw new NoomiError("1011");
-        }
-        //设置实例名
-        target.prototype.__instanceName = instanceName;
         InstanceFactory.addInstance({
             name:instanceName,  //实例名
             class:target,
@@ -52,42 +48,40 @@ function Instance(cfg){
  */
 function Inject(instanceName:string){
     return (target:any,propertyName:string)=>{
-        process.nextTick(()=>{
-            InstanceFactory.addInject(target,propertyName,instanceName);
-        });
+        InstanceFactory.inject(target.constructor.name,propertyName,instanceName);
     }
 }
 
 /**
  * @exclude
  * 路由类装饰器，装饰类
- * @param cfg:object
+ * @param cfg:object            可选
  *          namespace:string    命名空间，namespace+该类下的所有方法对应的路由路径=路由完整路径，可选
- *          path:string         路径，路由路径为 namespace+path+方法名，设置时，对所有方法有效，可选
+ *          path:string         路径，支持通配符,如: "*"表示该类下的所有方法，"add*"表示以add开头的所有方法
  */
 function Router(cfg?:any){
     return (target)=>{
-        let instanceName:string = '_nroute_' + target.name;
-        let namespace = cfg&&cfg.namespace?cfg.namespace:''; 
-        target.prototype.__routeconfig = {
-            namespace:namespace
-        }
-        target.prototype.__instanceName = instanceName;
-        //追加到instancefactory
-        InstanceFactory.addInstance({
-            name:instanceName,  //实例名
-            class:target,
-            singleton:false
-        });
         //如果配置了path，则追加到路由，对所有方法有效
-        if(cfg && cfg.path){
-            let path:string = cfg.path;
-            if(typeof path==='string' && (path=path.trim()) !== ''){
-                process.nextTick(()=>{
-                    //延迟到Route注解后，便于先处理非*的路由
-                    RouteFactory.addRoute(namespace + path + '(?!\\S+/)*',instanceName,null,cfg.results);
-                });
+        if(cfg){
+            //存在路径，则对所有方法有效
+            if(cfg.path){
+                cfg.path = cfg.path.trim();
+                if(cfg.path === ''){
+                    delete cfg.path;
+                } 
             }
+            cfg.className = target.name;
+            RouteFactory.registRoute(cfg);
+        }
+        //未添加到实例工程，则进行添加
+        if(!target.prototype.__instanceName){
+            InstanceFactory.addInstance({
+                name:target.name,
+                class:target,
+                singleton:false
+            });
+        }else{
+            RouteFactory.handleInstanceRoute(target.name,target.name);
         }
     }
 }
@@ -108,33 +102,51 @@ function Router(cfg?:any){
  */
 function Route(cfg:any){
     return (target:any,propertyName:string)=>{
-        process.nextTick(()=>{
-            let ns = target.__routeconfig?target.__routeconfig.namespace:'';
-            if(typeof cfg === 'string'){ //直接配置路径，默认type json
-                RouteFactory.addRoute(ns + cfg,target.__instanceName,propertyName);    
-            }else{
-                RouteFactory.addRoute(ns + cfg.path,target.__instanceName,propertyName,cfg.results);
-            }
-        });
+        if(typeof cfg === 'string'){ //直接配置路径，默认type json
+            RouteFactory.registRoute({
+                path:cfg,
+                className:target.constructor.name,
+                method:propertyName
+            });    
+        }else{
+            cfg.className = target.constructor.name;
+            cfg.method = propertyName;
+            RouteFactory.registRoute(cfg);
+        }
     }
 }
 /**
  * @exclude
  * web过滤器，装饰方法
- * @param pattern:string|Array<string>  过滤表达式串或数组，支持通配符，默认为/*，过滤所有路由
+ * @param pattern:RegExp|Array<RegExp>  过滤正则表达式或表达式数组，默认为 .*，过滤所有请求
  * @param order:number                  优先级，值越小优先级越高，默认10000，可选
  */
 function WebFilter(pattern?:any,order?:number){
     return function(target:any,name:string){
-        process.nextTick(()=>{
-            FilterFactory.addFilter({
-                instance_name:target.__instanceName,
-                method_name:name,
-                url_pattern:pattern,
-                order:order
-            })
+        FilterFactory.registFilter({
+            className:target.constructor.name,
+            methodName:name,
+            pattern:pattern,
+            order:order
         });
     } 
+}
+
+/**
+ * @exclude
+ * web后置处理器，装饰方法
+ * @param pattern:RegExp|Array<RegExp>  过滤正则表达式或表达式数组，默认为 .*，处理所有请求
+ * @param order:number                  优先级，值越小优先级越高，默认10000，可选
+ */
+ function WebHandler(pattern?:any,order?:number){
+    return function(target:any,name:string){
+        WebAfterHandler.registHandler({
+            className:target.constructor.name,
+            methodName:name,
+            pattern:pattern,
+            order:order
+        });
+    }
 }
 
 /**
@@ -143,32 +155,34 @@ function WebFilter(pattern?:any,order?:number){
  */
 function Aspect(){
     return (target)=>{
-        let instanceName:string = target.prototype.__instanceName || (target.name.substr(0,1).toLowerCase() + target.name.substr(1));
-        //设置aspect属性
-        target.prototype.__isAspect = true;
-        //添加到实例工厂
-        InstanceFactory.addInstance({
-            name:instanceName,  //实例名
-            class:target,
-            singleton:true
-        });
+        AopFactory.registAspect(target.name);
+        if(!target.prototype.__instanceName){
+            //添加到实例工厂
+            InstanceFactory.addInstance({
+                name:target.name,  //实例名
+                class:target,
+                singleton:true
+            });
+        }else{
+            AopFactory.handleInstanceAspect(target.name,target.name);
+        }
     }
 }
 
 /**
  * @exclude
- * 切点装饰器，切点名为方法名+()，装饰方法
+ * 切点装饰器，切点名为属性名，装饰属性
  * @param expressions:string|Array<string> 切点需要拦截的表达式串或数组，支持通配符*，
  *                                         拦截对象为instanceName.methodName，
  *                                         如user*.*拦截实例名为user开头的实例下的所有方法，
  *                                         userX.m1拦截实例名为userX的m1方法
  */
-function Pointcut(expressions:any){
+function Pointcut(expressions?:any){
     return (target:any,name:string)=>{
-        process.nextTick(()=>{
-            if(target.__isAspect){
-                AopFactory.addPointcut(name+'()',expressions);
-            }
+        AopFactory.registPointcut({
+            id:name,
+            expressions:expressions,
+            className:target.constructor.name
         });
     }
 }
@@ -180,15 +194,11 @@ function Pointcut(expressions:any){
  */
 function Before(pointcutId:string){
     return (target:any,name:string,desc:any)=>{
-        process.nextTick(()=>{
-            if(target.__isAspect){
-                AopFactory.addAdvice({
-                    pointcut_id:pointcutId,
-                    type:'before',
-                    instance:target,
-                    method:name
-                });
-            }
+        AopFactory.registAdvice({
+            pointcutId:pointcutId,
+            type:'before',
+            className:target.constructor.name,
+            method:name
         });
     }
 }
@@ -200,15 +210,11 @@ function Before(pointcutId:string){
  */
 function After(pointcutId:string){
     return (target:any,name:string,desc:any)=>{
-        process.nextTick(()=>{
-            if(target.__isAspect){
-                AopFactory.addAdvice({
-                    pointcut_id:pointcutId,
-                    type:'after',
-                    instance:target,
-                    method:name
-                });
-            }
+        AopFactory.registAdvice({
+            pointcutId:pointcutId,
+            type:'after',
+            className:target.constructor.name,
+            method:name
         });
     }
 }
@@ -220,15 +226,11 @@ function After(pointcutId:string){
  */
 function Around(pointcutId:string){
     return (target:any,name:string,desc:any)=>{
-        process.nextTick(()=>{
-            if(target.__isAspect){
-                AopFactory.addAdvice({
-                    pointcut_id:pointcutId,
-                    type:'around',
-                    instance:target,
-                    method:name
-                });
-            }
+        AopFactory.registAdvice({
+            pointcutId:pointcutId,
+            type:'around',
+            className:target.constructor.name,
+            method:name
         });
     }
 }
@@ -239,15 +241,11 @@ function Around(pointcutId:string){
  */
 function AfterReturn(pointcutId:string){
     return (target:any,name:string,desc:any)=>{
-        process.nextTick(()=>{
-            if(target.__isAspect){
-                AopFactory.addAdvice({
-                    pointcut_id:pointcutId,
-                    type:'after-return',
-                    instance:target,
-                    method:name
-                });
-            }
+        AopFactory.registAdvice({
+            pointcutId:pointcutId,
+            type:'after-return',
+            className:target.constructor.name,
+            method:name
         });
     }
 }
@@ -259,15 +257,11 @@ function AfterReturn(pointcutId:string){
  */
 function AfterThrow(pointcutId:string){
     return (target:any,name:string,desc:any)=>{
-        process.nextTick(()=>{
-            if(target.__isAspect){
-                AopFactory.addAdvice({
-                    pointcut_id:pointcutId,
-                    type:'after-throw',
-                    instance:target,
-                    method:name
-                });
-            }
+        AopFactory.registAdvice({
+            pointcutId:pointcutId,
+            type:'after-throw',
+            className:target.constructor.name,
+            method:name
         });
     }
 }
@@ -275,25 +269,27 @@ function AfterThrow(pointcutId:string){
 /**
  * @exclude
  * 事务类装饰器，装饰类
- * 该装饰器必须放在Instance装饰器之前使用
+ * 如果同时使用instance装饰器，该装饰器必须放在Instance装饰器之后
  * 把符合条件的方法装饰为事务方法
  * @param methodReg 数组或字符串，方法名表达式，可以使用*通配符，默认为*，表示该实例的所有方法都为事务方法
  */
 function Transactioner(methodReg?:any){
     return (target)=>{
-        //设置默认实例名
-        let instanceName:string = target.prototype.__instanceName || (target.name.substr(0,1).toLowerCase() + target.name.substr(1));
-        //添加到实例工厂
-        InstanceFactory.addInstance({
-            name:instanceName,  //实例名
-            class:target,
-            singleton:true
-        });
-
         if(!methodReg){
             methodReg = '*';
         }
-        TransactionManager.addTransaction(target.prototype.__instanceName,methodReg);
+        TransactionManager.registTransaction(target.name,methodReg);
+
+        if(!target.prototype.__instanceName){
+            //添加到实例工厂
+            InstanceFactory.addInstance({
+                name:target.name,  //实例名
+                class:target,
+                singleton:true
+            });
+        }else{
+            TransactionManager.handleInstanceTranstraction(target.name,target.name);
+        }
     }
 }
 /**
@@ -301,11 +297,8 @@ function Transactioner(methodReg?:any){
  * 事务装饰器，装饰方法
  */ 
 function Transaction(){
-    return (target:any,name:string,desc:any)=>{
-        //方法注解先于类注解，尚无实例名，延迟执行
-        process.nextTick(()=>{
-            TransactionManager.addTransaction(target.__instanceName,name);
-        });
+    return (target:any,name:string)=>{
+        TransactionManager.registTransaction(target.constructor.name,name);
     }
 }
 
@@ -356,4 +349,4 @@ function NullCheck(props:Array<string>){
         target.__addNullCheck(name,props);
     }
 }
-export {Instance,Router,Route,WebFilter,Inject,Aspect,Pointcut,Before,After,Around,AfterReturn,AfterThrow,Transactioner,Transaction,DataModel,DataType,DataValidator,NullCheck}
+export {Instance,Router,Route,WebFilter,WebHandler,Inject,Aspect,Pointcut,Before,After,Around,AfterReturn,AfterThrow,Transactioner,Transaction,DataModel,DataType,DataValidator,NullCheck}

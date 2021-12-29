@@ -591,12 +591,12 @@ class MemoryCache{
         let tp = typeof value;
         switch(tp){
             case 'string':
-                return strSize(value);
+                return Buffer.byteLength(value);
             case 'number':
                 return 8;
             case 'boolean':
                 return 2;
-            case 'object':
+            case 'object': 
                 let len:number = 0;
                 for(let p of Object.getOwnPropertyNames(value)){
                     len += this.getRealSize(value[p]);
@@ -604,29 +604,7 @@ class MemoryCache{
                 return len;
             default:
                 return 4;
-
         }
-        
-        /**
-         * 计算字符串尺寸
-         * @param v     字符串
-         * @return      size
-         */
-        function strSize(v:string){
-            let totalLength:number = 0;
-            for (let i = 0; i < v.length; i++) {
-                let charCode = v.charCodeAt(i);
-                if (charCode < 0x007f) {
-                    totalLength = totalLength + 1;
-                } else if ((0x0080 <= charCode) && (charCode <= 0x07ff)) {
-                    totalLength += 2;
-                } else if ((0x0800 <= charCode) && (charCode <= 0xffff)) {
-                    totalLength += 3;
-                }
-            }
-            return totalLength;
-        }
-        
     }
 
 
@@ -662,28 +640,49 @@ class MemoryCache{
      * @return      清理的尺寸
      */
     clearByLRU(){
-        //随机取10个，删除其中lru最小的3个
-        let delArr:Array<MemoryItem> = [];
-        let delKeys:Array<string> = [];
+        //随机取m个，删除其中lru最小的n个
+        let delArr:Array<any> = [];
         let keys = this.storeMap.keys();
-        
-        for(let i=0;i<10;i++){
-            let key:string = keys[Math.random()*this.storeMap.size|0];
-            delKeys.push(key);
-            delArr.push(this.storeMap.get(key));
+        //避免 m > stormap.size
+        const m = this.storeMap.size>=10?10:this.storeMap.size;
+        const n = 3;
+        //10个随机位置
+        let indexes=[];
+        for(let i=0;i<m;i++){
+            indexes.push(this.storeMap.size * Math.random()|0);
         }
-        //升序排序
+        //遍历，找到m个存储键
+        for(let i=0;i<this.storeMap.size;i++){
+            let k = keys.next();
+            let ind;
+            if((ind = indexes.indexOf(i)) !== -1){
+                let d = this.storeMap.get(k.value);
+                delArr.push({
+                    key:k.value,
+                    lru:d.LRU,
+                    size:d.size
+                });
+                indexes.splice(ind,1);
+                if(indexes.length===0){
+                    break;
+                }
+            }
+        }
+
+        //降序排序
         delArr.sort((a,b)=>{
-            return a.LRU - b.LRU;
+            return b.lru - a.lru;
         });
-        //释放前三个
+
+        //释放前n个
         let size:number = 0;
-        for(let i=0;i<delKeys.length&&i<3;i++){
+        for(let i=0;i<n;i++){
             size += delArr[i].size;
-            this.storeMap.delete(delKeys[i]);
+            this.storeMap.delete(delArr[i].key);
         }
         return size;
     }
+
     /**
      * 检查和清理空间
      * @param item  cacheitem

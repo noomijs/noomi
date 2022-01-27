@@ -7,7 +7,7 @@ import { TransactionManager } from "../database/transactionmanager";
 import { FilterFactory } from "../web/filterfactory";
 import { RouteFactory } from "./route/routefactory";
 import { WebAfterHandler } from "../web/webafterhandler";
-import { AopFactory } from "./aopfactory";
+import { AopFactory, AopPointcut } from "./aopfactory";
 
 /**
  * 实例属性
@@ -129,10 +129,6 @@ export class InstanceFactory{
      */
     public static async init(config:any){
         await this.parse(config);
-        //执行后置处理
-        setImmediate(()=>{
-            AopFactory.updMethodProxy();
-        });
     }
     /**
      * 添加单例到工厂
@@ -146,6 +142,7 @@ export class InstanceFactory{
             class:cfg.class,
             singleton:cfg.singleton!==false
         });
+
         
         //依赖实例名的相关处理
         AopFactory.handleInstanceAspect(cfg.name,cfg.class.name);
@@ -153,6 +150,12 @@ export class InstanceFactory{
         TransactionManager.handleInstanceTranstraction(cfg.name,cfg.class.name);
         FilterFactory.handleInstanceFilter(cfg.name,cfg.class.name);
         WebAfterHandler.handleInstanceHandler(cfg.name,cfg.class.name);
+        
+        //因为可能切面尚未添加到实例工厂，延迟aop代理
+        setImmediate(()=>{
+            AopFactory.clearProxy(cfg.class.prototype.__instanceName);
+            AopFactory.proxyOne(cfg.class.prototype.__instanceName);
+        });
     }
 
     /**
@@ -163,7 +166,14 @@ export class InstanceFactory{
      */
     public static inject(targetClassName:any,propName:string,injectName:string){
         if(this.injectMap.has(targetClassName)){
-            this.injectMap.get(targetClassName).push({propName:propName,injectName:injectName});
+            let arr = this.injectMap.get(targetClassName);
+            //不重复注入，如果属性已注入，则修改注入名，否则增加到数组
+            let r = arr.find(item=>item['propName'] === propName);
+            if(r){
+                r['injectName'] = injectName;
+            }else{
+                arr.push({propName:propName,injectName:injectName});
+            }
         }else{
             this.injectMap.set(targetClassName,[{propName:propName,injectName:injectName}]);
         }
@@ -181,6 +191,12 @@ export class InstanceFactory{
             return null;
         }
         if(ins.singleton&&ins.instance){
+            if(this.injectMap.has(ins.class.name)){
+                //重新注入
+                this.injectMap.get(ins.class.name).forEach((item)=>{
+                    ins.instance[item['propName']] = this.getInstance(item['injectName']);
+                });
+            }
             return ins.instance;
         }else{
             let mdl = ins.class;
@@ -196,6 +212,15 @@ export class InstanceFactory{
             }
             return instance;
         }
+    }
+
+    /**
+     * 获取实例配置对象
+     * @param instanceName  实例名
+     * @returns             实例配置对象
+     */
+    public static getInstanceCfg(instanceName:string):IInstance{
+        return this.factory.get(instanceName);
     }
 
     /**
@@ -288,7 +313,7 @@ export class InstanceFactory{
                         if(reg.test(dirent.name)){
                             await import(App.path.resolve(dirPath , dirent.name));
                         }
-                    }            
+                    }
                 }
             }
         }
@@ -301,32 +326,4 @@ export class InstanceFactory{
     public static getFactory():Map<string,IInstance>{
         return this.factory;
     }
-
-
-    /**
-     * 更新与clazz相关的注入
-     * @param clazz     实例类
-     * @since 0.4.4
-     */
-    public static updInject(clazz:any){
-        //更改的instance name
-        let insName = clazz.prototype.__instanceName;
-        if(!insName){
-            return;
-        }
-        let arr:object[] = this.injectMap.get(insName);
-        if(!arr || arr.length === 0){
-            return;
-        }
-        
-        for(let cn of arr){
-            let c = this.getInstance(cn['insName']);
-            let ins = this.getInstance(insName);
-            if(c){
-                c[cn['propName']] = ins;
-            }
-        }
-    }
 }
-
-// export {InstanceFactory,IInstance,IInstanceCfg,IInstanceProperty};

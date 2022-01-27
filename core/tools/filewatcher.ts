@@ -27,14 +27,14 @@ export class FileWatcher {
     /**
      * 监听目录map，键为路径，值为类型，类型包括static(静态)和dynamic(动态)
      */
-    static directoryMap:Map<string,EWatcherType> = new Map();
+    private static directoryMap:Map<string,EWatcherType> = new Map();
 
     /**
      * 添加监听目录
      * @param path      目录路径
      * @param type      类型
      */
-    static addDir(path:string,type:EWatcherType){
+    public static addDir(path:string,type:EWatcherType){
         //不重复监听
         if(this.directoryMap.has(path)){
             return;
@@ -55,7 +55,7 @@ export class FileWatcher {
      * 删除监听目录
      * @param path      目录路径
      */
-    static removeDir(path:string){
+    public static removeDir(path:string){
         this.directoryMap.delete(path);
         App.fs.unwatchFile(path);
     }
@@ -69,32 +69,22 @@ export class FileWatcher {
         if(!WebConfig.useServerCache){
             return;
         }
-        //支持recursive
-        if(process.platform === 'darwin' || process.platform === 'win32'){
-            App.fs.watch(path,{recursive:true},async (eventType,fileName)=>{
-                //文件不存在或监听类型为rename，则返回
-                if(!fileName || eventType === 'rename'){
-                    return;
-                }
-                await this.handleStaticRes(App.path.resolve(path ,fileName));
-            });    
-        }else{
-            App.fs.watch(path,async (eventType,fileName)=>{
-                //文件不存在或监听类型为rename，则返回
-                if(!fileName || eventType === 'rename'){
-                    return;
-                }
-                await this.handleStaticRes(App.path.resolve(path ,fileName));
-            });
-
-            const dir = App.fs.readdirSync(path,{withFileTypes:true});
-            for (let dirent of dir) {
-                if(!dirent.isDirectory()){
-                    continue;
-                }
-                //处理子目录
-                this.addDir(App.path.resolve(path,dirent.name),EWatcherType.STATIC);
+        //有的系统不支持递归，统一不用递归方式
+        App.fs.watch(path,async (eventType,fileName)=>{
+            //文件不存在或监听类型为rename，则返回
+            if(!fileName || eventType === 'rename'){
+                return;
             }
+            await this.handleStaticRes(App.path.resolve(path ,fileName));
+        });
+
+        //处理子目录
+        const dir = App.fs.readdirSync(path,{withFileTypes:true});
+        for (let dirent of dir) {
+            if(!dirent.isDirectory()){
+                continue;
+            }
+            this.addDir(App.path.resolve(path,dirent.name),EWatcherType.STATIC);
         }
     }
 
@@ -115,28 +105,7 @@ export class FileWatcher {
             if(!App.fs.existsSync(path1)){
                 return;
             }
-            let r = require(path1);
-            let cls;
-            //不同生成方法，r对象不同
-            //非class，需要取出class
-            if(!r.prototype){
-                let props = Object.getOwnPropertyNames(r);
-                for(let p of props){
-                    //类
-                    if(typeof r[p] === 'function' && r[p].prototype){
-                        cls = r[p];
-                        break;
-                    }
-                }
-            }else{
-                cls = r;
-            }
-            if(cls){
-                //更新该类注入
-                setImmediate(()=>{
-                    InstanceFactory.updInject(cls);
-                });
-            }
+            await import(path1);
         });
     }
 

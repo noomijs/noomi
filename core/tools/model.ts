@@ -2,12 +2,6 @@ import { Validator } from "./validator";
 import { NoomiModelTip } from "../locales/noomimodeltip";
 import { App } from './application';
 import { Util } from "./util";
-/**
- * 模型接口(模型驱动)
- */
-interface IModel{
-    __props:Map<string,IModelCfg>;
-}
 
 /**
  * 模型配置接口
@@ -29,30 +23,59 @@ interface IModelCfg{
  */
 class BaseModel{
     /**
-     * 实际使用props
+     * 校验器map
+     * key:propName,value:校验器数组
      */
-    private __props:Map<string,IModelCfg>;
+    private static __validatorMap:Map<string,any> = new Map();
+
+    /**
+     * 数据类型map
+     * key:propName,value:数据类型
+     */
+    private static __typeMap:Map<string,string> = new Map();
     
     /**
-     * 转换和验证，返回数据类型或验证不正确的属性消息集合
-     * @param notTransform  是否不进行数据格式转换，默认false
+     * 空校验数组
      */
-    public __handle(notTransform?:boolean):object{
+    private __nullCheckArr:string[];
+
+    /**
+     * 构造器
+     * @param nullArr   对应路由方法的空校验字段map
+     */
+    constructor(nullArr?:string[]){
+        this.__nullCheckArr = nullArr;
+    }
+
+    /**
+     * 转换和校验，返回数据类型或校验不正确的属性消息集合
+     */
+    public __handle():object{
         let errObj = {};
-        if(!this.__props){
-            return null;
-        }
-        for(let o of this.__props){
-            let prop = o[0];
-            let po:IModelCfg = o[1];
-            if(!notTransform && !this.__transform(prop)){ //数据格式转换
-                errObj[prop] =  NoomiModelTip[App.language][po.type];
-            }else{ //校验
-                let r = this.__validate(prop);
-                if(r!==null){
-                    errObj[prop] = r;
+        //空校验
+        let r;
+        if(this.__nullCheckArr){
+            for(let p of this.__nullCheckArr){
+                r = Validator.validate('nullable',this[p],null);
+                if(!r){
+                    errObj[p] = Util.compileString(NoomiModelTip[App.language]['nullable'],[]);
                 }
-            } 
+            }
+        }
+        for(let p of Object.keys(this)){
+            //空校验异常或__开头的属性不处理
+            if(errObj[p] || p.startsWith('__')){
+                continue;
+            }
+            //类型转换
+            if(!this.__transform(p)){
+                errObj[p] =  NoomiModelTip[App.language][this.constructor['__typeMap'].get(p)];
+            }else{
+                let r = this.__validate(p);
+                if(r !== null){
+                    errObj[p] = r;
+                }
+            }
         }
         return Object.getOwnPropertyNames(errObj).length === 0?null:errObj;
     }
@@ -61,30 +84,23 @@ class BaseModel{
      * @param name  属性名
      * @returns     null或字符串(表示验证异常)
      */
-    private __validate(name:string){
-        if(!this.__props){
-            return null;
-        }
-        let cfg:IModelCfg = this.__props.get(name);
-        if(!cfg || !cfg.validators){
+    public __validate(name:string){
+        const validators = this.constructor['__validatorMap'].get(name);
+        if(!validators){
             return null;
         }
         let value = this[name];
-        //值为空且有nullable
-        if((value ===undefined || value === null) && !cfg.validators['nullable']){
-            return null;
-        }
-        for(let vn of Object.getOwnPropertyNames(cfg.validators)){
+        for(let vn of Object.keys(validators)){
             if(Validator.hasValidator(vn)){
-                let r = Validator.validate(vn,value,cfg.validators[vn]);
+                let r = Validator.validate(vn,value,validators[vn]);
                 if(!r){
-                    return Util.compileString(NoomiModelTip[App.language][vn],cfg.validators[vn]);
+                    return Util.compileString(NoomiModelTip[App.language][vn],validators[vn]);
                 }
             }else if(this[vn] && typeof this[vn] === 'function'){ //模型自定义校验器
-                let r = this[vn](value,cfg.validators[vn]);
+                let r = this[vn](value,validators[vn]);
                 if(r !== null){
                     return r;
-                } 
+                }
             }
         }
         return null;
@@ -96,19 +112,14 @@ class BaseModel{
      * @returns     true 转换成功 false转换失败
      */
     private __transform(name:string):boolean{
-        if(!this.__props){
+        const type = this.constructor['__typeMap'].get(name);
+        if(!type){
             return true;
         }
-        let cfg:IModelCfg = this.__props.get(name);
-        
         let v = this[name];
-        //不存在类型，也不存在值，则不处理
-        if(!cfg || !cfg.type || v === undefined || v === null){
-            return true;
-        }
         const tp = typeof v;
         //非字符串，需要去掉两端空格
-        if(cfg.type !== 'string' && tp === 'string'){
+        if(type !== 'string' && tp === 'string'){
             v = v.trim();
             //非字符串，且为''，则删除
             if(v === ''){
@@ -119,7 +130,7 @@ class BaseModel{
         
         //类型不为string则不转换
         if(tp === 'string'){
-            switch(cfg.type){
+            switch(type){
                 case 'int':         //整数
                     if(/(^0$)|(^[1-9]\d*$)/.test(v)){
                         v = parseInt(v);
@@ -175,17 +186,9 @@ class BaseModel{
      * @param name          属性名
      * @param validators    验证器
      */
-    public __setValidator(name:string,validators:object){
-        this.__initPropMap();
-        let cfg:IModelCfg = this.__props.get(name);
-        if(!cfg){
-            cfg = {
-                type:'string',
-                validators:validators
-            }
-            this.__props.set(name,cfg);
-        }else{
-            cfg.validators = validators;
+    public static __setValidator(name:string,validators:object){
+        if(!this.__validatorMap.has(name)){
+            this.__validatorMap.set(name,validators);
         }
     }
 
@@ -195,52 +198,11 @@ class BaseModel{
      * @param name      属性名
      * @param type      属性类型
      */
-    public __setType(name:string,type:string){
-        this.__initPropMap();
-        let cfg:IModelCfg = this.__props.get(name);
-        if(!cfg){
-            cfg = {
-                type:type,
-                validators:null
-            }
-            this.__props.set(name,cfg);
-        }else{
-            cfg.type=type;
-        }
-    }
-
-    /**
-     * 给属性增加指定校验器
-     * @param name              属性名
-     * @param validatorName     校验器名
-     * @param params            校验参数
-     */
-    public __addValidator(name:string,validatorName:string,params?:[]){
-        this.__initPropMap();
-        let cfg:IModelCfg = this.__props.get(name);
-        if(!cfg){
-            cfg = {
-                type:'string',
-                validators:{}
-            }
-            this.__props.set(name,cfg);
-        }else if(!cfg.validators){
-            cfg.validators = {};
-        }
-        //增加校验器
-        cfg.validators[validatorName] = params || [];
-    }
-
-    /**
-     * 初始化prop map
-     */
-    private __initPropMap(){
-        if(!this.__props){
-            this.__props = new Map();
-        }else if(Object.getOwnPropertyNames(this.__props).length === 0){
-            this.__props = Util.clone(this.__props);
+    public static __setType(name:string,type:string){
+        if(!this.__typeMap.has(name)){
+            this.__typeMap.set(name,type);
         }
     }
 }
 
-export{IModel,BaseModel}
+export{BaseModel}

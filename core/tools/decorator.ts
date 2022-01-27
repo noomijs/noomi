@@ -71,6 +71,7 @@ function Router(cfg?:any){
                 } 
             }
             cfg.className = target.name;
+            cfg.clazz = target;
             RouteFactory.registRoute(cfg);
         }
         //未添加到实例工程，则进行添加
@@ -83,6 +84,7 @@ function Router(cfg?:any){
         }else{
             RouteFactory.handleInstanceRoute(target.name,target.name);
         }
+        
     }
 }
 
@@ -310,7 +312,7 @@ function Transaction(){
  */ 
 function DataModel(clazz:object){
     return (target)=>{
-        target.prototype.__modelClass = clazz;
+        target.__modelClass = clazz;
     }
 }
 
@@ -322,7 +324,7 @@ function DataModel(clazz:object){
  */ 
 function DataType(type:string){
     return (target:any,name:string)=>{
-        target.__setType(name,type);
+        target.constructor.__setType(name,type);
     }
 }
 
@@ -334,7 +336,7 @@ function DataType(type:string){
  */ 
 function DataValidator(types:object){
     return (target:any,name:string)=>{
-        target.__setValidator(name,types);
+        target.constructor.__setValidator(name,types);
     }
 }
 
@@ -346,7 +348,7 @@ function DataValidator(types:object){
  */ 
 function NullCheck(props:Array<string>){
     return (target:any,name:string)=>{
-        target.__addNullCheck(name,props);
+        target.constructor.__setNullCheck(name,props);
     }
 }
 export {Instance,Router,Route,WebFilter,WebHandler,Inject,Aspect,Pointcut,Before,After,Around,AfterReturn,AfterThrow,Transactioner,Transaction,DataModel,DataType,DataValidator,NullCheck}

@@ -3,7 +3,6 @@ import { HttpCookie } from "./httpcookie";
 import { WebConfig } from "./webconfig";
 import { App } from "../tools/application";
 import { Stats } from "fs";
-import { ERouteResultType } from "../main/route/routefactory";
 
 /**
  * response回写配置项
@@ -180,8 +179,8 @@ export class HttpResponse extends ServerResponse{
      * @param key       键
      * @param value     值
      */
-    setHeader(key:string,value:number|string|string[]){
-        this.srcRes.setHeader(key,value);
+    setHeader(name: string, value: any):any{
+        return this.srcRes.setHeader(name,value);
     }
     
     /**

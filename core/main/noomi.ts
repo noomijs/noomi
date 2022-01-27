@@ -116,7 +116,9 @@ class NoomiMain{
         //实例初始化
         if(iniJson.hasOwnProperty('instance')){
             console.log(msgTip["0105"]);
-            await InstanceFactory.init(iniJson['instance']);
+            await InstanceFactory.init(iniJson['instance']).catch(r=>{
+                console.error(r);
+            })
             console.log(msgTip["0106"]);
         }
         
@@ -125,9 +127,13 @@ class NoomiMain{
             console.log(msgTip["0115"]);
             let cfg = iniJson['security'];
             if(typeof cfg === 'object'){  //配置为对象
-                await SecurityFactory.init(cfg);    
+                await SecurityFactory.init(cfg).catch(r=>{
+                    console.error(r);
+                });;    
             }else{          //配置为路径
-                await SecurityFactory.parseFile(Util.getAbsPath([basePath,cfg]));
+                await SecurityFactory.parseFile(Util.getAbsPath([basePath,cfg])).catch(r=>{
+                    console.error(r);
+                });;
             }
             console.log(msgTip["0116"]);
         }
@@ -141,7 +147,9 @@ class NoomiMain{
             }else{          //配置为路径
                 LaunchHookManager.parseFile(Util.getAbsPath([basePath,cfg]));
             }
-            await LaunchHookManager.run();
+            await LaunchHookManager.run().catch(r=>{
+                console.error(r);
+            });;
             console.log(msgTip["0120"]);
         }        
 
@@ -149,7 +157,8 @@ class NoomiMain{
         if(!WebConfig.httpsCfg || !WebConfig.httpsCfg['only_https']){
             // http 服务器
             this.server = App.http.createServer((req:IncomingMessage,res:ServerResponse)=>{
-                RequestQueue.add(new HttpRequest(req,res));
+                // RequestQueue.add(new HttpRequest(req,res));
+                RequestQueue.handleOne(new HttpRequest(req,res));
             }).listen(this.port,(e)=>{
                 console.log(msgTip["0117"]);
                 console.log(Util.compileString(msgTip["0121"],[this.port]));

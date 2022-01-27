@@ -14,11 +14,6 @@ interface IAopAdvice{
     pointcutId?:string;
 
     /**
-     * 实例名或实例对象
-     */
-    instance?:any;
-
-    /**
      * 类名
      */
     className?:string;
@@ -89,6 +84,11 @@ class AopPointcut{
     id:string;
 
     /**
+     * 实例名
+     */
+    instanceName:string;
+
+    /**
      * 表达式数组（正则表达式）
      */
     expressions:Array<RegExp> = [];
@@ -100,11 +100,13 @@ class AopPointcut{
 
     /**
      * 构造器
-     * @param id            切点id(唯一) 
+     * @param id            切点id(实例内唯一) 
+     * @param instanceName  实例名
      * @param expressions   该切点对应的表达式数组，表达式为正则表达式串
      */
-    constructor(id:string,expressions:Array<string>){
+    constructor(id:string,instanceName:string,expressions:Array<string>){
         this.id = id;
+        this.instanceName = instanceName;
         if(expressions){
             this.addExpression(expressions);    
         }
@@ -116,20 +118,20 @@ class AopPointcut{
      * @param methodName    待检测方法 
      * @returns             匹配返回true，否则返回false
      */
-    match(instanceName:string,methodName:string):boolean{
-        for(let exp of this.expressions){
-            if(exp.test(instanceName + '.' + methodName)){
-                return true;
-            }
-        }
-        return false;
-    }
+    // public match(instanceName:string,methodName:string):boolean{
+    //     for(let exp of this.expressions){
+    //         if(exp.test(instanceName + '.' + methodName)){
+    //             return true;
+    //         }
+    //     }
+    //     return false;
+    // }
 
     /**
      * 给切点添加通知
      * @param advice    通知对象
      */
-    addAdvice(advice:IAopAdvice):void{
+    public addAdvice(advice:IAopAdvice):void{
         this.advices.push(advice);
     }
 
@@ -157,20 +159,16 @@ class AopPointcut{
  */
 class AopFactory{
     /**
-     * 切面map，用于存储所有切面
-     */
-    static aspects:Map<string,IAopAspect> = new Map();
-    /**
      * 切点map，用于存储所有切点
+     * key:切面实例名 + '.' + 切点名
      */
-    static pointcuts:Map<string,AopPointcut> = new Map();
+    private static pointcuts:Map<string,AopPointcut> = new Map();
     
     /**
      * 已代理方法map，键为instanctName.methodName，避免重复代理
      * @since 0.4.4
      */
-    static proxyMethodMap:Map<string,boolean> = new Map();
-
+    static proxyMethodMap:Map<string,AopPointcut[]> = new Map();
     /**
      * 注册切面map，键为className,值为
      *          {
@@ -266,18 +264,15 @@ class AopFactory{
         Object.keys(cfg).forEach(item=>{
             let o = cfg[item];
             //新建pointcut
-            let pc = new AopPointcut(item,o.expressions);
+            let pc = new AopPointcut(item,instanceName,o.expressions);
             //加入切点集
-            this.pointcuts.set(item,pc);
+            this.pointcuts.set(instanceName + '.' + item,pc);
             //为切点添加advice
             o.advices.forEach(item1=>{
-                //设置实例或实例名
-                item1.instance = instanceName;
                 //添加advice
                 pc.addAdvice(item1);
             });
         });
-        this.aspects.set(instanceName,cfg);
         //删除已处理的class
         this.registAspectMap.delete(className);
     }
@@ -289,7 +284,6 @@ class AopFactory{
      * @param expression    表达式或数组
      */
     public static addExpression(className:string,pointcutId:string,expression:string|Array<string>){
-        // let pc = this.getRegistPointcut(className,pointcutId,true);
         let pc = this.pointcuts.get(pointcutId);
         if(!pc){
             return;
@@ -298,73 +292,60 @@ class AopFactory{
     }
 
     /**
-     * 更新aop匹配的方法代理，为所有aop匹配的方法设置代理
+     * 为所有aop匹配的方法设置代理
      */
-    public static updMethodProxy(){
+    public static proxyAll(){
         if(!this.pointcuts || this.pointcuts.size === 0){
             return;
         }
+        let pcArr = this.pointcuts.values();
         //遍历pointcut
         let pc:AopPointcut;
-
-        for(pc of this.pointcuts.values()){
-            let reg:RegExp;
-            //遍历expression
-            for(reg of pc.expressions){
-                this.addProxyByExpression(reg);
-            }
+        for(let ins of InstanceFactory.getFactory()){
+            this.proxyOne(ins[0]);
         }
     }
 
     /**
-     * 通过正则式给方法加代理
-     * @param expr          表达式正则式
+     * 为某个类设置代理
+     * @param instanceName  实例名
+     * @param clazz         类
      */
-    private static addProxyByExpression(expr:RegExp){
-        //遍历instance factory设置aop代理
-        let insFac = InstanceFactory.getFactory();
-        for(let insName of insFac.keys()){
-            //先检测instanceName
-            let instance = InstanceFactory.getInstance(insName);
-            if(instance){
-                Object.getOwnPropertyNames(instance.__proto__).forEach(key=>{
+    public static proxyOne(instanceName:string){
+        if(!this.pointcuts || this.pointcuts.size === 0){
+            return;
+        }
+        const clazz = InstanceFactory.getInstanceCfg(instanceName).class;
+        //遍历pointcut
+        let pc:AopPointcut;
+        for(pc of this.pointcuts.values()){
+            let reg:RegExp;
+            //遍历expression
+            for(reg of pc.expressions){
+                Object.getOwnPropertyNames(clazz.prototype).forEach(key=>{
                     //给方法设置代理，constructor 不需要代理
-                    if(key === 'constructor' || typeof(instance[key]) !== 'function'){
+                    if(key === 'constructor' || typeof clazz.prototype[key] !== 'function'){
                         return;
                     }
-                    let method:string = insName + '.' + key;
-                    //已代理过，不再代理
-                    if(this.proxyMethodMap.has(method)){
-                        return;
-                    }
-                    
-                    //实例名+方法符合aop正则表达式
-                    if(expr.test(method)){
-                        instance[key] = AopProxy.invoke(insName,key,instance[key],instance);
-                        this.proxyMethodMap.set(method,true);
+                    let method:string = clazz.name + '.' + key;
+                    if(reg.test(method)){
+                        if(this.proxyMethodMap.has(method)){
+                            let arr = this.proxyMethodMap.get(method);
+                            //不重复代理
+                            if(!arr.includes(pc)){
+                                arr.push(pc);
+                            }
+                        }else{
+                            //首次需要代理方法
+                            clazz.prototype[key] = AopProxy.invoke(instanceName,key);
+                            //设置方法对应pointcut数组
+                            this.proxyMethodMap.set(method,[pc]);
+                        }
                     }
                 });
             }
         }
     }
-    /**
-     * 获取切点
-     * @param instanceName  实例名 
-     * @param methodName    方法名
-     * @returns             切点数组
-     */
-    public static getPointcut(instanceName:string,methodName:string):Array<AopPointcut>{
-        // 遍历iterator
-        let a:Array<AopPointcut> = [];
-    
-        for(let p of this.pointcuts.values()){
-            if(p.match(instanceName,methodName)){
-                a.push(p); 
-            }
-        }
-        return a;
-    }
-    
 
     /**
      * 根据id获取切点
@@ -373,6 +354,18 @@ class AopFactory{
      */
     public static getPointcutById(pointcutId:string):AopPointcut{
         return this.pointcuts.get(pointcutId);
+    }
+
+    /**
+     * 清理实例aop代理
+     * @param instanceName  实例名
+     */
+    public static clearProxy(instanceName:string){
+        for(let k of this.proxyMethodMap.keys()){
+            if(k.startsWith(instanceName + '.')){
+                this.proxyMethodMap.delete(k);
+            }
+        }
     }
 
     /**
@@ -386,13 +379,15 @@ class AopFactory{
      *                          throw:[{instance:切面实例,method:切面方法},...]
      *                      }
      */
-    public static getAdvices(instanceName:string,methodName:string):object{
-        let pointcuts:Array<AopPointcut> = this.getPointcut(instanceName,methodName);
+    public static getAdvices(className:string,methodName:string):object{
+        const pointcuts:AopPointcut[] = this.proxyMethodMap.get(className + '.' + methodName);
         if(pointcuts.length === 0){
             return null;
         }
-        
+
         let beforeArr:Array<object> = [];
+        let aroundArr1:Array<object> = [];  //前置around
+        let aroundArr2:Array<object> = [];  //后置around
         let afterArr:Array<object> = [];
         let throwArr:Array<object> = [];
         let returnArr:Array<object> = [];
@@ -404,48 +399,49 @@ class AopFactory{
                 hasTransaction = true;
                 continue;
             }
-            pointcut.advices.forEach(aop=>{
-                let ins:any = typeof aop.instance === 'string'?
-                    InstanceFactory.getInstance(aop.instance):aop.instance;
+            pointcut.advices.forEach(item=>{
+                let ins:any = InstanceFactory.getInstance(pointcut.instanceName);
                 
-                switch(aop.type){
+                switch(item.type){
                     case 'before':
                         beforeArr.push({
                             instance:ins,
-                            method:aop.method
+                            method:item.method
                         });
                         return;
                     case 'after':
                         afterArr.push({
                             instance:ins,
-                            method:aop.method
+                            method:item.method
                         });
                         return;
                     case 'around':
-                        beforeArr.push({
+                        aroundArr1.push({
                             instance:ins,
-                            method:aop.method
+                            method:item.method
                         });
-                        afterArr.push({
+                        aroundArr2.push({
                             instance:ins,
-                            method:aop.method
+                            method:item.method
                         });
                         return;
                     case 'after-return':
                         returnArr.push({
                             instance:ins,
-                            method:aop.method
+                            method:item.method
                         });
                         return;
                     case 'after-throw':
                         throwArr.push({
                             instance:ins,
-                            method:aop.method
+                            method:item.method
                         });
                 }
             });
         }
         
+        beforeArr = aroundArr1.concat(beforeArr);
+        afterArr = afterArr.concat(aroundArr2);
         return {
             hasTransaction:hasTransaction,
             before:beforeArr,
@@ -454,7 +450,6 @@ class AopFactory{
             return:returnArr
         }
     }
-
 }
 
 export{AopFactory,IAopAdvice,IAopAspect,AopPointcut,IAopCfg,IPointcut};

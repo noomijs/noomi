@@ -199,10 +199,10 @@ var RouteFactory = /** @class */ (function () {
                         //设置model
                         if (typeof route.instance.setModel === 'function') {
                             nullArr = void 0;
-                            if (route.instance.__getNullCheck) { //空属性
-                                nullArr = route.instance.__getNullCheck(route.method);
-                            }
-                            r = route.instance.setModel(params, nullArr);
+                            // if (route.instance.__getNullCheck) { //空属性
+                            //     nullArr = route.instance.__getNullCheck(route.method);
+                            // }
+                            r = route.instance.setModel(params);
                             if (r !== null) { //setmodel异常
                                 throw r;
                             }

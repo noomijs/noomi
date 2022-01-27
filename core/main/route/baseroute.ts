@@ -1,7 +1,10 @@
 import { HttpRequest} from "../../web/httprequest";
 import { HttpResponse } from "../../web/httpresponse";
 import { BaseModel } from "../../tools/model";
-import { NoomiError } from "../../tools/errorfactory";
+import { Validator } from "../../tools/validator";
+import { Util } from "../../tools/util";
+import { NoomiModelTip } from "../../locales/noomimodeltip";
+import { App } from "../../tools/application";
 /**
  * 路由基类
  * 可自动为路由类生成model(传入参数对象)，自带request和response对象
@@ -14,9 +17,9 @@ class BaseRoute{
     public __modelClass:any;
 
     /**
-     * null属性检查{方法名:待检查属性数组}
+     * null属性检查{方法名:待检查属性map}
      */
-    private __nullCheckMap:Map<string,Array<string>>;
+    private static __nullCheckMap:Map<string,string[]> = new Map();
 
     /**
      * 数据对象
@@ -35,31 +38,49 @@ class BaseRoute{
 
 
     /**
+     * 空校验
+     * @oaram model         模型数据
+     * @param methodName    方法名
+     * @returns             校验异常信息
+     */
+    public doNullCheck(model:any,methodName:string){
+        let fields = this.constructor['__nullCheckMap'].get(methodName);
+        if(!fields){
+            return null;
+        }
+        for(let f of fields){
+            if(!Validator.validate("nullable",model[f],null)){
+                return Util.compileString(NoomiModelTip[App.language]['nullable'],f);    
+            }
+        }
+    }
+    /**
      * 为model设置值
      * @param data  数据对象(由浏览器/客户端传入的数据参数)
      * @returns     无异常null，否则返回异常字段集
      */
-    public setModel(data:any,nullArr?:Array<string>){
-        if(this.__modelClass){
-            let m:BaseModel = new this.__modelClass();
-            if(nullArr){
-                for(let p of nullArr){
-                    m.__addValidator(p,'nullable');
-                }
+    public setModel(data:any,methodName?:string){
+        const mCls = this.constructor['__modelClass'];
+        if(mCls){
+            let m:BaseModel;
+            if(methodName){
+                //设置null check字段
+                let nullArr = this.constructor['__nullCheckMap'].get(methodName);
+                m = Reflect.construct(mCls,[nullArr]);
+            }else{
+                m = Reflect.construct(mCls,[]);
             }
+            
             Object.getOwnPropertyNames(data).forEach((item)=>{
                 m[item] = data[item];
             });
-            let isJsonReq:boolean = false;
             let ctType:string = <string>this.request.getHeader('content-type');
-            if(ctType){
-                isJsonReq = ctType.startsWith('application/json');
-            }
-            
             //数据转换和校验，如果request content-type为application/json，则不进行转换
-            let r = m.__handle(isJsonReq);
-            if(r){
-                throw new Error(JSON.stringify(r));
+            if(!ctType || !ctType.startsWith('application/json')){
+                let r = m.__handle();
+                if(r){
+                    throw new Error(JSON.stringify(r));
+                }
             }
             this.model = m;
         }else{
@@ -89,22 +110,13 @@ class BaseRoute{
      * @param methodName    方法名
      * @param props         检测数组
      */
-    public __addNullCheck(methodName:string,props:Array<string>){
+    public static __setNullCheck(methodName:string,props:Array<string>){
         if(!this.__nullCheckMap){
             this.__nullCheckMap = new Map();
+        }else if(this.__nullCheckMap.has(methodName)){ //已经存在
+            return;
         }
         this.__nullCheckMap.set(methodName,props);
-    }
-
-    /**
-     * 获取null check 数组
-     * @param methodName 方法名
-     */
-    public __getNullCheck(methodName:string):Array<string>{
-        if(this.__nullCheckMap){
-            return this.__nullCheckMap.get(methodName);
-        }
-        return null;
     }
 }
 

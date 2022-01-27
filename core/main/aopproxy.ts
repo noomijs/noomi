@@ -16,8 +16,12 @@ class AopProxy{
      * @param func          执行函数  
      * @param instance      实例
      */
-    static invoke(instanceName:string,methodName:string,func:Function,instance:any):any{
+    static invoke(instanceName:string,methodName:string):any{
         const util = App.util;
+
+        const instance = InstanceFactory.getInstance(instanceName);
+        const func = instance[methodName];
+        const clazz = InstanceFactory.getInstanceCfg(instanceName).class;
         /**
          * 异步方法
          */
@@ -26,7 +30,7 @@ class AopProxy{
                 //advices获取
                 let advices:any;
                 if(AopFactory){
-                    advices = AopFactory.getAdvices(instanceName,methodName);
+                    advices = AopFactory.getAdvices(clazz.name,methodName);
                 }
                 let params:Array<any> = [];
                 for(let p of arguments){
@@ -98,7 +102,7 @@ class AopProxy{
             //advices获取
             let advices:any;
             if(AopFactory){
-                advices = AopFactory.getAdvices(instanceName,methodName);
+                advices = AopFactory.getAdvices(clazz.name,methodName);
             }
             let params:Array<any> = [];
             for(let p of arguments){

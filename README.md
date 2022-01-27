@@ -6,7 +6,7 @@ Noomi全面支持typescript，提供快捷简单的注解编写方式和丰富�
 支持[noomi-cli](https://www.npmjs.com/package/noomi-cli)一键安装，完成noomi及其依赖包的安装，同时建立项目框架。
 
 ## 源码迁移
-源码迁移到gitee(git@gitee.com:weblabsw/noomijs)，原github继续有效
+源码迁移到gitee(git@gitee.com:weblabsw/noomijs)，原github继续有效。
 ## 升级
 ### 1.0.0
 针对noomi的实际使用情况，noomi从0.x版本升级到1.x版本，主要做了以下修改：
@@ -17,7 +17,8 @@ Noomi全面支持typescript，提供快捷简单的注解编写方式和丰富�
 5. 过滤器和后置处理，不再支持字符串，支持完整正则表达式；
 6. 如果未设置实例名（@Instance），实例名默认为类名，不再是首字母小写的驼峰命名方式；
 7. 不再支持 实例、切面、路由、过滤器配置文件方式，统一采用注解（装饰器）方式；
-8. 切点(pointcut)不再装饰方法，采用装饰属性，advice中直接使用装饰的属性名作为pointcutId。
+8. 切点(pointcut)不再装饰方法，采用装饰属性，advice中直接使用装饰的属性名作为pointcutId；
+9. 修复非单例类的注入aop问题。
 ## 核心模块
 主要包括以下部分：
 ### 路由

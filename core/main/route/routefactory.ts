@@ -46,6 +46,11 @@ interface IRouteCfg{
     namespace?:string;
 
     /**
+     * 路由类
+     */
+    clazz?:any;
+    
+    /**
      * 路由正则表达式
      */
     reg?:RegExp;
@@ -138,8 +143,6 @@ interface IRoute{
      * @since 0.4.7
      */
     params?:object;
-
-
 }
 
 /**
@@ -148,13 +151,9 @@ interface IRoute{
  */
 class RouteFactory{
     /**
-     * 动态路由(带通配符)路由集合
-     */
-    static dynaRouteArr:IRouteCfg[] = new Array();
-    /**
      * 静态路由(不带通配符)路由集合
      */
-    static staticRouteMap:Map<string,IRouteCfg> = new Map();
+    static routeMap:Map<string,IRouteCfg> = new Map();
     
     /**
      * 注册路由map，添加到实例工厂时统一处理
@@ -177,7 +176,23 @@ class RouteFactory{
         if(cfg.namespace){
             obj.namespace = cfg.namespace;
         }
-        if(cfg.path){
+        if(!cfg.path){
+            return;
+        }
+
+        if(cfg.clazz){  //router且存在通配符
+            if(cfg.path.indexOf('*') !== -1){
+                let reg = Util.toReg(cfg.path,3);
+                for(let o of Object.getOwnPropertyNames(cfg.clazz.prototype)){
+                    if(o === 'constructor' || typeof  cfg.clazz.prototype[o] !== 'function'){
+                        continue;
+                    }
+                    if(reg.test(o)){
+                        obj.paths.push({path:o,method:o});
+                    }
+                }
+            }
+        }else{
             obj.paths.push({path:cfg.path,method:cfg.method,results:cfg.results});
         }
     }
@@ -208,6 +223,10 @@ class RouteFactory{
      * @param results       路由处理结果集
      */
     private static addRoute(path:string,className:string,method?:string,results?:Array<IRouteResult>){
+        //已存在则不再添加（因为通配符在非通配符后面）
+        if(this.routeMap.has(path)){
+            return;
+        }
         if(results && results.length>0){
             for(let r of results){
                 if((r.type === ERouteResultType.CHAIN || r.type === ERouteResultType.REDIRECT) 
@@ -219,25 +238,11 @@ class RouteFactory{
         if(method){
             method = method.trim();
         }
-        
-        //没有通配符
-        if(path.indexOf('*') === -1){
-            this.staticRouteMap.set(path,{
-                instanceName:className,
-                method:method,
-                results:results
-            });
-        }else{ //有通配符
-            if(!this.dynaRouteArr.find(item=>item.path === path)){
-                this.dynaRouteArr.push({
-                    path:path,
-                    reg:Util.toReg(path,3),
-                    instanceName:className,
-                    method:method,
-                    results:results
-                });
-            }
-        }
+        this.routeMap.set(path,{
+            instanceName:className,
+            method:method,
+            results:results
+        });
     }
 
     /**
@@ -249,26 +254,9 @@ class RouteFactory{
         let item:IRouteCfg;
         let method:string; //方法名
         //下查找非通配符map
-        if(this.staticRouteMap.has(path)){
-            item = this.staticRouteMap.get(path);
+        if(this.routeMap.has(path)){
+            item = this.routeMap.get(path);
             method = item.method;
-        }else{
-            for(let i=0;i<this.dynaRouteArr.length;i++){
-                item = this.dynaRouteArr[i];
-                //路径测试通过
-                if(item.reg.test(path)){
-                    method = item.method;
-                    if(!method){
-                        let index = path.lastIndexOf("/");
-                        //通配符处理
-                        if(index !== -1){
-                            //通配符方法
-                            method = path.substr(index+1);
-                        }
-                    }
-                    break;
-                }
-            }
         }
         //找到匹配的则返回
         if(item && method){
@@ -308,14 +296,10 @@ class RouteFactory{
         if(!params){
             params = await req.init();
         }
-
+        
         //设置model
         if(typeof route.instance.setModel === 'function'){
-            let nullArr;
-            if(route.instance.__getNullCheck){ //空属性
-                nullArr = route.instance.__getNullCheck(route.method);    
-            }
-            route.instance.setModel(params,nullArr);
+            route.instance.setModel(params||{},route.method);
         }
         
         //实际调用方法

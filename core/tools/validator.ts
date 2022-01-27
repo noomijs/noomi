@@ -11,7 +11,7 @@ class Validator{
      * 是否拥有该名字的验证器
      * @param validatorName 
      */
-    static hasValidator(validatorName:string){
+    public static hasValidator(validatorName:string){
         return this.valiators.has(validatorName);
     }
 
@@ -20,7 +20,7 @@ class Validator{
      * @param name  验证器名 
      * @param foo   验证器方法
      */
-    static addValidator(name:string,foo:Function){
+    public static addValidator(name:string,foo:Function){
         if(typeof foo !== 'function'){
             return;
         }
@@ -31,7 +31,7 @@ class Validator{
      * 添加验证器集
      * @param config {validatorName:foo,...} 
      */
-    static addValidators(config:object){
+    public static addValidators(config:object){
         Object.getOwnPropertyNames(config).forEach((item)=>{
             if(typeof config[item] !== 'function'){
                 return;
@@ -47,7 +47,7 @@ class Validator{
      * @param paramArr  附加参数，根据调用确定
      * @returns         通过/不通过
      */
-    static validate(name:string,value:any,paramArr:any[]):boolean{
+    public static validate(name:string,value:any,paramArr:any[]):boolean{
         if(!this.valiators.has(name)){
             return true;
         }
@@ -69,7 +69,7 @@ class Validator{
  */
 Validator.addValidators({
     "nullable":function(value){
-        return value!==undefined && value !== null && value !== "";
+        return value !== undefined && value !== null && value !== "";
     },
     "min":function(value,min){
         return value>=min;

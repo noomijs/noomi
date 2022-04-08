@@ -10,7 +10,7 @@ import { DBManager } from "../database/dbmanager";
 import { NoomiTip } from "../locales/noomitip";
 import { Util } from "../tools/util";
 import { App } from "../tools/application";
-import { SecurityFactory } from "../tools/securityfactory";
+// import { SecurityFactory } from "../tools/securityfactory";
 import { LaunchHookManager } from "../tools/launchhookmanager";
 
 /**
@@ -62,7 +62,7 @@ class NoomiMain{
 
         App.appName = iniJson['app_name']||'APP';
         //设置file watcher开关
-        App.openWatcher = iniJson['open_watcher'] || false;
+        // App.openWatcher = iniJson['open_watcher'] || false;
         
         App.language = iniJson['language'] || 'zh';
         
@@ -72,7 +72,7 @@ class NoomiMain{
         console.log(msgTip["0100"]);
         
         //设置是否集群
-        App.isCluster = iniJson['cluster']===true?true:false;
+        App.isCluster = iniJson['cluster']===true;
         if(App.isCluster && iniJson['redis'] === undefined){
             throw new NoomiError("0600");
         }
@@ -123,48 +123,56 @@ class NoomiMain{
         }
         
         //security初始化
-        if(iniJson.hasOwnProperty('security')){
-            console.log(msgTip["0115"]);
-            let cfg = iniJson['security'];
-            if(typeof cfg === 'object'){  //配置为对象
-                await SecurityFactory.init(cfg).catch(r=>{
-                    console.error(r);
-                });;    
-            }else{          //配置为路径
-                await SecurityFactory.parseFile(Util.getAbsPath([basePath,cfg])).catch(r=>{
-                    console.error(r);
-                });;
-            }
-            console.log(msgTip["0116"]);
-        }
+        // if(iniJson.hasOwnProperty('security')){
+        //     console.log(msgTip["0115"]);
+        //     let cfg = iniJson['security'];
+        //     if(typeof cfg === 'object'){  //配置为对象
+        //         await SecurityFactory.init(cfg).catch(r=>{
+        //             console.error(r);
+        //         });;    
+        //     }else{          //配置为路径
+        //         await SecurityFactory.parseFile(Util.getAbsPath([basePath,cfg])).catch(r=>{
+        //             console.error(r);
+        //         });;
+        //     }
+        //     console.log(msgTip["0116"]);
+        // }
 
         //启动钩子执行
-        if(iniJson.hasOwnProperty('launchhook')){
-            console.log(msgTip["0119"]);
-            let cfg = iniJson['launchhook'];
-            if(typeof cfg === 'object'){  //配置为对象
-                LaunchHookManager.init(cfg);    
-            }else{          //配置为路径
-                LaunchHookManager.parseFile(Util.getAbsPath([basePath,cfg]));
-            }
-            await LaunchHookManager.run().catch(r=>{
-                console.error(r);
-            });;
-            console.log(msgTip["0120"]);
-        }        
+        // if(iniJson.hasOwnProperty('launchhook')){
+            // console.log(msgTip["0119"]);
+            // let cfg = iniJson['launchhook'];
+            // if(typeof cfg === 'object'){  //配置为对象
+            //     LaunchHookManager.init(cfg);    
+            // }else{          //配置为路径
+            //     LaunchHookManager.parseFile(Util.getAbsPath([basePath,cfg]));
+            // }
+            // await LaunchHookManager.run().catch(r=>{
+            //     console.error(r);
+            // });;
+            // console.log(msgTip["0120"]);
+        // } 
+        
+        // 启动钩子执行
+        await LaunchHookManager.run().catch(r=>{
+            console.error(r);
+        });
 
         //如果web config 配置为only https，则不创建http server
         if(!WebConfig.httpsCfg || !WebConfig.httpsCfg['only_https']){
             // http 服务器
             this.server = App.http.createServer((req:IncomingMessage,res:ServerResponse)=>{
-                // RequestQueue.add(new HttpRequest(req,res));
-                RequestQueue.handleOne(new HttpRequest(req,res));
+                // RequestQueue.handle(new HttpRequest(req,res));
+                RequestQueue.add(new HttpRequest(req,res));
             }).listen(this.port,(e)=>{
+                // Noomi启动成功！
                 console.log(msgTip["0117"]);
+                // Http服务器正在运行,监听端口 ${0}
                 console.log(Util.compileString(msgTip["0121"],[this.port]));
                 //启动队列执行
             }).on('error',(err)=>{
                 if (err.code === 'EADDRINUSE') {
+                    // 地址正被使用，重试中...
                     console.log(msgTip["0118"]);
                     //1秒后重试
                     setTimeout(() => {

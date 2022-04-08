@@ -79,7 +79,7 @@ class BaseRoute{
             if(!ctType || !ctType.startsWith('application/json')){
                 let r = m.__handle();
                 if(r){
-                    throw new Error(JSON.stringify(r));
+                    throw r;
                 }
             }
             this.model = m;

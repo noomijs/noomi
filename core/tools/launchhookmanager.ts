@@ -1,5 +1,3 @@
-import { App } from "./application";
-import { NoomiError } from "./errorfactory";
 import { InstanceFactory } from "../main/instancefactory";
 
 
@@ -11,7 +9,7 @@ interface IHookObj{
     /**
      * 实例名
      */
-    instance:string;
+    clazz:any;
 
     /**
      * 方法名
@@ -36,10 +34,13 @@ export class LaunchHookManager{
     
     /**
      * 初始化
-     * @param json [{"instance":实例名,"method":方法名,params:参数数组}...]
+     * @param cfg [{"clazz":实例类,"method":方法名,params:参数数组}...]
      */
-    static init(json:Array<IHookObj>){
-        this.hooks = json;
+    static init(cfg:IHookObj){
+        if(!InstanceFactory.hasClass(cfg.clazz)) {
+            InstanceFactory.addInstance(cfg.clazz);
+        }
+        this.hooks.push(cfg);
     }
 
     /**
@@ -48,22 +49,22 @@ export class LaunchHookManager{
     static async run(){
         let h:IHookObj;
         for(h of this.hooks){
-            await InstanceFactory.exec(h.instance,h.method,h.params);
+            await InstanceFactory.exec(h.clazz,h.method,h.params);
         }
     }
     /**
      * 解析配置文件
      * @param path  launch hook配置文件路径
      */
-    static parseFile(path:string){
-        //读取文件
-        let json:any = null;
-        try{
-            let jsonStr:string = App.fs.readFileSync(path,'utf-8');
-            json = App.JSON.parse(jsonStr);
-        }catch(e){
-            throw new NoomiError("2600") + '\n' + e;
-        }
-        this.init(json);
-    }
+    // static parseFile(path:string){
+    //     //读取文件
+    //     let json:any = null;
+    //     try{
+    //         let jsonStr:string = App.fs.readFileSync(path,'utf-8');
+    //         json = App.JSON.parse(jsonStr);
+    //     }catch(e){
+    //         throw new NoomiError("2600") + '\n' + e;
+    //     }
+    //     this.init(json);
+    // }
 }

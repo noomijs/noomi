@@ -8,6 +8,7 @@ import { MssqlConnectionManager } from "./mssqlconnectionmanager";
 import { TypeormConnectionManager } from "./typeormconnectionmanager";
 import { IConnectionManager } from "./connectionmanager";
 import { RelaenConnectionManager } from "./relaenconnectionmanager";
+import { Util } from "../tools/util";
 
 /**
  * 数据库管理器
@@ -18,7 +19,11 @@ class DBManager{
     /**
      * 连接管理器实例名
      */
-    static connectionManagerName:string;
+    // static connectionManagerName:string;
+    /**
+     * 连接管理器类
+     */
+    static connectionManagerClazz: any;
     /**
      * 事务类名
      */
@@ -32,16 +37,17 @@ class DBManager{
      * 初始化
      * @param cfg   配置项,参考数据库配置 
      */
-    static init(cfg:any){
+     static async init(cfg:any){
         //数据库默认mysql
         let product:string = cfg.product||'mysql';
         this.product = product;
         //connection manager配置
         let cm:any;
-        let cmName:string = cfg.connection_manager || 'noomi_connection_manager';
+        // let cmName:string = cfg.connection_manager || 'noomi_connection_manager';
         //先查询是否有自定义的connection manager
         if(cfg.connection_manager){
-            cm = InstanceFactory.getInstance(cmName);
+            this.connectionManagerClazz = Util.getObjFirst(require(App.path.resolve(process.cwd(), cfg.connection_manager)));
+            cm = InstanceFactory.getInstance(this.connectionManagerClazz);
         }
         //新建connection manager
         if(!cm && product){
@@ -52,38 +58,42 @@ class DBManager{
             // connection manager
             let cm:IConnectionManager;
             //connection manager 类
-            let clazz:any;
+            // let clazz:any;
             switch(product){
                 case "mysql":
                     cm = new MysqlConnectionManager(opt);
-                    clazz = MysqlConnectionManager;
+                    this.connectionManagerClazz = MysqlConnectionManager;
                     break;
                 case "mssql":
                     cm = new MssqlConnectionManager(opt);
-                    clazz = MssqlConnectionManager;
+                    this.connectionManagerClazz = MssqlConnectionManager;
                     break;
                 case "oracle":
                     cm = new OracleConnectionManager(opt);
-                    clazz = OracleConnectionManager;
+                    this.connectionManagerClazz = OracleConnectionManager;
                     break;
                 case "relaen":
                     cm = new RelaenConnectionManager(opt);
-                    clazz = RelaenConnectionManager;
+                    this.connectionManagerClazz = RelaenConnectionManager;
                     break;
                 case "typeorm":
                     cm = new TypeormConnectionManager(opt);
-                    clazz = TypeormConnectionManager;
+                    this.connectionManagerClazz = TypeormConnectionManager;
                     break;
                 
             }
             //添加到实例工厂
-            InstanceFactory.addInstance({
-                name:cmName,
+            // InstanceFactory.addInstance({
+            //     name:cmName,
+            //     instance:cm,
+            //     class:clazz
+            // });
+            InstanceFactory.addInstance(this.connectionManagerClazz, {
                 instance:cm,
-                class:clazz
+                singleton:true
             });
         }
-        this.connectionManagerName = cmName;
+        // this.connectionManagerName = cmName;
         //事务配置
         if(cfg.transaction){
             let opt = cfg.transaction;
@@ -97,7 +107,7 @@ class DBManager{
      * @returns    connection manager
      */
     static getConnectionManager():IConnectionManager{
-        return InstanceFactory.getInstance(this.connectionManagerName);
+        return InstanceFactory.getInstance(this.connectionManagerClazz);
     }
 
     /**

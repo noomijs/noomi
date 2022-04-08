@@ -1,5 +1,5 @@
 import { InstanceFactory } from "../main/instancefactory";
-import { IFilter, IFilterCfg } from "../tools/types";
+import { IFilter} from "../tools/types";
 import { HttpRequest } from "./httprequest";
 import { HttpResponse } from "./httpresponse";
 
@@ -14,70 +14,28 @@ class WebAfterHandler{
      private static handlers:Array<IFilter> = [];
 
      /**
-      * 待添加的处理器map，键为类名，值为 {
-                 methodName:方法名,
-                 pattern:正则式或正则式数组,
-                 order:优先级
-             }
-      */
-     private static registHandlerMap:Map<string,IFilterCfg> = new Map();
- 
-     /**
-      * 注册过滤器
-      * 当对应类添加到实例工厂时，进行过滤器添加
-      * @param cfg   {
-      *                  className:类名,
-      *                  methodName:过滤器方法名,
-      *                  pattern:过滤url的正则式或正则式数组,
-      *                  order:优先级
-      *              }
-      * @since 1.0.0
-      */
-     public static registHandler(cfg:IFilterCfg){
-         let name = cfg.className;
-         delete cfg.className;
-         this.registHandlerMap.set(name,cfg);
-     }
- 
-     /**
       * 处理实例过滤器
       * @param instanceName  实例名
       * @param className     类名
       * @since 1.0.0
       */
-     public static handleInstanceHandler(instanceName:string,className:string){
-         if(!this.registHandlerMap.has(className)){
-             return;
-         }
-         const cfg = this.registHandlerMap.get(className);
-         let ptns = [];
-         if(!cfg.pattern){
-             ptns = [/^\/.*/];
-         }else if(!Array.isArray(cfg.pattern)){ //非数组
-             ptns = [cfg.pattern];
-         }
- 
-         //查找重复过滤器类
-         let f:IFilter = this.handlers.find(item=>{
-             return item.instance === instanceName && item.method === cfg.methodName;
-         });
-         
-         //删除之前添加的过滤器
-         if(f){
-             let ind = this.handlers.indexOf(f);
-             this.handlers.splice(ind,1);
-         }
-         //加入过滤器集合
-         this.handlers.push({
-             instance:instanceName,
-             method:cfg.methodName,
-             patterns:ptns,
-             order:cfg.order===undefined?10000:cfg.order
-         });
- 
-         this.handlers.sort((a,b)=>{
-             return a.order - b.order;
-         });
+     public static addHandler(cfg:IFilter){
+         //如果类未添加到实例工厂，则添加
+        if(!InstanceFactory.hasClass(cfg.clazz)){
+            InstanceFactory.addInstance(cfg.clazz,{
+                singleton:true
+            });
+        }
+        cfg.order = cfg.order || 10000;
+        if(!Array.isArray(cfg.patterns)) {
+            cfg.patterns = [cfg.patterns];
+        }
+        //加入过滤器集合
+        this.handlers.push(cfg);
+        //排序
+        this.handlers.sort((a,b)=>{
+            return a.order - b.order;
+        });
      }
 
     /**
@@ -114,7 +72,7 @@ class WebAfterHandler{
             return result;
         }
         for(let item of arr){
-            let ins = InstanceFactory.getInstance(item.instance);
+            let ins = InstanceFactory.getInstance(item.clazz);
             if(!ins){
                 continue;
             }

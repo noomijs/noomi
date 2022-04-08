@@ -12,11 +12,6 @@ import { IWebCacheObj } from "../../web/webcache";
  */
 interface IRouteClassCfg{
     /**
-     * 类名
-     */
-    className?:string;
-
-    /**
      * 命名空间
      */
     namespace?:string;
@@ -36,11 +31,6 @@ interface IRouteCfg{
     path?:string;
 
     /**
-     * 类名
-     */
-    className?:string;
-
-    /**
      * 命名空间
      */
     namespace?:string;
@@ -54,12 +44,9 @@ interface IRouteCfg{
      * 路由正则表达式
      */
     reg?:RegExp;
+    
     /**
-     * 该路由对应的实例名
-     */
-    instanceName?:string;
-    /**
-     * 该路由对应的实例方法
+     * 该路由对应的方法名
      */
     method?:string;
     /**
@@ -151,14 +138,16 @@ interface IRoute{
  */
 class RouteFactory{
     /**
-     * 静态路由(不带通配符)路由集合
+     * 路由集合
+     * key: 路由路径
      */
     static routeMap:Map<string,IRouteCfg> = new Map();
     
     /**
      * 注册路由map，添加到实例工厂时统一处理
+     * key: 类
      */
-    private static registRouteMap:Map<string,IRouteClassCfg> = new Map();
+    private static registRouteMap:Map<any,IRouteClassCfg> = new Map();
 
 
     /**
@@ -166,25 +155,28 @@ class RouteFactory{
      * @param cfg   路由配置 
      */
     public static registRoute(cfg:IRouteCfg){
-        if(!this.registRouteMap.has(cfg.className)){
-            this.registRouteMap.set(cfg.className,{
+        if(!InstanceFactory.hasClass(cfg.clazz)){
+            InstanceFactory.addInstance(cfg.clazz,{
+                singleton:false
+            });
+        }
+        if(!this.registRouteMap.has(cfg.clazz)){
+            this.registRouteMap.set(cfg.clazz,{
                 paths:[]
             })
         }
-        let obj = this.registRouteMap.get(cfg.className);
-        //命名空间，针对Router注解器
-        if(cfg.namespace){
-            obj.namespace = cfg.namespace;
-        }
+        let obj = this.registRouteMap.get(cfg.clazz);
+        
         if(!cfg.path){
             return;
         }
 
-        if(cfg.clazz){  //router且存在通配符
+        if(cfg.namespace){ // router装饰器
+            obj.namespace = cfg.namespace;
             if(cfg.path.indexOf('*') !== -1){
                 let reg = Util.toReg(cfg.path,3);
                 for(let o of Object.getOwnPropertyNames(cfg.clazz.prototype)){
-                    if(o === 'constructor' || typeof  cfg.clazz.prototype[o] !== 'function'){
+                    if(o === 'constructor' || typeof  cfg.clazz.prototype[o] !== 'function' || obj.paths.find(item=>item.method === o)){
                         continue;
                     }
                     if(reg.test(o)){
@@ -198,31 +190,32 @@ class RouteFactory{
     }
 
     /**
-     * 处理实例路由
-     * 把注册路由添加到路由对象中
-     * @param instanceName  实例名
-     * @param className     类名
+     * 添加路由类
+     * @param clazz     类
+     * @param params    路由参数
      */
-    public static handleInstanceRoute(instanceName:string,className:string){
-        if(!this.registRouteMap.has(className)){
-            return;
+    public static addRouter(clazz:any){
+        if(!InstanceFactory.hasClass(clazz)){
+            InstanceFactory.addInstance(clazz,{
+                singleton:false
+            });
         }
-        let cfg = this.registRouteMap.get(className);
-        let paths = cfg.paths;
-        for(let p of paths){
-            this.addRoute(Util.getUrlPath([cfg.namespace||'',p.path]),instanceName,p.method,p.results);
+        const cfg = this.registRouteMap.get(clazz);
+        // const cfg = this.registRouteMap.get(clazz.name);
+        for(let p of cfg.paths){
+            this.addRoute(Util.getUrlPath([cfg.namespace||'',p.path]),clazz,p.method,p.results);
         }
         //删除已处理的class
-        this.registRouteMap.delete(className);
+        this.registRouteMap.delete(clazz);
     }
     /**
      * 添加路由
      * @param path          路由路径，支持通配符*，需要method支持
-     * @param className     对应类
+     * @param clazz         对应类
      * @param method        方法，path中包含*，则不设置
      * @param results       路由处理结果集
      */
-    private static addRoute(path:string,className:string,method?:string,results?:Array<IRouteResult>){
+    private static addRoute(path:string,clazz:any,method?:string,results?:Array<IRouteResult>){
         //已存在则不再添加（因为通配符在非通配符后面）
         if(this.routeMap.has(path)){
             return;
@@ -239,7 +232,7 @@ class RouteFactory{
             method = method.trim();
         }
         this.routeMap.set(path,{
-            instanceName:className,
+            clazz:clazz,
             method:method,
             results:results
         });
@@ -260,7 +253,8 @@ class RouteFactory{
         }
         //找到匹配的则返回
         if(item && method){
-            let instance = InstanceFactory.getInstance(item.instanceName);
+            let instance = InstanceFactory.getInstance(item.clazz);
+            // let instance = InstanceFactory.getInstance(item);
             if(instance && typeof instance[method] === 'function'){
                 return {instance:instance,method:method,results:item.results};
             }    
@@ -309,6 +303,9 @@ class RouteFactory{
         }
         
         let re = await func.call(route.instance,route.instance||params);
+        if(re === ERouteResultType.REDIRECT) {
+            return re;
+        }
         return await this.handleResult(route,re);
     }
 
@@ -371,8 +368,7 @@ class RouteFactory{
                         url += '&' + pas;
                     }
                 }
-                res.redirect(url);
-                return ERouteResultType.REDIRECT;
+                return res.redirect(url);
             case ERouteResultType.CHAIN: //路由器链
                 url = handleParamUrl(instance,result.url);
                 let url1 = App.url.parse(url).pathname;

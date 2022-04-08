@@ -39,39 +39,16 @@
      */
     writeType?:string;
 }
-/**
- * 过滤器配置类型
- */
- export interface IFilterCfg{
-    /**
-     * 类名
-     */
-    className?:string;
 
-    /**
-     * 方法需要返回true/false，如果为false，则表示不再继续执行（过滤器链）
-     */
-    methodName?:string; 
-
-    /**
-     * 正则表达式串，或数组
-     */
-    pattern?:RegExp|Array<RegExp>;
-
-    /**
-     * 优先级，越小越高，1-10为框架保留，创建时尽量避免，默认10000
-     */
-    order?:number;
-}
 
 /**
  * filter类型
  */
 export interface IFilter{
     /**
-     * 实例名
+     * 类
      */
-    instance:string; 
+    clazz:any;
     /**
      * 方法名
      */          

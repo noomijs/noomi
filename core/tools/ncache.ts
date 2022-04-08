@@ -175,6 +175,17 @@ export class NCache{
     }
 
     /**
+     * 清理缓存空间
+     */
+    public async clearAll(){
+        if(this.saveType === 0){
+            this.memoryCache.cleanup();
+        }else{
+            await RedisFactory.clear(this.redis);
+        }
+    }
+
+    /**
      * 获取键数组
      * @param key   键，可以带通配符 
      * @returns     键名组成的数组
@@ -607,14 +618,17 @@ class MemoryCache{
         }
     }
 
-
     /**
      * 清理缓存
-     * @param size  清理大小，为0仅清除超时元素
+     * @param size  清理空间大小，为0仅清除超时元素，不设置表示全部清除
      */
-    cleanup(size:number){
+    cleanup(size?:number){
         //无可清理对象
         if(this.storeMap.size === 0){
+            return;
+        }
+        if(size === undefined){ //全部清除
+            this.storeMap.clear();
             return;
         }
         let ct = new Date().getTime();

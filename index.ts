@@ -15,8 +15,12 @@ export * from './core/database/transactionproxy';
 export * from './core/database/typeormconnectionmanager';
 export * from './core/database/typeormtransaction';
 
-export * from './core/web/filter/securityfilter';
+export * from './core/log/logadvice';
+export * from './core/log/logmanager';
+
+export * from './core/web/cpufactory';
 export * from './core/web/filterfactory';
+export * from './core/web/webafterhandler';
 export * from './core/web/httpcookie';
 export * from './core/web/httprequest';
 export * from './core/web/httpresponse';
@@ -35,18 +39,16 @@ export * from './core/main/instancefactory';
 export * from './core/main/noomi';
 export * from './core/main/route/baseroute';
 export * from './core/main/route/routefactory';
-export * from './core/main/route/routeerrorhandler';
 
 export * from './core/tools/application';
 export * from './core/tools/decorator';
 export * from './core/tools/errorfactory';
-export * from './core/tools/filewatcher';
 export * from './core/tools/launchhookmanager';
 export * from './core/tools/model';
 export * from './core/tools/ncache';
 export * from './core/tools/pagefactory';
 export * from './core/tools/redisfactory';
-export * from './core/tools/securityfactory';
 export * from './core/tools/threadlocal';
+export * from './core/tools/types';
 export * from './core/tools/util';
 export * from './core/tools/validator';

@@ -11,98 +11,89 @@ import { App } from "../tools/application";
 class AopProxy{
     /**
      * 代理方法 
-     * @param instanceName  实例名
+     * @param clazz         类
      * @param methodName    方法名
-     * @param func          执行函数  
-     * @param instance      实例
      */
-    static invoke(instanceName:string,methodName:string):any{
+    static invoke(clazz:any,methodName:string):any{
         const util = App.util;
-
-        const instance = InstanceFactory.getInstance(instanceName);
-        const func = instance[methodName];
-        const clazz = InstanceFactory.getInstanceCfg(instanceName).class;
+        const func = clazz.prototype[methodName];
+        if(!func){
+            return;
+        }
         /**
          * 异步方法
          */
-        if(func && util.types.isAsyncFunction(func)){
+        if(util.types.isAsyncFunction(func)){
             return async function(){
+                const instance = InstanceFactory.getInstance(clazz);
                 //advices获取
                 let advices:any;
                 if(AopFactory){
-                    advices = AopFactory.getAdvices(clazz.name,methodName);
+                    advices = AopFactory.getAdvices(clazz,methodName);
                 }
                 let params:Array<any> = [];
                 for(let p of arguments){
                     params.push(p);
                 }
 
-                //参数1为实例名，2是方法名，3是被代理方法自带参数(数组)
+                //参数1为类，2是方法名，3是被代理方法自带参数(数组)
                 let aopParams:Array<any> = [{
-                    instanceName:instanceName,
+                    clazz:clazz,
                     methodName:methodName,
-                    params:params  
+                    params:params
                 }];
                 
-                let retValue = await foo();
-                if(retValue instanceof Error){
-                    throw retValue;
+                let result:any;
+                //before aop执行
+                if(advices !== null){
+                    for(let item of advices.before){
+                        await item.instance[item.method].apply(item.instance,aopParams);
+                    }
                 }
-                return retValue;
-            
-                async function foo(){
-                    let result:any;
-                    //before aop执行
+                try{
+                    //方法是事务
+                    if(advices.hasTransaction){
+                        result = await TransactionProxy.invoke(func,instance)(params);
+                    }else{ //非事务
+                        result = await func.apply(instance,params);
+                    }
+                    //带入参数
+                    aopParams[0].returnValue = result;
+                    //return aop执行
                     if(advices !== null){
-                        for(let item of advices.before){
+                        for(let item of advices.return){
                             await item.instance[item.method].apply(item.instance,aopParams);
                         }
                     }
-                    try{
-                        //方法是事务
-                        if(advices.hasTransaction){
-                            result = await TransactionProxy.invoke(func,instance)(params);
-                        }else{ //非事务
-                            result = await func.apply(instance,params);
-                        }
-                
-                        //带入参数
-                        aopParams[0].returnValue = result;
-                        //return aop执行
-                        if(advices !== null){
-                            for(let item of advices.return){
-                                //instance可能为实例对象，也可能是实例名
-                                await item.instance[item.method].apply(item.instance,aopParams);
-                            }
-                        }
-                    }catch(e){
-                        aopParams[0].throwValue = e;
-                        //异常aop执行
-                        if(advices !== null){
-                            for(let item of advices.throw){
-                                //instance可能为实例对象，也可能是实例名
-                                await item.instance[item.method].apply(item.instance,aopParams);
-                            }
-                        }
-                        result = e;
-                    }
-        
-                    // after aop 调用
-                    if(advices !== null && advices.after.length>0){
-                        for(let item of advices.after){
+                }catch(e){
+                    aopParams[0].throwValue = e;
+                    //异常aop执行
+                    if(advices !== null){
+                        for(let item of advices.throw){
                             await item.instance[item.method].apply(item.instance,aopParams);
                         }
                     }
-                    return result;
+                    result = e;
                 }
+                // after aop 调用
+                if(advices !== null && advices.after.length>0){
+                    for(let item of advices.after){
+                        await item.instance[item.method].apply(item.instance,aopParams);
+                    }
+                }
+                if(result instanceof Error){
+                    throw result;
+                }
+                return result;
             }
         }
         //非async 拦截
         return function(){
+            const instance = InstanceFactory.getInstance(clazz);
             //advices获取
             let advices:any;
             if(AopFactory){
-                advices = AopFactory.getAdvices(clazz.name,methodName);
+                advices = AopFactory.getAdvices(clazz,methodName);
             }
             let params:Array<any> = [];
             for(let p of arguments){
@@ -110,7 +101,6 @@ class AopProxy{
             }
             //参数1为实例名，2是方法名，3是被代理方法自带参数(数组)
             let aopParams:Array<any> = [{
-                instanceName:instanceName,
                 methodName:methodName,
                 params:params  
             }];
@@ -142,7 +132,7 @@ class AopProxy{
                                 //instance可能为实例对象，也可能是实例名
                                 item.instance[item.method].apply(item.instance,aopParams);
                             }
-                        }        
+                        }
                     }).catch((e)=>{
                         //throw aop执行
                         aopParams[0].throwValue = e;
@@ -187,7 +177,7 @@ class AopProxy{
                     });
                 }else{
                     for(let item of advices.after){
-                        InstanceFactory.exec(item.instance,item.method,aopParams);
+                        item.instance[item.method].apply(item.instance,aopParams);
                     }
                 }
             }

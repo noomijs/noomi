@@ -245,7 +245,7 @@ class RedisFactory{
      * @param key       键 
      * @param subKey    子键
      */
-    static del(clientName:string,key:string,subKey?:string){
+    static async del(clientName:string,key:string,subKey?:string){
         let client = this.getClient(clientName);
         if(client === null){
             throw new NoomiError("2601",clientName);
@@ -255,6 +255,19 @@ class RedisFactory{
         }else{
             client.del(key);
         }
+    }
+
+
+    /**
+     * 清空
+     * @param clientName    client name
+     */
+    static async clear(clientName:string){
+        let client = this.getClient(clientName);
+        if(client === null){
+            throw new NoomiError("2601",clientName);
+        }
+        await client.flushdb();
     }
 
     /**
@@ -292,12 +305,16 @@ class RedisFactory{
                     index++;
                 }
                 this.addClient(jo);
+                //清空redis
+                RedisFactory.clear(jo.name);
             }
         }else{
             if(!config.name){
                 config.name = 'default'
             }
             this.addClient(config);
+            //清空redis
+            RedisFactory.clear(config.name);
         }
     }
 }

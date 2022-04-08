@@ -3,6 +3,7 @@ import { TransactionManager } from "./transactionmanager";
 import { getConnection } from "./connectionmanager";
 import { InstanceFactory } from "../main/instancefactory";
 import { NoomiThreadLocal} from "../tools/threadlocal";
+import { TransactionAdvice } from "./transactionadvice";
 /**
  * 事务Aop代理
  * @remarks
@@ -62,7 +63,8 @@ class TransactionProxy{
                     NoomiThreadLocal.newThreadId();
                 }
                 //advices获取
-                let adviceInstance = InstanceFactory.getInstance(TransactionManager.aspectName);
+                // let adviceInstance = InstanceFactory.getInstance(TransactionManager.aspectName);
+                let adviceInstance = InstanceFactory.getInstance(TransactionAdvice);
                 let result:any;
                 //before aop执行
                 await adviceInstance.before.apply(adviceInstance);
@@ -91,7 +93,8 @@ class TransactionProxy{
                     RelaenThreadLocal.newThreadId();
                 }
                 //advices获取
-                let adviceInstance = InstanceFactory.getInstance(TransactionManager.aspectName);
+                // let adviceInstance = InstanceFactory.getInstance(TransactionManager.aspectName);
+                let adviceInstance = InstanceFactory.getInstance(TransactionAdvice);
                 let result:any;
                 //before aop执行
                 await adviceInstance.before.apply(adviceInstance);

@@ -9,6 +9,8 @@ import { HttpResponse } from "./httpresponse";
 import { Util } from "../tools/util";
 import { WebCache, IWebCacheObj } from "./webcache";
 import { WebAfterHandler } from "./webafterhandler";
+import { NoomiError } from "../tools/errorfactory";
+import { CpuFactory } from "./cpufactory";
 
 /**
  * @exclude
@@ -32,14 +34,15 @@ class RequestQueue{
      * @param res 
      */
     static add(req:HttpRequest){
+        if(this.queue.length === 0) {
+            CpuFactory.openInterval();
+        }
         let timeout = WebConfig.get('request_timeout') || 0;
         this.queue.push({
-            req:req,
-            expire:timeout>0?new Date().getTime() + timeout*1000:0
+            req: req,
+            expire:timeout>0?new Date().getTime()+timeout*1000:0
         });
-        if(this.canHandle){
-            this.handle();
-        }
+        this.handle();
     }
 
     /**
@@ -52,7 +55,6 @@ class RequestQueue{
         }
         //cpu超限，延迟1m执行队列
         if(!this.canHandle){
-            this.canHandle = true;
             setTimeout(()=>{
                 RequestQueue.handle();
             },1000);
@@ -63,7 +65,6 @@ class RequestQueue{
         if(item.expire === 0 || item.expire > new Date().getTime()){
             this.handleOne(item.req);
         }
-        this.handle();
     }
     
     /**
@@ -124,8 +125,11 @@ class RequestQueue{
                 }
             }catch(e){
                 //输出异常对象
+                if(e instanceof NoomiError) {
+                    console.error(e);
+                    return;
+                }
                 data = e;
-                console.error(e);
             }
         }else{ //静态资源
             //从web cache获取数据
@@ -193,7 +197,7 @@ class RequestQueue{
                 });
             }else{  //数据对象
                 response.writeToClient({
-                    data:data,
+                    data:cData.data,
                     charset:charset
                 });
             }

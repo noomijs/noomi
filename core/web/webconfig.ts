@@ -80,9 +80,7 @@ export class WebConfig{
             }
             this.cors = cfg['cors'];
             this.welcomePage = cfg['welcome'];
-                    
             this.config = cfg;
-            
         }
 
         if(config.hasOwnProperty('session')){

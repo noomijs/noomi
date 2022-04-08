@@ -69,6 +69,10 @@ export class App {
      */
     static JSON = require('json5');
     /**
+     * os 对象
+     */
+    static os = require('os');
+    /**
      * 应用配置文件路径
      */
     static configPath:string;

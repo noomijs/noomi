@@ -3,6 +3,7 @@ import { HttpCookie } from "./httpcookie";
 import { WebConfig } from "./webconfig";
 import { App } from "../tools/application";
 import { Stats } from "fs";
+import { ERouteResultType } from "../main/route/routefactory";
 
 /**
  * response回写配置项
@@ -87,6 +88,8 @@ export class HttpResponse extends ServerResponse{
         if(!(data instanceof Buffer)){
             if(typeof data === 'object'){
                 data = JSON.stringify(data);
+            }else if(typeof data !== 'string') {
+                data = data + "";
             }
         }
         
@@ -207,6 +210,7 @@ export class HttpResponse extends ServerResponse{
             }
         );
         this.srcRes.end();
+        return ERouteResultType.REDIRECT;
     }
 
     /**

@@ -158,6 +158,7 @@ export class HttpRequest extends IncomingMessage{
         let maxSize:number = WebConfig.get('upload_max_size');
         //不能大于max size
         if(maxSize > 0 && contentLen > maxSize){
+            // 上传文件超过最大限制
             return Promise.reject(new NoomiError('0501'));
         }
         //临时目录，默认 /upload/tmp

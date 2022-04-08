@@ -171,5 +171,14 @@ export class Util{
      public static eval(evalStr: string): any {
         return new Function(`return(${evalStr})`)();
     }
+
+    /**
+     * 获取对象第一个属性值
+     */
+    public static getObjFirst(obj: any): any {
+        for(let key in obj) {
+            return obj[key];
+        }
+    }
     
 }

@@ -1,10 +1,7 @@
 import { InstanceFactory } from "../main/instancefactory";
-import { NoomiError } from "../tools/errorfactory";
-import { Util } from "../tools/util";
-import { App } from "../tools/application";
 import { HttpRequest } from "./httprequest";
 import { HttpResponse } from "./httpresponse";
-import { IFilter, IFilterCfg } from "../tools/types";
+import { IFilter} from "../tools/types";
 
 
 /**
@@ -18,67 +15,27 @@ export class FilterFactory{
     private static filters:Array<IFilter> = [];
 
     /**
-     * 待添加的过滤器map，键为类名，值为 {
-                methodName:方法名,
-                pattern:正则式或正则式数组,
-                order:优先级
-            }
-     */
-    private static registFilterMap:Map<string,IFilterCfg> = new Map();
-
-    /**
-     * 注册过滤器
-     * 当对应类添加到实例工厂时，进行过滤器添加
-     * @param cfg   {
-     *                  className:类名,
-     *                  methodName:过滤器方法名,
-     *                  pattern:过滤url的正则式或正则式数组,
-     *                  order:优先级
-     *              }
-     * @since 1.0.0
-     */
-    public static registFilter(cfg:IFilterCfg){
-        let name = cfg.className;
-        delete cfg.className;
-        this.registFilterMap.set(name,cfg);
-    }
-
-    /**
      * 处理实例过滤器
      * @param instanceName  实例名
      * @param className     类名
      * @since 1.0.0
      */
-    public static handleInstanceFilter(instanceName:string,className:string){
-        if(!this.registFilterMap.has(className)){
-            return;
+    public static addFilter(cfg:IFilter){
+        //如果类未添加到实例工厂，则添加
+        if(!InstanceFactory.hasClass(cfg.clazz)){
+            InstanceFactory.addInstance(cfg.clazz,{
+                singleton:true
+            });
         }
-        const cfg = this.registFilterMap.get(className);
-        let ptns = [];
-        if(!cfg.pattern){
-            ptns = [/^\/.*/];
-        }else if(!Array.isArray(cfg.pattern)){ //非数组
-            ptns = [cfg.pattern];
-        }
-
-        //查找重复过滤器类
-        let f:IFilter = this.filters.find(item=>{
-            return item.instance === instanceName && item.method === cfg.methodName;
-        });
         
-        //删除之前添加的过滤器
-        if(f){
-            let ind = this.filters.indexOf(f);
-            this.filters.splice(ind,1);
+        cfg.order = cfg.order || 10000;
+        if(!Array.isArray(cfg.patterns)) {
+            cfg.patterns = [cfg.patterns];
         }
-        //加入过滤器集合
-        this.filters.push({
-            instance:instanceName,
-            method:cfg.methodName,
-            patterns:ptns,
-            order:cfg.order===undefined?10000:cfg.order
-        });
 
+        //加入过滤器集合
+        this.filters.push(cfg);
+        //排序
         this.filters.sort((a,b)=>{
             return a.order - b.order;
         });
@@ -148,7 +105,7 @@ export class FilterFactory{
         }
         
         for(let item of arr){
-            let ins = InstanceFactory.getInstance(item.instance);
+            let ins = InstanceFactory.getInstance(item.clazz);
             if(!ins){
                 continue;
             }

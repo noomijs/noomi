@@ -5,6 +5,7 @@ import { NoomiError } from "../../tools/errorfactory";
 import { Util } from "../../tools/util";
 import { App } from "../../tools/application";
 import { IWebCacheObj } from "../../web/webcache";
+import { createGunzip } from "zlib";
 
 
 /**
@@ -167,12 +168,16 @@ class RouteFactory{
         }
         let obj = this.registRouteMap.get(cfg.clazz);
         
+        obj.namespace = cfg.namespace;//保存namespace
         if(!cfg.path){
             return;
         }
-
         if(cfg.namespace){ // router装饰器
-            obj.namespace = cfg.namespace;
+            //默认*
+            if(cfg.path==='/'){
+                cfg.path = '*';
+            }
+            
             if(cfg.path.indexOf('*') !== -1){
                 let reg = Util.toReg(cfg.path,3);
                 for(let o of Object.getOwnPropertyNames(cfg.clazz.prototype)){
@@ -190,24 +195,25 @@ class RouteFactory{
     }
 
     /**
-     * 添加路由类
-     * @param clazz     类
-     * @param params    路由参数
+     * 处理路由
      */
-    public static addRouter(clazz:any){
-        if(!InstanceFactory.hasClass(clazz)){
-            InstanceFactory.addInstance(clazz,{
-                singleton:false
-            });
+    public static handleAllRouter(){
+        for(let r of this.registRouteMap){
+            if(!InstanceFactory.hasClass(r[0])){
+                InstanceFactory.addInstance(r[0],{
+                    singleton:false
+                });
+            }
+            const cfg = r[1];
+            const ns = cfg.namespace || '';
+            for(let p of cfg.paths){
+                this.addRoute(Util.getUrlPath([ns,p.path]),r[0],p.method,p.results);
+            }        
         }
-        const cfg = this.registRouteMap.get(clazz);
-        // const cfg = this.registRouteMap.get(clazz.name);
-        for(let p of cfg.paths){
-            this.addRoute(Util.getUrlPath([cfg.namespace||'',p.path]),clazz,p.method,p.results);
-        }
-        //删除已处理的class
-        this.registRouteMap.delete(clazz);
+        //清空regist map
+        this.registRouteMap.clear();
     }
+    
     /**
      * 添加路由
      * @param path          路由路径，支持通配符*，需要method支持
@@ -271,7 +277,7 @@ class RouteFactory{
      * @returns             0 正常 1异常
      */
     public static async handleRoute(route:IRoute,req:HttpRequest,res:HttpResponse,params?:object):Promise<number|IWebCacheObj|string>{
-        //绑定path
+        //绑定path, 没有必要
         if(!route.path && req){
             route.path = req.url;
         }

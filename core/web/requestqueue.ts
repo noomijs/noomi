@@ -109,7 +109,7 @@ class RequestQueue{
             }
         }
         
-        //过滤器执行
+        //前置过滤器执行
         if(!await FilterFactory.doChain(request.url,request,response)){
             return;
         }
@@ -139,6 +139,7 @@ class RequestQueue{
                 data = await StaticResource.load(request,response,path,gzip);
             }
         }
+        //后置过滤器执行
         data = await WebAfterHandler.doChain(request.url,data,request,response);
         this.handleResult(response,data,path,gzip);
     }

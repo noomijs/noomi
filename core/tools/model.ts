@@ -132,14 +132,14 @@ class BaseModel{
         if(tp === 'string'){
             switch(type){
                 case 'int':         //整数
-                    if(/(^0$)|(^[1-9]\d*$)/.test(v)){
+                    if(/(^[\+\-]?0$)|(^[\+\-]?[1-9]\d*$)/.test(v)){
                         v = parseInt(v);
                     }else{
                         return false;
                     }
                     break;
                 case 'float':       //小数
-                    if(/^\d+(\.?\d+)?$/.test(v)){
+                    if(/^[\+\-]?\d+(\.?\d+)?$/.test(v)){
                         v = parseFloat(v);
                     }else{
                         return false;

@@ -2,6 +2,7 @@ import { NoomiError } from "../tools/errorfactory";
 import { Util } from "../tools/util";
 import { App } from "../tools/application";
 import { AopFactory} from "./aopfactory";
+import { RouteFactory } from "./route/routefactory";
 
 /**
  * 实例属性
@@ -107,6 +108,7 @@ export class InstanceFactory{
      */
     public static async init(config:any){
         await this.parse(config);
+        RouteFactory.handleAllRouter();
         AopFactory.proxyAll();
     }
     /**

@@ -57,7 +57,6 @@ function Router(cfg?:any){
             cfg.clazz = target;
             RouteFactory.registRoute(cfg);
         }
-        RouteFactory.addRouter(target);
     }
 }
 

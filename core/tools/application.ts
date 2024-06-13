@@ -1,20 +1,22 @@
 /**
  * 全局App对象
- * 把常用模块放置到该全局对象中，可以减少模块初始化时间
+ * @remarks
+ * 对常用模块统一管理，减少模块初始化时间
  */
 export class App {
     /**
      * 应用名，如果存在多个App共享redis，则需要设置改名字，在noomi.json中配置
      */
-    static appName:string='APP';
+    static appName: string = 'APP';
+
     /**
      * 语言
      */
-    static language:string = 'zh';
+    static language: string = 'zh';
     /**
      * 是否打开file watcher
      */
-    static openWatcher:boolean = false;
+    static openWatcher: boolean = false;
     /**
      * node http 对象
      */
@@ -55,7 +57,6 @@ export class App {
      * redis 对象
      */
     static redis = require('redis');
-
     /**
      * stream 对象
      */
@@ -64,10 +65,7 @@ export class App {
      * zlib 对象
      */
     static zlib = require('zlib');
-    /**
-     * json5 对象
-     */
-    static JSON = require('json5');
+    
     /**
      * os 对象
      */
@@ -75,9 +73,9 @@ export class App {
     /**
      * 应用配置文件路径
      */
-    static configPath:string;
+    static configPath: string;
     /**
      * 应用是否部署为集群应用标志
      */
-    static isCluster:boolean = false;
+    static isCluster: boolean = false;
 }

@@ -1,26 +1,24 @@
+const {AsyncLocalStorage} = require("async_hooks");
 
-const{AsyncLocalStorage} = require("async_hooks");
 /**
- * 线程安全（threadlocal）
- * @since 0.4.7
+ * 线程安全（thread local）
  */
-class NoomiThreadLocal{
+export class NoomiThreadLocal {
     /**
      * 线程id
      */
-    private static threadId:number = 1;
-
+    private static threadId: number = 1;
     /**
      * 异步线程存储器
      */
     private static localStorage = new AsyncLocalStorage();
-    
+
     /**
      * 新建thread id
      * @returns     新threadId
      */
-    public static newThreadId():number{
-        let sid = this.threadId++;
+    public static newThreadId(): number {
+        const sid = this.threadId++;
         this.localStorage.enterWith(sid);
         return sid;
     }
@@ -29,9 +27,7 @@ class NoomiThreadLocal{
      * 获取当前thread id
      * @returns     当前threadId
      */
-    public static getThreadId():number{
+    public static getThreadId(): number {
         return this.localStorage.getStore();
     }
 }
-
-export{NoomiThreadLocal}

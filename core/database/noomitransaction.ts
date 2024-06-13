@@ -1,114 +1,33 @@
-import { getConnection } from "./connectionmanager";
-
 /**
- * 事务类
+ * 事务类，数据库包（如：noomi-mysql,noomi-relaen,...）必须继承此基类
  */
-class NoomiTransaction{
+export abstract class NoomiTransaction {
     /**
-     * 事务id
+     * begin次数
      */
-    public id:number;
-    /**
-     * 事务所属连接
-     */
-    public connection:any;
-    /**
-     * 事务管理器
-     */
-    public manager:any;
-    /**
-     * 事务类型
-     */
-    public type:ETransactionType;
-    /**
-     * 事务是否开始
-     */
-    public isBegin:boolean;
-    
-    /**
-     * 事务id数组，当事务嵌套时需要通过该数组判断是否执行commit和rollback
-     */
-    public invokeNum:number;
-    
+    public beginTimes: number;
+
     /**
      * 实际的事务对象
      */
-    public tr:any;
+    protected tx: {begin,commit,rollback};
 
-    /**
-     * 构造器
-     * @param id            事务id 
-     * @param connection    所属连接
-     * @param type          事务类型
-     */
-    constructor(id:number,connection?:any,type?:ETransactionType){
-        this.id = id; 
-        this.connection = connection;
-        this.invokeNum = 0;
-        this.type = type || ETransactionType.NESTED;
+    constructor() {
+        this.beginTimes = 0;
     }
+
     /**
      * 开始事务,继承类需要重载
      */
-    public async begin(){
-        this.isBegin = true;
-        if(!this.connection){
-            await getConnection();
-        }
-    }
+    public abstract begin() : void;
+
     /**
      * 事务提交,继承类需要重载
      */
-    public async commit(){}
+    public abstract commit() : void;
 
     /**
      * 事务回滚,继承类需要重载
      */
-    public async rollback(){}
+    public abstract rollback() : void;
 }
-
-/**
- * 事务类型枚举
- */
-enum ETransactionType {
-    /**
-     * 嵌套
-     */
-    NESTED=1,        
-    /**
-     * 新建
-     */ 
-    NEW=2             
-}
-
-/**
- * 事务源枚举类型
- */
-enum ETransactionSource{
-    /**
-     * mysql
-     */
-    MYSQL='mysql',
-    /**
-     * oracle
-     */
-    ORACLE='oracle',
-    /**
-     * mssql
-     */
-    MSSQL='mssql',
-    /**
-     * mongodb
-     */
-    MONGODB='mongodb',
-    /**
-     * relaen
-     */
-    RELAEN='relaen',
-    /**
-     * typeorm
-     */
-    TYPEORM='typeorm'
-}
-
-export{NoomiTransaction,ETransactionType}

@@ -1,43 +1,23 @@
-import { InstanceFactory } from "../main/instancefactory";
-
-
-/**
- * hook 对象
- * @since 0.3.5
- */
-interface IHookObj{
-    /**
-     * 实例名
-     */
-    clazz:any;
-
-    /**
-     * 方法名
-     */
-    method:string;
-
-    /**
-     * 参数数组
-     */
-    params?:Array<any>
-}
+import {InstanceFactory} from "../main/instancefactory";
+import { HookItem } from "../types/other";
 
 /**
- * 启动后执行钩子对象管理器
- * @since 0.3.5
+ * 应用启动后钩子对象管理器
+ * @remarks
+ * 用于管理应用启动后的钩子函数及其调用
  */
-export class LaunchHookManager{
+export class LaunchHookManager {
     /**
      * hook实例数组
      */
-    static hooks:Array<IHookObj> = new Array();
-    
+    static hooks: Array<HookItem> = [];
+
     /**
      * 初始化
-     * @param cfg [{"clazz":实例类,"method":方法名,params:参数数组}...]
+     * @param cfg - hook集
      */
-    static init(cfg:IHookObj){
-        if(!InstanceFactory.hasClass(cfg.clazz)) {
+    static init(cfg: HookItem) {
+        if (!InstanceFactory.hasClass(cfg.clazz)) {
             InstanceFactory.addInstance(cfg.clazz);
         }
         this.hooks.push(cfg);
@@ -46,25 +26,9 @@ export class LaunchHookManager{
     /**
      * 批量执行hook方法
      */
-    static async run(){
-        let h:IHookObj;
-        for(h of this.hooks){
-            await InstanceFactory.exec(h.clazz,h.method,h.params);
+    static async run() {
+        for (const h of this.hooks) {
+            await InstanceFactory.exec(h.clazz, h.method, h.params);
         }
     }
-    /**
-     * 解析配置文件
-     * @param path  launch hook配置文件路径
-     */
-    // static parseFile(path:string){
-    //     //读取文件
-    //     let json:any = null;
-    //     try{
-    //         let jsonStr:string = App.fs.readFileSync(path,'utf-8');
-    //         json = App.JSON.parse(jsonStr);
-    //     }catch(e){
-    //         throw new NoomiError("2600") + '\n' + e;
-    //     }
-    //     this.init(json);
-    // }
 }

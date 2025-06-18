@@ -47,26 +47,19 @@ export class RouteFactory {
         const obj = this.registRouteMap.get(cfg.clazz);
         // 保存namespace
         obj.namespace = cfg.namespace;
-        if (!cfg.path) {
-            return;
-        }
-        if (cfg.batch) { // router装饰器
-            //只针对通配符进行处理，非通配符不进行匹配
-            if (cfg.path.indexOf('*') !== -1) {
-                const reg = Util.toReg(cfg.path, 3);
-                for (const o of Object.getOwnPropertyNames((<UnknownClass>cfg.clazz).prototype)) {
-                    //构造器，非方法，已注册的方法 不再处理
-                    if (o === 'constructor' || 
-                        typeof (<UnknownClass>cfg.clazz).prototype[o] !== 'function' || 
-                        obj.paths.find(item => item.method === o)) {
-                        continue;
-                    }
-                    if (reg.test(o)) {
-                        obj.paths.push({path: o, method: o});
-                    }
-                }
+        //只针对通配符进行处理
+        if (cfg.path.indexOf('*') !== -1) {
+            const reg = Util.toReg(cfg.path, 3);
+            for(let clazz = (<UnknownClass>cfg.clazz).prototype;clazz && clazz.constructor !== BaseRoute;clazz = Object.getPrototypeOf(clazz)){
+                Object.getOwnPropertyNames(clazz)
+                    .filter(prop => typeof clazz[prop] === 'function' && prop !== 'constructor')
+                    .forEach(method => {
+                        if(!obj.paths.find(item => item.method === method) && reg.test(method)){
+                            obj.paths.push({path: method, method: method});        
+                        }    
+                    });
             }
-        } else { //route装饰器
+        }else { //route装饰器
             obj.paths.push({path: cfg.path, method: cfg.method.trim(), results: cfg.results});
         }
     }
@@ -155,20 +148,18 @@ export class RouteFactory {
             route.path = req.url;
         }
         //设置request
-        if (typeof route.instance.setRequest === 'function') {
-            route.instance.setRequest(req);
-        }
+        route.instance.request = req;
+        
         //设置response
-        if (typeof route.instance.setResponse === 'function') {
-            route.instance.setResponse(res);
-        }
+        route.instance.response = res;
+        
         //初始化参数
         if (!params) {
             params = await req.init();
         }
         //设置model
-        if (typeof route.instance.setModel === 'function') {
-            route.instance.setModel(params || {}, route.method);
+        if (typeof route.instance.__setModel === 'function') {
+            route.instance.__setModel(params || {}, route.method);
         }
         //实际调用方法
         const func = route.instance[route.method];

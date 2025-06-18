@@ -115,7 +115,7 @@ export class RequestQueue {
                     });
                 }
             }
-        } else if (typeof data === 'object') {
+        } else if (typeof data === 'object' && !(data instanceof Error)) {
             const cData: WebCacheItem = <WebCacheItem>data;
             // json格式为utf8，zip和流用binary
             const charset = data['mimeType'] && data['mimeType'].indexOf('/json') === -1 || isZip && cData.zipData ? 'binary' : 'utf8';
@@ -136,7 +136,7 @@ export class RequestQueue {
                     type: cData.mimeType,
                     size: cData.dataSize
                 });
-            } else if (cData.data) { // 数据
+            } else if (cData.data !== undefined && cData.data !== null) { // 数据
                 response.writeToClient({
                     data: cData.data,
                     type: cData.mimeType,
@@ -145,7 +145,7 @@ export class RequestQueue {
                 });
             } else {  // 数据对象
                 response.writeToClient({
-                    data: cData.data,
+                    data: cData.toString(),
                     charset: charset
                 });
             }

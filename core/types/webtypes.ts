@@ -330,7 +330,7 @@ export type ResponseWriteOption = {
     /**
      * 待写数据，可以是数据串或stream
      */
-    data?: string|Stream;
+    data?: string|Stream|Error;
     /**
      * 字符集，默认utf8
      */

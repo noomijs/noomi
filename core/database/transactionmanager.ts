@@ -10,11 +10,12 @@ export class TransactionManager {
     private static pointcutId: string = '__NOOMI_TX_POINTCUT';
     
     /**
-     * 添加为事务
+     * 添加事务Aop操作
      * @param clazz -       事务类
      * @param methodName -  方法名或方法名数组，支持通配符'*'
      */
-    public static addTransaction(clazz: UnknownClass, methodName: string | string[]) {
+    public static addTransactionAop(clazz: UnknownClass, methodName: string | string[]) {
+        //如果类尚未添加到实例工厂，则先添加
         if (!InstanceFactory.hasClass(clazz)) {
             InstanceFactory.addInstance(clazz);
         }
@@ -32,7 +33,7 @@ export class TransactionManager {
     }
 
     /**
-     * 初始化transaction advice
+     * 初始化事务 advice
      */
     public static initAdvice() {
         AopFactory.registPointcut({

@@ -1,24 +1,17 @@
 # Noomi
 一个基于node的企业级框架，基于typescript开发，支持路由、过滤器、IoC、Aop、事务及嵌套、安全框架、缓存、集群。  
 Noomi全面支持typescript，提供快捷简单的注解编写方式和丰富的配置处理能力。   
-**框架官网：[www.noomi.cn](http://www.noomi.cn)。**
+**框架官网：[noomi.lab209.com](http://noomi.lab209.com)。**
+
 ## 快速接入
 支持[noomi-cli](https://www.npmjs.com/package/noomi-cli)一键安装，完成noomi及其依赖包的安装，同时建立项目框架。
 
-## 源码迁移
-源码迁移到gitee(git@gitee.com:weblabsw/noomijs)，原github继续有效。
-## 升级
-### 1.0.0
-针对noomi的实际使用情况，noomi从0.x版本升级到1.x版本，主要做了以下修改：
-1. 修复热部署在windows系统下的bug；
-2. 修复ncache替换计算bug；
-3. 删除route errorhandler配置项，替换方法，采用web后置处理；
-4. 增加web后置处理，装饰器为@WebHandler，与filter相对应(webfilter在web请求处理前处理)，用法与filter相似，route异常处理可以在该环节处理；
-5. 过滤器和后置处理，不再支持字符串，支持完整正则表达式；
-6. 如果未设置实例名（@Instance），实例名默认为类名，不再是首字母小写的驼峰命名方式；
-7. 不再支持 实例、切面、路由、过滤器配置文件方式，统一采用注解（装饰器）方式；
-8. 切点(pointcut)不再装饰方法，采用装饰属性，advice中直接使用装饰的属性名作为pointcutId；
-9. 修复非单例类的注入aop问题。
+### API
+更多使用细节参考[API](./api/noomi.md)。
+
+### 版本
+版本信息参考[版本信息](./update.md)。
+
 ## 核心模块
 主要包括以下部分：
 ### 路由
@@ -64,7 +57,7 @@ class Clazz1{
 把业务无关代码独立出来，做成切面，然后把切面包裹到业务代码上，通常应用场景为日志、事务等。  
 ```javascript
 @Aspect()
-class Clazz1{
+class TestAspect{
     @Pointcut(["test1.*","test2.*"])
     testPointcut(){}
     @Before("testPointcut()")
@@ -129,4 +122,4 @@ noomi提供内置安全框架，用户只需提供对应的数据表和配置相
     "login_url":"***"         
 }
 ```
-更多使用细节请参考[Noomi官网](http://www.noomi.cn)。
+更多使用细节请参考[Noomi官网](http://noomi.lab209.com)。

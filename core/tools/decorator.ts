@@ -37,7 +37,7 @@ export function Inject(clazz: unknown) {
 
 /**
  * 路由类装饰器，装饰类
- * @param cfg - 配置项
+ * @param cfg - 配置项，如果为字符串，则表示为namespace
  * 
  * 说明：
  * 
@@ -45,27 +45,35 @@ export function Inject(clazz: unknown) {
  * 
  *   path:路径，支持通配符,如: "*"表示该类下的所有方法，"add*"表示以add开头的所有方法
  */
-export function Router(cfg?: RouteConfig) {
+export function Router(cfg?: RouteConfig|string) {
     return (target) => {
         // 如果配置了path，则追加到路由，对所有方法有效
         if (cfg) {
-            if (cfg.path) {
-                cfg.path = cfg.path.trim();
-                if (cfg.path === '') {
-                    delete cfg.path;
+            //如果为字符串，则设置为namespace
+            if(typeof cfg === 'string'){
+                cfg = {
+                    namespace:cfg.trim()
+                }
+            }else if (typeof cfg === 'object'){
+                if (cfg.path) {
+                    cfg.path = cfg.path.trim();
+                }
+                if(cfg.namespace){
+                    cfg.namespace = cfg.namespace.trim();
                 }
             }
         }else{
             cfg = {};
         }
-        //默认为全部匹配
-        if(!cfg.path){
-            cfg.path = '*';
+        //默认为/
+        if(!cfg.namespace || cfg.namespace === ''){
+            cfg.namespace = '/';
         }
-        //默认为 '/'
-        cfg.namespace ||= '/';
+        //默认为*
+        if(!cfg.path || cfg.path === ''){
+            cfg.path = '*'
+        }
         cfg.clazz = target;
-        cfg.batch = true;
         RouteFactory.registRoute(cfg);
     }
 }
@@ -243,7 +251,7 @@ export function AfterThrow(pointcutId: string) {
  */
 export function Transactioner(methodReg?: string|string[]) {
     return (target) => {
-        TransactionManager.addTransaction(target, methodReg || '*');
+        TransactionManager.addTransactionAop(target, methodReg || '*');
     }
 }
 
@@ -254,7 +262,7 @@ export function Transactioner(methodReg?: string|string[]) {
  */
 export function Transaction() {
     return (target: unknown, name: string) => {
-        TransactionManager.addTransaction(<UnknownClass>target.constructor, name);
+        TransactionManager.addTransactionAop(<UnknownClass>target.constructor, name);
     }
 }
 

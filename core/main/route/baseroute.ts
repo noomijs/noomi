@@ -40,7 +40,7 @@ export class BaseRoute {
      * @param methodName -  路由方法名
      * @throws              抛出数据转换或校验异常对象信息
      */
-    public setModel(data: object, methodName?: string) {
+    public __setModel(data: object, methodName?: string) {
         const mCls = this.constructor['__modelClass'];
         if (mCls) {
             //实例化model
@@ -62,21 +62,5 @@ export class BaseRoute {
         } else {
             this.model = data;
         }
-    }
-
-    /**
-     * 设置request对象
-     * @param req -   request对象
-     */
-    public setRequest(req: HttpRequest): void {
-        this.request = req;
-    }
-
-    /**
-     * 设置response对象
-     * @param res -   response对象
-     */
-    public setResponse(res: HttpResponse): void {
-        this.response = res;
     }
 }

@@ -192,7 +192,7 @@ export class HttpResponse extends ServerResponse {
         }
         this.setHeader('Access-Control-Allow-Origin', domain);
         this.setHeader('Access-Control-Allow-Headers', WebConfig.cors['allow_headers'] || '');
-        this.setHeader('Access-Control-Allow-Method', "POST,GET,HEAD,OPTIONS");
+        this.setHeader('Access-Control-Allow-Methods', WebConfig.cors['allow_methods'] || "GET,POST,PUT,DELETE,OPTIONS");
         if (domain !== '*') {
             this.setHeader('Access-Control-Allow-Credentials', 'true');
         }

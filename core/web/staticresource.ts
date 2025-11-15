@@ -10,6 +10,8 @@ import { WebCacheItem } from "../types/webtypes";
 
 /**
  * 静态资源加载器
+ * 
+ * @public
  */
 export class StaticResource {
     /**

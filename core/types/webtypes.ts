@@ -2,8 +2,10 @@ import { Stream } from "stream";
 
 /**
  * web缓存配置
+ * 
+ * @public
  */
-export type WebCacheOption = {
+export interface WebCacheOption {
     /**
      * 存储类型
      * @remarks
@@ -70,12 +72,14 @@ export type WebCacheOption = {
 
 /**
  * web跨域配置项
+ * 
+ * @public
  */
-export type WebCorsOption = {
+export interface WebCorsOption {
     /**
      * 域设置
      */
-    domain:string,             
+    domain:string|String[],
     /**
      * 自定义header，多个以","分割，method=options时有效
      */
@@ -83,16 +87,22 @@ export type WebCorsOption = {
     /**
      * 结果缓存时间(秒)，默认24小时 24*3600
      */
-    access_max_age:string      
+    access_max_age:string,
+    /**
+     * allow headers，默认 GET,POST,PUT,DELETE,OPTIONS
+     */
+    allow_methods:string
 }
 
 /**
  * web异常页面配置项
  * @remarks
  * 如果http异常码在该配置中，则重定向到该异常码对应的页面
- * 如403，404异常码配置
+ * 如403，404
+ * 
+ * @public
  */
-export type WebErrorPageOption={
+export interface WebErrorPageOption {
     /**
      * 异常码，类型：数字
      */
@@ -106,9 +116,45 @@ export type WebErrorPageOption={
 }
 
 /**
- * session 配置项
+ * cookie 配置
+ * 
+ * @public
  */
-export type SessionOption={
+export interface CookieOption {
+    /**
+     * 禁止 JavaScript 通过 document.cookie 访问（防 XSS 攻击），默认false
+     */
+    http_only:boolean;
+    /**
+     * 仅通过 HTTPS 协议发送 Cookie（防止中间人窃取），默认false
+     */
+    secure:boolean;
+
+    /**
+     * 指定哪些域名会携带此 Cookie（默认当前域名，不包含子域名)
+     */
+    domain:string;
+
+    /**
+     * 限制 Cookie 仅在指定路径下生效（默认 /，即全站有效）
+     */
+    path:string;
+
+    /**
+     * cookie 的有效期（秒数），优先级高于 Expires
+     */
+    max_age:number;
+}
+/**
+ * session 配置项
+ * 
+ * @public
+ */
+export interface SessionOption {
+    /**
+     * cookie 配置
+     */
+    cookie:CookieOption;
     /**
      * set-cookie中的sessionId名
      * @remarks
@@ -143,8 +189,10 @@ export type SessionOption={
 
 /**
  * https配置项
+ * 
+ * @public
  */
-export type WebHttpsOption={
+export interface WebHttpsOption {
     /**
      * 是否只采用https
      * @remarks
@@ -167,8 +215,10 @@ export type WebHttpsOption={
 
 /**
  * web配置项
+ * 
+ * @public
  */
-export type WebConfigOption={
+export interface WebConfigOption {
     /**
      * 网络配置
      */
@@ -235,8 +285,10 @@ export type WebConfigOption={
 
 /**
  * response回写配置项
+ * 
+ * @public
  */
-export type ResponseWriteCfg = {
+export interface ResponseWriteCfg  {
     /**
      * 待写数据，可以是数据串或stream
      */
@@ -273,8 +325,10 @@ export type ResponseWriteCfg = {
 
 /**
  * 静态资源缓存项
+ * 
+ * @public
  */
-export type WebCacheItem = {
+export interface WebCacheItem  {
     /**
      * ETag
      */
@@ -307,8 +361,10 @@ export type WebCacheItem = {
 
 /**
  * http content type 配置项
+ * 
+ * @public
  */
-export type ContentTypeOption = {
+export interface ContentTypeOption {
     /**
      * 域分隔线
      */
@@ -325,8 +381,10 @@ export type ContentTypeOption = {
 
 /**
  * response回写配置项
+ * 
+ * @public
  */
-export type ResponseWriteOption = {
+export interface ResponseWriteOption {
     /**
      * 待写数据，可以是数据串或stream
      */
@@ -364,8 +422,10 @@ export type ResponseWriteOption = {
 
 /**
  * filter类型
+ * 
+ * @public
  */
-export type FilterOption = {
+export interface FilterOption {
     /**
      * 类
      */

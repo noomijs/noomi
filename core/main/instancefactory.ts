@@ -11,6 +11,8 @@ import { InstanceItem, InstanceOption } from "../types/instancetypes";
  * 实例工厂
  * @remarks
  * 用于管理所有的实例对象
+ * 
+ * @public
  */
 export class InstanceFactory {
     /**
@@ -98,7 +100,8 @@ export class InstanceFactory {
      */
     public static inject(targetClass: unknown, propName: string, injectClass: unknown) {
         if (!this.factory.has(targetClass)) {
-            this.factory.set(targetClass, {});
+            // this.factory.set(targetClass, {});
+            this.addInstance(targetClass);
         }
         const cfg = this.factory.get(targetClass);
         if (!cfg.properties) {

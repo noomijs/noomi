@@ -1,5 +1,5 @@
 import {IncomingMessage, ServerResponse} from "http";
-import {SessionFactory, Session} from "./sessionfactory";
+import {SessionFactory} from "./sessionfactory";
 import {HttpResponse} from "./httpresponse";
 import {WebConfig} from "./webconfig";
 import {App} from "../tools/application";
@@ -10,13 +10,22 @@ import {PostFormHandler} from "./postformhandler";
 import {PostFileHandler} from "./postfileparamhandler";
 import {PostTextHandler} from "./posttexthandler";
 import { ContentTypeOption } from "../types/webtypes";
+import { HttpCookie } from "./httpcookie";
+import { Session } from "./session";
 
 /**
  * http请求
  * @remarks
  * 在IncomingMessage基础上增加了参数解析等方法，更适合直接使用
+ * 
+ * @public
  */
 export class HttpRequest extends IncomingMessage {
+    /**
+     * cookie
+     */
+    private cookies:HttpCookie[];
+
     /**
      * 源IncommingMessage对象(server listen 时传入)，某些需要操纵源IncommingMessage的情况下，可以直接使用
      */
@@ -120,6 +129,33 @@ export class HttpRequest extends IncomingMessage {
      */
     public getParameter(name: string): string {
         return this.parameters[name];
+    }
+
+    /**
+     * 获取cookie数组
+     */
+    public getCookies(){
+        if(!this.cookies){
+            this.cookies = [];
+            const cook = <string>this.getHeader('Cookie');
+            cook?.split(';').forEach(parms => {
+                const parts = parms.split('=');
+                this.cookies.push(new HttpCookie(parts[0].trim(),parts[1]));
+            });
+        }
+        return this.cookies;
+    }
+
+    /**
+     * 获取cookie 对象
+     * @param name -    cookie name
+     * @returns         cookie对象
+     */
+    public getCookie(name:string){
+        if(this.cookies){
+            this.getCookies();
+        }
+        return this.cookies.find(item=>item.getName() === name);
     }
 
     /**

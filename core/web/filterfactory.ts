@@ -7,6 +7,8 @@ import {FilterOption} from "../types/types";
  * 过滤器工厂类
  * @remarks
  * 用于管理定义的过滤器
+ * 
+ * @public
  */
 export class FilterFactory {
     /**

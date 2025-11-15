@@ -3,27 +3,29 @@ import {HttpCookie} from "./httpcookie";
 import {WebConfig} from "./webconfig";
 import {App} from "../tools/application";
 import {Stats} from "fs";
-import {ERouteResultType} from "../types/routetypes";
+import {RouteResultType} from "../types/routetypes";
 import { ResponseWriteOption } from "../types/webtypes";
 
 /**
  * http响应
  * @remarks
  * 在ServerResponse基础上增加了写客户端方法，更适合直接使用
+ * 
+ * @public
  */
 export class HttpResponse extends ServerResponse {
     /**
      * 源response
      */
-    srcRes: ServerResponse;
+    private srcRes: ServerResponse;
     /**
      * 源request
      */
-    request: IncomingMessage;
+    private request: IncomingMessage;
     /**
      * cookie
      */
-    cookie: HttpCookie = new HttpCookie();
+    private cookies:HttpCookie[] = [];
 
     /**
      * 初始化response对象
@@ -39,8 +41,8 @@ export class HttpResponse extends ServerResponse {
      * 写到浏览器(客户)端
      * @param config -    回写配置项
      */
-    writeToClient(config: ResponseWriteOption): void {
-        this.writeCookie();
+    public writeToClient(config: ResponseWriteOption): void {
+        this.writeCookies();
         this.setCorsHead();
         let data: string | Buffer | object = config.data || '';
         const charset = config.charset || 'utf8';
@@ -75,8 +77,8 @@ export class HttpResponse extends ServerResponse {
      * @param config -    回写配置项
      * @param mimeType -  mime 类型
      */
-    writeFileToClient(config: ResponseWriteOption): void {
-        this.writeCookie();
+    public writeFileToClient(config: ResponseWriteOption): void {
+        this.writeCookies();
         this.setCorsHead();
         // 文件路径
         const path = config.data;
@@ -130,7 +132,7 @@ export class HttpResponse extends ServerResponse {
      * @param value -   值
      * @returns         HttpResponse实例
      */
-    setHeader(name: string, value: number | string | string[]) {
+    public setHeader(name: string, value: number | string | string[]) {
         this.srcRes.setHeader(name, value);
         return this;
     }
@@ -140,7 +142,7 @@ export class HttpResponse extends ServerResponse {
      * @param key -     键
      * @returns         header值
      */
-    getHeader(key: string): number | string | string[] {
+    public getHeader(key: string): number | string | string[] {
         return this.srcRes.getHeader(key);
     }
 
@@ -149,8 +151,8 @@ export class HttpResponse extends ServerResponse {
      * @param page -    跳转路径url
      * @returns         redirect
      */
-    redirect(page: string) {
-        this.writeCookie();
+    public redirect(page: string) {
+        this.writeCookies();
         this.srcRes.writeHead(
             302,
             {
@@ -159,44 +161,48 @@ export class HttpResponse extends ServerResponse {
             }
         );
         this.srcRes.end();
-        return ERouteResultType.REDIRECT;
+        return RouteResultType.REDIRECT;
     }
 
     /**
+     * 添加cookie   
+     * @param cookie -  cookie 
+     */
+    public addCookie(cookie:HttpCookie){
+        this.cookies.push(cookie);
+    }
+    
+    /**
      * 写cookie到header
      */
-    writeCookie() {
-        const kvs = this.cookie.getAll();
-        let str = '';
-        for (const kv of kvs) {
-            str += kv[0] + '=' + kv[1] + ';';
+    public writeCookies() {
+        for(let c of this.cookies){
+            this.srcRes.setHeader('Set-Cookie', c.toHeaderString());
         }
-        if (str !== '') {
-            str += 'Path=/; Secure; HttpOnly; SameSite=None';
-            this.srcRes.setHeader('Set-Cookie', str);
-        }
-        return str;
     }
 
     /**
      * 设置跨域头
      */
-    setCorsHead() {
+    public setCorsHead() {
         if (!this.request.headers['origin'] || !WebConfig.cors || !WebConfig.cors['domain']) {
             return;
         }
         // 来源域
-        const domain: string = WebConfig.cors['domain'].trim();
-        if (domain === '') {
+        const domain = WebConfig.cors.domain;
+        if(typeof domain === 'string'){
+            this.setHeader('Access-Control-Allow-Origin', domain);
+        }else if(Array.isArray(domain) && domain.includes(this.request.headers.origin)){
+            this.setHeader('Access-Control-Allow-Origin', this.request.headers.origin);
+        }else{
             return;
         }
-        this.setHeader('Access-Control-Allow-Origin', domain);
-        this.setHeader('Access-Control-Allow-Headers', WebConfig.cors['allow_headers'] || '');
-        this.setHeader('Access-Control-Allow-Methods', WebConfig.cors['allow_methods'] || "GET,POST,PUT,DELETE,OPTIONS");
+        this.setHeader('Access-Control-Allow-Headers', WebConfig.cors.allow_headers || '');
+        this.setHeader('Access-Control-Allow-Methods', WebConfig.cors.allow_methods || "GET,POST,PUT,DELETE,OPTIONS");
         if (domain !== '*') {
             this.setHeader('Access-Control-Allow-Credentials', 'true');
         }
-        this.setHeader('Access-Control-Max-Age', WebConfig.cors['access_max_age'] || 86400);
+        this.setHeader('Access-Control-Max-Age', WebConfig.cors.access_max_age || 86400);
     }
 
     /**
@@ -241,8 +247,7 @@ export class HttpResponse extends ServerResponse {
      * 处理options请求方法
      */
     doOptions() {
-        this.setHeader('Allow', 'GET, POST, OPTIONS, HEAD');
-        this.writeCookie();
+        this.writeCookies();
         this.setCorsHead();
         this.setContentLength(0);
         this.srcRes.writeHead(200, {});

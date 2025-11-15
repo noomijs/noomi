@@ -1,31 +1,46 @@
 import { AopPointcut } from "../main/aop/aoppointcut";
 
 /**
- * Aop通知类型
+ * 通知类型
+ * 
+ * @public
  */
-export type AopAdvice = {
-    /**
-     * 切点
+export type AdviceType = 'before'|'after'|'after-return'|'after-throw'|'around';
+
+/**
+ * Aop通知类型
+ * 
+ * @public
+ */
+export interface AopAdvice {
+    /** 
+     * 切点 
      */
     pointcutId?: string;
+
     /**
      * 通知类
      */
     clazz?: unknown;
+
     /**
-     * 通知类型 (before,after,after-return,after-throw,around)
+     * 通知类型
      */
-    type: 'before'|'after'|'after-return'|'after-throw'|'around';
+    type: AdviceType;
+
     /**
-     * 对应的切面方法
+     * 对应的切面方法名
      */
     method: string;
 }
 
+
 /**
  * Aop切面类型
+ * 
+ * @public
  */
-export type AopAspect = {
+export interface AopAspect {
     /**
      * 实例名
      */
@@ -42,8 +57,10 @@ export type AopAspect = {
 
 /**
  * 切点配置
+ * 
+ * @public
  */
-export type AopPointcutOption = {
+export interface AopPointcutOption {
     /**
      * 类
      */
@@ -59,17 +76,21 @@ export type AopPointcutOption = {
 }
 
 /**
- * aop方法配置
+ * aop方法配置项
+ * 
+ * @public
  */
-export type AopMethodOption = {
+export interface AopMethodOption {
     instance:unknown;
     method:string;
 }
 
 /**
  * 针对切点的方法集
+ * 
+ * @public
  */
-export type AopAdviceCollection = {
+export interface AopAdviceCollection {
     /**
      * 前置方法集
      */

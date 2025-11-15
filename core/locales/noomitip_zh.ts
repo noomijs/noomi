@@ -1,5 +1,7 @@
 /**
  * noomi中文提示信息
+ * 
+ * @internal
  */
 export const NoomiTip_zh = {
     tip:{

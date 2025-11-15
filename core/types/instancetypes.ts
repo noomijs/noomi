@@ -1,7 +1,9 @@
 /**
  * 实例属性
+ * 
+ * @public
  */
-export type InstanceProperty = {
+export interface InstanceProperty{
     /**
      * 属性名
      */
@@ -14,8 +16,10 @@ export type InstanceProperty = {
 
 /**
  * 实例配置对象
+ * 
+ * @public
  */
-export type InstanceOption = {
+export interface InstanceOption {
     /**
      * 单例模式，如果为true，表示该类只创建一个实例，调用时，共享调用
      */
@@ -28,8 +32,10 @@ export type InstanceOption = {
 
 /**
  * 实例对象，实例工厂中的存储元素
+ * 
+ * @public
  */
-export type InstanceItem = {
+export interface InstanceItem {
     /**
      * 实例对象
      */
@@ -54,8 +60,10 @@ export type InstanceItem = {
 
 /**
  * 注入参数对象，用于存储待注入对象的参数
+ * 
+ * @public
  */
-export type InjectItem = {
+export interface InjectItem {
     /**
      * 待注入实例
      */
@@ -73,17 +81,3 @@ export type InjectItem = {
      */
     injectName: string
 }
-
-
-// {
-//     "name":"logAdvice", 			//实例名，不可重复，必填
-//     "class":"LogAdvice",			//类名，必填
-//     "path":"advice/logadvice",		//模块路径，相对于module_path中的路径，必填
-//     "singleton":true,				//是否单例，布尔型，默认true,
-//     "properties":[                  //注入对象
-//         {
-//             "name":"commonTool",    //属性名
-//             "ref":"commInstanceTool"//引用实例名
-//         }
-//     ]
-// }

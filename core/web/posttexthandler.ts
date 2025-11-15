@@ -3,6 +3,8 @@ import { ContentTypeOption } from "../types/webtypes";
 
 /**
  * 针对post不同mime进行处理
+ * 
+ * @public
  */
 export class PostTextHandler {
     /**

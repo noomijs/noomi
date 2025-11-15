@@ -1,5 +1,7 @@
 /**
  * 连接管理器基类，数据库包（如：noomi-mysql,noomi-relaen,...）必须继承此基类
+ * 
+ * @public
  */
 export abstract class NoomiConnectionManager {
     /**

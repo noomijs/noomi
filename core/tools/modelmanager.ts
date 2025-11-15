@@ -8,6 +8,8 @@ import { Validator } from "./validator";
  * model管理器
  * @remarks
  * 管理所有DataModel的数据校验、类型转换信息并提供校验和类型转换操作
+ * 
+ * @public
  */
 export class ModelManager{
     /**
@@ -145,7 +147,7 @@ export class ModelManager{
                 }
             }
         }
-        return Object.getOwnPropertyNames(errObj).length === 0 ? null : errObj;
+        return Object.keys(errObj).length === 0 ? null : errObj;
     }
 
     /**
@@ -179,7 +181,7 @@ export class ModelManager{
      * @param name -    属性名
      * @returns         如果失败，则返回失败信息
      */
-    private static transform(model,name: string,type:CommonDataType): string{
+    private static transform(model:unknown,name: string,type:CommonDataType): string{
         let v = model[name];
         const tp = typeof v;
         // 非字符串，需要去掉两端空格

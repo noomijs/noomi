@@ -1,5 +1,7 @@
 /**
  * 模型验证器
+ * 
+ * @public
  */
 export class Validator {
     /**

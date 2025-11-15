@@ -3,6 +3,8 @@ import {Util} from "../tools/util";
 
 /**
  * 针对post不同mime进行处理
+ * 
+ * @public
  */
 export class PostFileHandler {
     /**

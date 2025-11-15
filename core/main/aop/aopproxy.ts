@@ -6,8 +6,12 @@ import { AopAdviceCollection } from "../../types/aoptypes";
 
 /**
  * Aop 代理类
+ * 
  * @remarks
  * 用于代理切点所匹配的方法，当符合切点表达式匹配的方法时，将统一调用该代理类的invoke方法
+ * 通知执行顺序 around、before、returns（或throws）、after、around
+ * 
+ * @public
  */
 export class AopProxy {
     /**
@@ -21,6 +25,8 @@ export class AopProxy {
         if (!func) {
             return;
         }
+        //TODO 通过this.***调用时，如果不是singleton，则在getInstance时，会导致新的instance产生，this指向失效
+        // 目前需要限定只能针对singleton进行代理
         /**
          * 异步方法
          */
@@ -51,6 +57,7 @@ export class AopProxy {
                         await item.instance[item.method](aopParams);
                     }
                 }
+                
                 try {
                     result = await func.apply(instance, args);
                     //带入参数
@@ -71,7 +78,8 @@ export class AopProxy {
                     }
                     // 抛出异常
                     throw e;
-                }
+                }    
+                
                 // after aop 调用
                 if (advices !== null && advices.after.length > 0) {
                     for (const item of advices.after) {

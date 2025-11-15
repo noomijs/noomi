@@ -18,6 +18,8 @@ import { ModelManager } from './modelmanager';
 /**
  * instance装饰器，添加实例到实例工厂，装饰类
  * @param cfg - 配置项或singleton设置，如果为boolean，则为singleton设置
+ * 
+ * @internal
  */
 export function Instance(cfg?: InstanceOption|boolean) {
     return (target) => {
@@ -28,6 +30,8 @@ export function Instance(cfg?: InstanceOption|boolean) {
 /**
  * IoC注入装饰器，装饰属性
  * @param clazz -   注入类
+ * 
+ * @internal
  */
 export function Inject(clazz: unknown) {
     return (target: unknown, propertyName: string) => {
@@ -44,6 +48,8 @@ export function Inject(clazz: unknown) {
  *   namespace:命名空间，可选，namespace+path匹配的方法名=路由完整路径
  * 
  *   path:路径，支持通配符,如: "*"表示该类下的所有方法，"add*"表示以add开头的所有方法
+ * 
+ * @internal
  */
 export function Router(cfg?: RouteConfig|string) {
     return (target) => {
@@ -81,7 +87,8 @@ export function Router(cfg?: RouteConfig|string) {
 /**
  * 路由装饰器，装饰方法
  * @param cfg - 配置项，如果为string，则为路由路径，默认type=‘json’
- *          
+ *  
+ * @internal        
  */
 export function Route(cfg: RouteConfig|string) {
     return (target: unknown, propertyName: string) => {
@@ -103,6 +110,8 @@ export function Route(cfg: RouteConfig|string) {
  * web过滤器，装饰方法
  * @param pattern - RegExp|Array<RegExp>  过滤正则表达式或表达式数组，默认为 .*，过滤所有请求
  * @param order -   number                优先级，值越小优先级越高，默认10000，可选
+ * 
+ * @internal
  */
 export function WebFilter(pattern?: RegExp|RegExp[], order?: number) {
     return (target: unknown, name: string) => {
@@ -122,6 +131,8 @@ export function WebFilter(pattern?: RegExp|RegExp[], order?: number) {
  * web后置处理器，装饰方法
  * @param pattern - 过滤正则表达式或表达式数组，默认为 .*，处理所有请求
  * @param order -   优先级，值越小优先级越高，默认10000，可选
+ * 
+ * @internal
  */
 export function WebHandler(pattern?: RegExp|Array<RegExp>, order?: number) {
     return (target: unknown, name: string) => {
@@ -139,6 +150,8 @@ export function WebHandler(pattern?: RegExp|Array<RegExp>, order?: number) {
 
 /**
  * 切面装饰器，装饰类
+ * 
+ * @internal
  */
 export function Aspect() {
     return (target) => {
@@ -156,6 +169,8 @@ export function Aspect() {
  * 如`user*.*`拦截实例名为user开头的实例下的所有方法，
  * 
  * `userX.m1`拦截实例名为userX的m1方法
+ * 
+ * @internal
  */
 export function Pointcut(expressions?: string[]) {
     return (target: unknown, name: string) => {
@@ -170,6 +185,8 @@ export function Pointcut(expressions?: string[]) {
 /**
  * 通知装饰器 before，装饰方法
  * @param pointcutId -  切点id
+ * 
+ * @internal
  */
 export function Before(pointcutId: string) {
     return (target: unknown, name: string) => {
@@ -185,6 +202,8 @@ export function Before(pointcutId: string) {
 /**
  * 通知装饰器 after，装饰方法
  * @param pointcutId -  切点id
+ * 
+ * @internal
  */
 export function After(pointcutId: string) {
     return (target: unknown, name: string) => {
@@ -200,6 +219,8 @@ export function After(pointcutId: string) {
 /**
  * 通知装饰器 around，装饰方法
  * @param pointcutId -  切点id
+ * 
+ * @internal
  */
 export function Around(pointcutId: string) {
     return (target: unknown, name: string) => {
@@ -215,6 +236,8 @@ export function Around(pointcutId: string) {
 /**
  * 通知装饰器 after-return，装饰方法
  * @param pointcutId -  切点id
+ * 
+ * @internal
  */
 export function AfterReturn(pointcutId: string) {
     return (target: unknown, name: string) => {
@@ -230,6 +253,8 @@ export function AfterReturn(pointcutId: string) {
 /**
  * 通知装饰器 after-throw，装饰方法
  * @param pointcutId -  切点id
+ * 
+ * @internal
  */
 export function AfterThrow(pointcutId: string) {
     return (target: unknown, name: string) => {
@@ -248,6 +273,8 @@ export function AfterThrow(pointcutId: string) {
  * 把符合条件的方法装饰为事务方法，如果没有使用Instance装饰器，则会默认添加
  * 
  * @param methodReg - 方法名表达式，字符串或字符串数组，可以使用含`*`的通配符，默认为`*`，表示该实例的所有方法都为事务方法
+ * 
+ * @internal
  */
 export function Transactioner(methodReg?: string|string[]) {
     return (target) => {
@@ -259,6 +286,8 @@ export function Transactioner(methodReg?: string|string[]) {
  * 事务方法装饰器，装饰方法
  * @remarks
  * 如果没有Transactioner和Instance修饰此方法对应的类，则会默认添加Instance装饰器
+ * 
+ * @internal
  */
 export function Transaction() {
     return (target: unknown, name: string) => {
@@ -269,6 +298,8 @@ export function Transaction() {
 /**
  * 数据模型装饰器，装饰类
  * @param clazz - 模型类
+ * 
+ * @internal
  */
 export function DataModel(clazz: unknown) {
     return (target) => {
@@ -279,6 +310,8 @@ export function DataModel(clazz: unknown) {
 /**
  * 属性装饰器，装饰属性，使用DataModel时有效
  * @param cfg - 配置项，如果为字符串，则表示为类型
+ * 
+ * @internal
  */
 export function Prop(cfg?:PropOption|string){
     return (target: unknown, name: string) => {
@@ -302,6 +335,8 @@ export function Prop(cfg?:PropOption|string){
 /**
  * 数据null检查，装饰路由方法
  * @param props -     待检查属性数组
+ * 
+ * @internal
  */
 export function NullCheck(props: Array<string>) {
     return (target: unknown, name: string) => {
@@ -312,6 +347,8 @@ export function NullCheck(props: Array<string>) {
 /**
  * 日志装饰器，装饰类
  * @param cfg -  配置对象
+ * 
+ * @internal
  */
 export function Logger(cfg: LogOption) {
     return (target:unknown) => {
@@ -329,6 +366,8 @@ export function Logger(cfg: LogOption) {
  * @remarks
  * 用于项目初始化完成后的自定义代码执行
  * @param params -      钩子方法的参数数组
+ * 
+ * @internal
  */
 export function LaunchHook(params?: Array<unknown>) {
     return (target, methodName) => {

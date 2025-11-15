@@ -4,8 +4,11 @@ import {HttpRequest} from "./httprequest";
 import {HttpResponse} from "./httpresponse";
 
 /**
- * web后置处理，对web请求结果进行再处理
- * 如果处理方法返回为null，则处理链不再继续处理
+ * web后置处理，对web请求结果进行再处理，处理流程与filter相似
+ * 
+ * 如果某个处理方法返回为null，则处理链不再继续处理
+ * 
+ * @public
  */
 export class WebAfterHandler {
     /**

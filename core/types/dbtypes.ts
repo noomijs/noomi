@@ -1,8 +1,10 @@
 
 /**
  * 连接配置
+ * 
+ * @public
  */
-export type ConnectionConfig = {
+export interface ConnectionConfig {
     /**
      * noomi数据库包名（如noomi-relaen,noomi-typeorm,noomi-mysql等）
      */
@@ -40,9 +42,9 @@ export type ConnectionConfig = {
      *   "type": "mysql",
      *   "host": "localhost",
      *   "port": 3306,
-     *   "username": "root",
-     *   "password": "field",
-     *   "database": "codement",
+     *   "username":"your user",
+     *   "password":"your password",
+     *   "database":"your database",
      *   "logging": true,
      *   "entities": [path1,path2,...]
      * }
@@ -92,18 +94,12 @@ export type ConnectionConfig = {
 
 /**
  * 数据库初始化配置对象
+ * 
+ * @public
  */
-export type DbInitOption = {
-    /**
-     * 是否使用链接池，默认false
-     */
-    usePool?:boolean;
+export interface DbInitOption {
     /**
      * 数据源配置，需参考各数据源 npm 配置项
      */
     options:object;
-    /**
-     * 别名
-     */
-    poolAlias?:string;
 }

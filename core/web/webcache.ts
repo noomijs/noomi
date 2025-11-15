@@ -1,4 +1,4 @@
-import {NCache} from "../tools/ncache";
+import {NCache} from "../tools/cache/ncache";
 import { WebCacheItem, WebCacheOption } from "../types/webtypes";
 import {HttpRequest} from "./httprequest";
 import {HttpResponse} from "./httpresponse";
@@ -9,6 +9,8 @@ import {WebConfig} from "./webconfig";
  * web 缓存类
  * @remarks
  * 用于管理缓存资源
+ * 
+ * @public
  */
 export class WebCache {
     /**

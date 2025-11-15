@@ -4,6 +4,8 @@ import {App} from "./application";
  * 工具类
  * @remarks
  * 提供工具方法
+ * 
+ * @public
  */
 export class Util {
     /**
@@ -169,21 +171,5 @@ export class Util {
      */
     public static eval(evalStr: string): unknown {
         return new Function(`return(${evalStr})`)();
-    }
-
-    /**
-     * 获取模块
-     * @remarks
-     * 针对export输出的对象
-     * @param path -    模块路径
-     * @returns 
-     */
-    
-    public static async getModuleClass(path:string): Promise<unknown> {
-        const mdl = await import(path);
-        const keys = Object.keys(mdl);
-        if(keys&&keys.length>0){
-            return mdl[keys[0]];
-        }
     }
 }

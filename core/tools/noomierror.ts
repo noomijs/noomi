@@ -4,6 +4,8 @@ import { TipManager } from "./tipmanager";
  * Noomi异常类
  * @remarks
  * 用于产生异常信息
+ * 
+ * @public
  */
 export class NoomiError extends Error {
     /**
@@ -27,7 +29,11 @@ export class NoomiError extends Error {
             this.code = <string>code;
         }else{
             super();
-            this.message = <string>code;        
+            if (tp === 'object'){
+                this.message = JSON.stringify(code);
+            }else{
+                this.message = <string>code;
+            }
         }
     }
 }

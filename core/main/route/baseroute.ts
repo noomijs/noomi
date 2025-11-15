@@ -1,18 +1,16 @@
 import {HttpRequest} from "../../web/httprequest";
 import {HttpResponse} from "../../web/httpresponse";
 import { ModelManager } from "../../tools/modelmanager";
+import { NoomiError } from "../../tools/noomierror";
 
 /**
  * 路由基类
  * @remarks
- * 可自动为路由类生成model(存放http请求参数的对象)，自带request和response对象，
- * 建议所有路由继承此基类
+ * 可自动为路由类生成model(存放http请求参数的对象)，自带request和response对象，建议所有路由继承此基类
+ * 
+ * @public
  */
 export class BaseRoute {
-    /**
-     * 模型类
-     */
-    public __modelClass: unknown;
     /**
      * 数据对象
      */
@@ -38,9 +36,11 @@ export class BaseRoute {
      * 如果类型转换或数据校验未通过，抛出异常
      * @param data -        数据对象(由浏览器/客户端传入的数据参数)
      * @param methodName -  路由方法名
-     * @throws              抛出数据转换或校验异常对象信息
+     * @returns             数据转换错误、校验错误 或 undefined
+     * 
+     * @internal
      */
-    public __setModel(data: object, methodName?: string) {
+    public __setModel(data: object, methodName?: string):object {
         const mCls = this.constructor['__modelClass'];
         if (mCls) {
             //实例化model
@@ -55,7 +55,7 @@ export class BaseRoute {
                 const r = ModelManager.handle(this,methodName,m);
                 //如果不为空，抛出异常
                 if (r) {
-                    throw new Error(JSON.stringify(r));
+                    return new NoomiError(r);
                 }
             }
             this.model = m;

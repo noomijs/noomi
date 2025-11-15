@@ -2,6 +2,8 @@
  * 页面工厂
  * @remarks
  * 用于管理页面及路径
+ * 
+ * @public
  */
 export class PageFactory {
     /**

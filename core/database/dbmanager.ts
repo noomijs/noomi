@@ -12,6 +12,8 @@ import { Util } from "../tools/util";
  * 数据库管理器
  * @remarks
  * 用于管理数据库配置、连接对象、事务对象等
+ * 
+ * @public
  */
 export class DBManager {
     /**

@@ -3,6 +3,8 @@ import {Util} from "../tools/util";
 
 /**
  * form 参数处理器
+ * 
+ * @public
  */
 export class PostFormHandler {
     /**
@@ -231,7 +233,9 @@ export class PostFormHandler {
                     }
                     const fn = a1[1];
                     const fn1 = fn.substring(1, fn.length - 1).trim();
-                    const fn2 = App.uuid.v1() + fn1.substring(fn1.lastIndexOf('.'));
+                    //找到后缀名开始位置，如果存在后缀名，在uuid串后面加上后缀名
+                    const dotIndex = fn1.lastIndexOf('.');
+                    const fn2 = App.uuid.v1() + (dotIndex===-1?'':fn1.substring(dotIndex));
                     // 得到绝对路径
                     const filePath = Util.getAbsPath([this.saveDir, fn2]);
                     this.value = {

@@ -6,6 +6,8 @@ import { Util } from "./util";
 
 /**
  * redis 工厂
+ * 
+ * @public
  */
 export class RedisFactory {
     /**

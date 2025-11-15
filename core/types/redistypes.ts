@@ -1,7 +1,9 @@
 /**
  * redis 配置项
+ * 
+ * @public
  */
-export type RedisCfg = {
+export interface RedisCfg {
     /**
      * redis名
      */
@@ -22,8 +24,10 @@ export type RedisCfg = {
 
 /**
  * redis存储项
+ * 
+ * @public
  */
-export type RedisItem = {
+export interface RedisItem {
     /**
      * 键
      */
@@ -48,8 +52,10 @@ export type RedisItem = {
 
 /**
  * redis实例
+ * 
+ * @public
  */
-export type RedisInst={
+export interface RedisInst{
     keys:(key:string)=>string[];
     hset:(key:string,subKey:string,value:unknown,foo:(err,v)=>void)=>void;
     hmset:(key:string|string[],value?:object,foo?:(err,v)=>void)=>void;

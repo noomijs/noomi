@@ -7,12 +7,9 @@ import { NoomiTransaction } from "./noomitransaction";
 
 /**
  * 获取数据库或数据源连接
- * @returns    数据库connection，针对不同的product返回不同:
- *              mysql:      返回connection对象
- *              oracle:     返回connection对象
- *              mssql:      返回request对象
- *              relaen:     返回connection对象
- *              typeorm:    返回connection（已连接）
+ * @returns    数据库connection，connection具体使用参考对应package
+ * 
+ * @public
  */
 export async function getConnection(): Promise<any> {
     return await DBManager.getConnection();
@@ -20,6 +17,8 @@ export async function getConnection(): Promise<any> {
 
 /**
  * 关闭数据库连接
+ * 
+ * @public
  */
 export async function closeConnection() {
     await DBManager.closeConnection();
@@ -28,6 +27,8 @@ export async function closeConnection() {
 /**
  * 获取事务对象
  * @returns     事务对象
+ * 
+ * @public
  */
 export async function getTransaction():Promise<NoomiTransaction>{
     return await DBManager.getTransaction();
@@ -35,6 +36,8 @@ export async function getTransaction():Promise<NoomiTransaction>{
 
 /**
  * 开始事务
+ * 
+ * @public
  */
 export async function txBegin(){
     const tx = await getTransaction();
@@ -48,6 +51,8 @@ export async function txBegin(){
  * 提交事务
  * @param close -   关闭连接   
  * @returns         提交成功返回true，否则返回false
+ * 
+ * @public
  */
 export async function txCommit(close?:boolean):Promise<boolean>{
     const tx = await getTransaction();
@@ -66,6 +71,8 @@ export async function txCommit(close?:boolean):Promise<boolean>{
  * 回滚事务
  * @param close -   是否关闭connection
  * @returns         回滚成功返回true，否则返回false
+ * 
+ * @public
  */
 export async function txRollback(close?:boolean){
     const tx = await getTransaction();

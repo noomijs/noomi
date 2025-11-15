@@ -5,6 +5,8 @@ import { HookItem } from "../types/other";
  * 应用启动后钩子对象管理器
  * @remarks
  * 用于管理应用启动后的钩子函数及其调用
+ * 
+ * @public
  */
 export class LaunchHookManager {
     /**

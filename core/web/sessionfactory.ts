@@ -1,12 +1,16 @@
 import {HttpRequest} from "./httprequest";
-import {NCache} from "../tools/ncache";
+import {NCache} from "../tools/cache/ncache";
 import {App} from "../tools/application";
-import { SessionOption } from "../types/webtypes";
+import { CookieOption, SessionOption } from "../types/webtypes";
+import { HttpCookie } from "./httpcookie";
+import { Session } from "./session";
 
 /**
  * session 工厂类
  * @remarks
  * 用于管理session
+ * 
+ * @public
  */
 export class SessionFactory {
     /**
@@ -35,6 +39,11 @@ export class SessionFactory {
     static cache: NCache;
 
     /**
+     * 全局cookie 配置
+     */
+    static cookieOption:CookieOption;
+
+    /**
      * 参数初始化
      * @param cfg - session配置项
      */
@@ -50,6 +59,7 @@ export class SessionFactory {
         if (typeof cfg.timeout === 'number') {
             this.timeout = cfg.timeout * 60;
         }
+        
         //session类型
         this.type = cfg.save_type || 0;
         this.cache = new NCache({
@@ -58,6 +68,8 @@ export class SessionFactory {
             saveType: cfg.save_type,
             redis: cfg.redis
         });
+        //保存cookie设置
+        this.cookieOption = cfg.cookie;
     }
 
     /**
@@ -69,7 +81,6 @@ export class SessionFactory {
         // session存在
         let id: string = this.getSessionId(req);
         const cTime = new Date().getTime();
-        const expTime = cTime + this.timeout * 1000;
         let needCreate: boolean = false;
         // 新建session
         if (!id) {
@@ -77,7 +88,6 @@ export class SessionFactory {
             needCreate = true;
         } else {
             needCreate = !await this.cache.has(id);
-
         }
         // 需要创建
         if (needCreate) {
@@ -95,9 +105,26 @@ export class SessionFactory {
         // 得到session对象
         const session = new Session(id);
         // 设置cookie sessionid和过期时间
-        const cookie = req.response.cookie;
-        cookie.set(this.sessionName, id);
-        cookie.set('Expires', new Date(expTime).toUTCString());
+        const cookie = new HttpCookie(this.sessionName,id);
+        //根据配置
+        if(this.cookieOption.domain){
+            cookie.setDomain(this.cookieOption.domain);
+        }
+        if(this.cookieOption.http_only){
+            cookie.setHttpOnly(true);
+        }
+        if(this.cookieOption.secure){
+            cookie.setSecure(true);
+        }
+        if(this.cookieOption.path){
+            cookie.setPath(this.cookieOption.path);
+        }
+        if(this.cookieOption.max_age){
+            cookie.setMaxAge(this.cookieOption.max_age);
+        }else if(this.timeout){
+            cookie.setMaxAge(this.timeout * 60);
+        }
+        req.response.addCookie(cookie);
         return session;
     }
 
@@ -120,67 +147,10 @@ export class SessionFactory {
 
     /**
      * 获取cookie携带的sessionId
-     * @param req -   request对象
-     * @returns     sessionId
+     * @param req -     request对象
+     * @returns         sessionId
      */
     static getSessionId(req: HttpRequest): string {
-        const cookies = {};
-        const cook = <string>req.getHeader('cookie');
-        cook && cook.split(';').forEach(parms => {
-            const parts = parms.split('=');
-            cookies[parts[0].trim()] = (parts[1] || '').trim();
-        });
-        return cookies[this.sessionName];
-    }
-}
-
-/**
- * session 类
- */
-export class Session {
-    /**
-     * session id
-     */
-    id: string;
-
-    /**
-     * 构造器
-     * @param id - sessionId
-     */
-    constructor(id: string) {
-        this.id = id;
-    }
-
-    /**
-     * 获取session值
-     * @param key - 键
-     * @returns     值或null
-     */
-    async get(key: string): Promise<unknown> {
-        return await SessionFactory.cache.get(this.id, key);
-    }
-
-    /**
-     * 设置session值
-     * @param key -   键
-     * @param value - 值
-     */
-    async set(key: string, value: unknown) {
-        if (value === undefined) {
-            return;
-        }
-        await SessionFactory.cache.set({
-            key: this.id,
-            subKey: key,
-            value: value
-        }, SessionFactory.timeout);
-    }
-
-    /**
-     * 删除session值
-     * @param key -   键
-     */
-    async del(key: string) {
-        await SessionFactory.cache.del(this.id, key);
+        return req.getCookie(this.sessionName)?.getValue();
     }
 }

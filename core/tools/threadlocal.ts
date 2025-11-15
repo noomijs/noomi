@@ -2,6 +2,8 @@ const {AsyncLocalStorage} = require("async_hooks");
 
 /**
  * 线程安全（thread local）
+ * 
+ * @public
  */
 export class NoomiThreadLocal {
     /**

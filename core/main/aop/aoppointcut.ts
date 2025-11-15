@@ -4,30 +4,33 @@ import { AopAdvice } from "../../types/aoptypes";
 
 /**
  * Aop 切点类
+ * 
+ * @public
  */
 export class AopPointcut {
     /**
      * 切点id
      */
-    id: string;
+    public id: string;
     /**
      * 切面类
      */
-    aspectClazz: unknown;
+    public aspectClazz: unknown;
     /**
      * 正则表达式数组
      */
-    expressions: RegExp[] = [];
+    public expressions: RegExp[] = [];
     /**
      * 通知数组
      */
-    advices?: Array<AopAdvice> = [];
+    public advices?: Array<AopAdvice> = [];
 
     /**
      * 构造器
      * @param id -            切点id(实例内唯一)
      * @param expressions -   表达式串数组，支持通配符'*'
      * @param clazz -         切面类
+     * 
      */
     constructor(id: string, expressions: Array<string>, clazz: unknown) {
         this.id = id;

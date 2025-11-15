@@ -1,5 +1,7 @@
 /**
  * noomi英文提示信息
+ * 
+ * @internal
  */
 export const NoomiTip_en = {
     tip:{

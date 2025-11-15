@@ -6,7 +6,12 @@ import {LogAdvice} from "./logadvice";
  * 日志管理类
  * @remarks
  * 用于管理各类日志
+ * 
+ * @public
+ * 
+ * 
  */
+// TODO 整理日志
 export class LogManager {
     /**
      * 日志对象

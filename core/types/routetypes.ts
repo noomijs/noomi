@@ -2,8 +2,10 @@ import { BaseRoute } from "../main/route/baseroute";
 
 /**
  * 路由类配置
+ * 
+ * @public
  */
-export type RouteClassCfg = {
+export interface RouteClassCfg {
     /**
      * 命名空间
      */
@@ -29,9 +31,12 @@ export type RouteClassCfg = {
 
 /**
  * 路由配置
+ * 
+ * @public
  */
-export type RouteConfig = {
+export interface RouteConfig {
     /**
+     * @remarks
      * 路由路径
      */
     path?: string;
@@ -39,10 +44,6 @@ export type RouteConfig = {
      * 命名空间
      */
     namespace?: string;
-    /**
-     * 批量定义路由，针对Router装饰器有效
-     */
-    batch?:boolean;
     /**
      * 路由类
      */
@@ -64,8 +65,10 @@ export type RouteConfig = {
 
 /**
  * 路由结果类型
+ * 
+ * @public
  */
-export enum ERouteResultType {
+export enum RouteResultType {
     /**
      * 重定向
      */
@@ -75,7 +78,7 @@ export enum ERouteResultType {
      */
     CHAIN = 'chain',
     /**
-     * 文件流，主要用于文件下载
+     * 文件流，用于文件下载
      */
     STREAM = 'stream',
     /**
@@ -90,12 +93,14 @@ export enum ERouteResultType {
 
 /**
  * 路由结果配置项
+ * 
+ * @public
  */
-export type RouteResultOption = {
+export interface RouteResultOption {
     /**
      * 结果类型
      */
-    type?: ERouteResultType;
+    type?: RouteResultType;
     /**
      * 返回值，当返回值与value一致时，将执行此结果
      */
@@ -118,8 +123,10 @@ export type RouteResultOption = {
 
 /**
  * 路由实例
+ * 
+ * @public
  */
-export type RouteInst = {
+export interface RouteInst {
     /**
      * 路由对应实例
      */

@@ -1,12 +1,16 @@
 /**
  * 未知类
+ * 
+ * @public
  */
 export type UnknownClass = ()=>void;
 
 /**
  * hook 项
+ * 
+ * @public
  */
-export type HookItem = {
+export interface HookItem {
     /**
      * 实例名
      */
@@ -23,15 +27,19 @@ export type HookItem = {
 
 /**
  * 通用有效数据类型
+ * 
+ * @public
  */
-export type CommonDataType = 'string'|'number'|'int'|'float'|'boolean'|'object'|'array';
+export type CommonDataType = 'string'|'number'|'int'|'float'|'boolean'|'date'|'time'|'datetime'|'object'|'array';
 
 /**
  * 属性配置
  * @remarks
  * 用于模型的属性定义
+ * 
+ * @public
  */
-export type PropOption = {
+export interface PropOption {
     /**
      * 属性类型
      */

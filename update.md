@@ -16,3 +16,6 @@
 
 ### 1.0.0-beta7
 1. 取消@DataType和@DataValidator装饰器，用@Prop装饰器代替
+
+### 1.0.0-beta14
+1. 完善web config的跨域设置

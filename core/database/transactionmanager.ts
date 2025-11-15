@@ -3,6 +3,11 @@ import {AopFactory} from "../main/aop/aopfactory";
 import { UnknownClass } from "../types/other";
 import { TransactionAdvice } from "./transactionadvice";
 
+/**
+ * 事务管理器
+ * 
+ * @internal
+ */
 export class TransactionManager {
     /**
      * 事务切点名
@@ -11,8 +16,11 @@ export class TransactionManager {
     
     /**
      * 添加事务Aop操作
+     * 
      * @param clazz -       事务类
      * @param methodName -  方法名或方法名数组，支持通配符'*'
+     * 
+     * @internal
      */
     public static addTransactionAop(clazz: UnknownClass, methodName: string | string[]) {
         //如果类尚未添加到实例工厂，则先添加
@@ -34,6 +42,8 @@ export class TransactionManager {
 
     /**
      * 初始化事务 advice
+     * 
+     * @internal
      */
     public static initAdvice() {
         AopFactory.registPointcut({

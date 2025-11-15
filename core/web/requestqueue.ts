@@ -1,6 +1,6 @@
 import {HttpRequest} from "./httprequest";
 import {WebConfig} from "./webconfig";
-import {ERouteResultType, RouteInst} from "../types/routetypes";
+import {RouteResultType, RouteInst} from "../types/routetypes";
 import {FilterFactory} from "./filterfactory";
 import {StaticResource} from "./staticresource";
 import {App} from "../tools/application";
@@ -9,14 +9,15 @@ import {HttpResponse} from "./httpresponse";
 import {Util} from "../tools/util";
 import {WebCache,} from "./webcache";
 import {WebAfterHandler} from "./webafterhandler";
-import {NoomiError} from "../tools/noomierror";
 import { RouteFactory } from "../main/route/routefactory";
 import { WebCacheItem } from "../types/webtypes";
 
 /**
  * 请求队列
+ * 
+ * @public
  */
-//TODO v1.0.1 添加忙时延迟访问
+//TODO 添加忙时延迟访问
 export class RequestQueue {
     /**
      * 资源访问
@@ -67,19 +68,20 @@ export class RequestQueue {
         const route: RouteInst = RouteFactory.getRoute(path);
         if (route !== null) {
             // 执行
-            try {
-                data = await RouteFactory.handleRoute(route, request, response);
-                // 重定向直接返回
-                if (data === ERouteResultType.REDIRECT) {
-                    return;
-                }
-            } catch (e) {
-                // 如果非Error，需要转换为NoomiError
-                if(!(e instanceof Error)){
-                    e = new NoomiError(e);
-                }
-                data = e;
+            data = await RouteFactory.handleRoute(route, request, response);
+            //后置过滤器执行只对路由处理
+            // 重定向直接返回
+            if (data === RouteResultType.REDIRECT) {
+                return;
             }
+            //文件单独处理
+            if(data.type === 'file'){
+                response.writeFileToClient({
+                    data: data.data
+                });
+            }
+            // 请求后置处理
+            data = await WebAfterHandler.doChain(request.url, data, request, response);
         } else { // 静态资源
             // 从web cache获取数据
             data = await WebCache.load(request, response, path);
@@ -88,8 +90,6 @@ export class RequestQueue {
                 data = await StaticResource.load(request, response, path, gzip);
             }
         }
-        // 后置过滤器执行
-        data = await WebAfterHandler.doChain(request.url, data, request, response);
         this.handleResult(response, data, path, gzip);
     }
 
@@ -115,7 +115,7 @@ export class RequestQueue {
                     });
                 }
             }
-        } else if (typeof data === 'object' && !(data instanceof Error)) {
+        } else if (typeof data === 'object') {
             const cData: WebCacheItem = <WebCacheItem>data;
             // json格式为utf8，zip和流用binary
             const charset = data['mimeType'] && data['mimeType'].indexOf('/json') === -1 || isZip && cData.zipData ? 'binary' : 'utf8';
@@ -145,7 +145,7 @@ export class RequestQueue {
                 });
             } else {  // 数据对象
                 response.writeToClient({
-                    data: cData.toString(),
+                    data: JSON.stringify(cData),
                     charset: charset
                 });
             }

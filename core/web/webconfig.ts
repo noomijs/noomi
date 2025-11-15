@@ -11,6 +11,8 @@ import { WebConfigOption, WebCorsOption, WebHttpsOption } from "../types/webtype
  * web 配置类
  * @remarks
  * 用于管理web配置参数
+ * 
+ * @public
  */
 export class WebConfig {
     /**
@@ -32,6 +34,11 @@ export class WebConfig {
      *  cert_file:证书文件路径，相对与根目录
      */
     public static httpsCfg: WebHttpsOption;
+
+    /**
+     * session 配置
+     */
+    public static sessionCfg:WebConfigOption;
     /**
      * 跨域设置
      */

@@ -4,7 +4,9 @@ import { App } from "./application";
 import { Util } from "./util";
 
 /**
- * 获取体胖信息
+ * 管理提示信息
+ * 
+ * @internal
  */
 export class TipManager{
     /**

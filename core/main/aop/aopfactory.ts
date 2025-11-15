@@ -1,6 +1,6 @@
 import {InstanceFactory} from "../instancefactory";
 import {AopProxy} from "./aopproxy";
-import { AopAdvice,AopAdviceCollection,AopMethodOption,AopPointcutOption } from "../../types/aoptypes";
+import { AopAdvice,AopAdviceCollection,AopMethodOption,AopPointcutOption  } from "../../types/aoptypes";
 import { UnknownClass } from "../../types/other";
 import { AopPointcut } from "./aoppointcut";
 
@@ -9,6 +9,8 @@ import { AopPointcut } from "./aoppointcut";
 /**
  * Aop工厂
  * 用于管理所有切面、切点
+ * 
+ * @public
  */
 export class AopFactory {
     /**
@@ -50,7 +52,7 @@ export class AopFactory {
      * 注册切点
      * @param cfg -   pointcut配置
      */
-    public static registPointcut(cfg: AopPointcutOption) {
+    public static registPointcut(cfg: AopPointcutOption ) {
         const pc = this.getRegistPointcut(cfg.clazz, cfg.id, true);
         if (cfg.expressions) {
             pc.expressions = pc.expressions.concat(cfg.expressions);
@@ -75,9 +77,9 @@ export class AopFactory {
 
     /**
      * 从registAspectMap中获取注册的pointcut配置
-     * @param clazz -         切面类
-     * @param pointcutId -    切点id
-     * @param create -        如果不存在，是否创建，如果为true，则创建，默认false
+     * @param clazz -       切面类
+     * @param pointcutId -  切点id
+     * @param create -      如果不存在，是否创建，如果为true，则创建，默认false
      * @returns             pointcut配置项
      */
     private static getRegistPointcut(clazz: unknown, pointcutId: string, create?: boolean): {advices:[],expressions:string[]} {
@@ -101,7 +103,6 @@ export class AopFactory {
 
     /**
      * 添加切面
-     * @remarks
      * 
      * @param clazz -   切面类
      */
@@ -133,6 +134,8 @@ export class AopFactory {
 
     /**
      * 为切点添加表达式
+     * 
+     * @internal
      * @param pointcutId -  切点id
      * @param expression -  表达式或数组
      */
@@ -146,6 +149,8 @@ export class AopFactory {
 
     /**
      * 为所有aop匹配的方法设置代理
+     * 
+     * @internal
      */
     public static proxyAll() {
         if (!this.pointcuts || this.pointcuts.size === 0) {
@@ -159,6 +164,9 @@ export class AopFactory {
 
     /**
      * 为某个类设置代理
+     * 
+     * @internal
+     * 
      * @param clazz - 类
      */
     private static proxyOne(clazz: UnknownClass) {
@@ -194,15 +202,18 @@ export class AopFactory {
 
     /**
      * 根据id获取切点
-     * @param pointcutId -    切点id
+     * 
+     * @param pointcutId -  切点id
      * @returns             切点对象
+     * 
+     * @internal
      */
     public static getPointcutById(pointcutId: string): AopPointcut {
         return this.pointcuts.get(pointcutId);
     }
 
     /**
-     * 获取某个方法对应的advices
+     * 获取某个方法对应的通知集合
      * @param clazz -       类
      * @param methodName -  方法名
      * @returns             advice集合

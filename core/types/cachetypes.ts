@@ -1,7 +1,9 @@
 /**
  * cache item类型，用于cache操作参数传递
+ * 
+ * @public
  */
-export type CacheItem = {
+export interface CacheItem {
     /**
      * 键
      */
@@ -21,9 +23,28 @@ export type CacheItem = {
 }
 
 /**
- * cache配置类型，初始化cache时使用
+ * 缓存类型
+ * 
+ * @public
  */
-export type CacheOption = {
+export enum CacheType {
+    /**
+     * 内存
+     */
+    MEMORY = 0,
+
+    /**
+     * redis
+     */
+    REDIS =  1
+}
+
+/**
+ * cache配置类型，初始化cache时使用
+ * 
+ * @public
+ */
+export interface CacheOption {
     /**
      * cache 名
      */
@@ -31,9 +52,9 @@ export type CacheOption = {
     /**
      * 存储类型 0内存，1redis，默认0，如果应用设置为集群部署，则设置无效(强制为1)
      */
-    saveType: number;
+    saveType: CacheType;
     /**
-     * redis名，如果saveType=1，则必须设置，默认default
+     * redis名，如果saveType=REDIS，则必须设置，默认default
      */
     redis?: string;
     /**

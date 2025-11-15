@@ -4,7 +4,7 @@ import {HttpResponse} from "../../web/httpresponse";
 import {NoomiError} from "../../tools/noomierror";
 import {Util} from "../../tools/util";
 import {App} from "../../tools/application";
-import { ERouteResultType, RouteInst, RouteConfig, RouteClassCfg, RouteResultOption } from "../../types/routetypes";
+import { RouteResultType, RouteInst, RouteConfig, RouteClassCfg, RouteResultOption } from "../../types/routetypes";
 import { UnknownClass } from "../../types/other";
 import { BaseRoute } from "./baseroute";
 import { WebCacheItem } from "../../types/webtypes";
@@ -13,6 +13,8 @@ import { WebCacheItem } from "../../types/webtypes";
  * 路由工厂类
  * @remarks
  * 管理所有路由对象，进行路由处理
+ * 
+ * @public
  */
 export class RouteFactory {
     /**
@@ -98,7 +100,7 @@ export class RouteFactory {
         }
         if (results && results.length > 0) {
             for (const r of results) {
-                if ((r.type === ERouteResultType.CHAIN || r.type === ERouteResultType.REDIRECT)
+                if ((r.type === RouteResultType.CHAIN || r.type === RouteResultType.REDIRECT)
                     && (!r.url || typeof r.url !== 'string' || (r.url = r.url.trim()) === '')) {
                     throw new NoomiError("2101");
                 }
@@ -159,15 +161,18 @@ export class RouteFactory {
         }
         //设置model
         if (typeof route.instance.__setModel === 'function') {
-            route.instance.__setModel(params || {}, route.method);
+            const r = route.instance.__setModel(params || {}, route.method);
+            if(r){
+                return r;
+            }
         }
         //实际调用方法
         const func = route.instance[route.method];
         if (typeof func !== 'function') {
-            throw new NoomiError("1010");
+            return new NoomiError("1010");
         }
         const re = await func.call(route.instance, params);
-        if (re === ERouteResultType.REDIRECT) {
+        if (re === RouteResultType.REDIRECT) {
             return re;
         }
         return await this.handleResult(route, re);
@@ -210,10 +215,8 @@ export class RouteFactory {
         let url: string;
         const instance = route.instance;
         const res: HttpResponse = route.instance['response'];
-        // 返回值
-        let ret: WebCacheItem | number = 0;
         switch (result.type) {
-            case ERouteResultType.REDIRECT: // 重定向
+            case RouteResultType.REDIRECT: // 重定向
                 url = handleParamUrl(instance, result.url);
                 const pa = [];
                 // 参数属性
@@ -233,8 +236,9 @@ export class RouteFactory {
                         url += '&' + pas;
                     }
                 }
-                return res.redirect(url);
-            case ERouteResultType.CHAIN: // 路由器链
+                res.redirect(url);
+                return RouteResultType.REDIRECT;
+            case RouteResultType.CHAIN: // 路由器链
                 url = handleParamUrl(instance, result.url);
                 const url1 = App.url.parse(url).pathname;
                 const params = App.qs.parse(App.url.parse(url).query);
@@ -249,14 +253,14 @@ export class RouteFactory {
                 }
                 const route1 = this.getRoute(url1);
                 if (route1 === null) {
-                    throw new NoomiError("2103", url1);
+                    return new NoomiError("2103", url1);
                 }
                 // 设置route path
                 route1.path = url1;
                 return await this.handleRoute(route1, route.instance['request'], res, params);
-            case ERouteResultType.NONE:    // 什么都不做
+            case RouteResultType.NONE:    // 什么都不做
                 break;
-            case ERouteResultType.STREAM:  // 文件流
+            case RouteResultType.STREAM:  // 文件流
                 // 文件名
                 const pn: string = result.params[0];
                 if (pn) {
@@ -264,29 +268,29 @@ export class RouteFactory {
                     if (fn) {
                         fn = Util.getAbsPath([fn]);
                         if (!App.fs.existsSync(fn)) {
-                            throw new NoomiError('0050');
+                            return new NoomiError('0050');
                         }
-                        res.writeFileToClient({
-                            data: fn
-                        });
+                        return {data:fn,type:'file'}
+                        // res.writeFileToClient({
+                        //     data: fn
+                        // });
                     }
                 }
                 break;
             default: // json
-                let mimeType: string;
-                // 处理json对象
-                if (typeof data === 'object') {
-                    // data = JSON.stringify(data);
-                    mimeType = 'application/json';
-                } else {
-                    mimeType = 'text/plain';
-                }
-                ret = {
-                    data:<string>data, // 如果无数据，则返回''
-                    mimeType: mimeType
-                };
+                // let mimeType: string;
+                // // 处理json对象
+                // if (typeof data === 'object') {
+                //     mimeType = 'application/json';
+                // } else {
+                //     mimeType = 'text/plain';
+                // }
+                // ret = {
+                //     data:<string>data, // 如果无数据，则返回''
+                //     mimeType: mimeType
+                // };
+                return data;
         }
-        return ret;
 
         /**
          * 处理带参数的url，参数放在`{}`中

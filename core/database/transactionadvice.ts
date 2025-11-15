@@ -2,6 +2,8 @@ import { closeConnection, txBegin, txCommit, txRollback } from "./dbmethods";
 
 /**
  * 事务通知
+ * 
+ * @public
  */
 export class TransactionAdvice {
     /**

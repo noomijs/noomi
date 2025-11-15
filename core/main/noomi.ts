@@ -20,6 +20,8 @@ import { TipManager } from "../tools/tipmanager";
  * 1. new NoomiMain(config)
  * 
  * 2. noomi(config)
+ * 
+ * @public
  */
 export class NoomiMain {
     /**
@@ -60,7 +62,8 @@ export class NoomiMain {
     /**
      * 初始化框架
      */
-    async init() {
+    // TODO 增加启动日志
+    public async init() {
         const basePath: string = App.configPath;
         let iniJson: object = null;
         // 开始启动
@@ -118,9 +121,9 @@ export class NoomiMain {
             console.log(TipManager.getTip("0112"));
         }
         // 实例初始化
-        if (iniJson.hasOwnProperty('instance')) {
+        if (iniJson.hasOwnProperty('instances')) {
             console.log(TipManager.getTip("0105"));
-            await InstanceFactory.init(iniJson['instance']).catch(r => {
+            await InstanceFactory.init(iniJson['instances']).catch(r => {
                 console.error(r);
             })
             console.log(TipManager.getTip("0106"));
@@ -182,10 +185,12 @@ export class NoomiMain {
 
 /**
  * 框架主函数
- * @param port -          http端口,默认3000
- * @param contextPath -   配置文件路径，默认 /config，相对于项目根目录
- * @param sslPort -       https端口，默认4000
- * @returns             NoomiMain对象
+ * @param port -            http端口,默认3000
+ * @param contextPath -     配置文件路径，默认 /config，相对于项目根目录
+ * @param sslPort -         https端口，默认4000
+ * @returns                 NoomiMain对象
+ * 
+ * @public
  */
 export function noomi(port?: number, contextPath?: string, sslPort?: number): NoomiMain {
     return new NoomiMain(port, contextPath, sslPort);

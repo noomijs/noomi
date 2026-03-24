@@ -20,6 +20,7 @@ export * from './core/web/httpcookie';
 export * from './core/web/httprequest';
 export * from './core/web/httpresponse';
 export * from './core/web/requestqueue';
+export * from './core/web/session';
 export * from './core/web/sessionfactory';
 export * from './core/web/staticresource';
 export * from './core/web/webconfig';

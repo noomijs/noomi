@@ -135,9 +135,9 @@ export class HttpRequest extends IncomingMessage {
      * 获取cookie数组
      */
     public getCookies(){
-        if(!this.cookies){
+        const cook = <string>this.getHeader('cookie');
+        if(!this.cookies && cook){
             this.cookies = [];
-            const cook = <string>this.getHeader('Cookie');
             cook?.split(';').forEach(parms => {
                 const parts = parms.split('=');
                 this.cookies.push(new HttpCookie(parts[0].trim(),parts[1]));
@@ -152,10 +152,10 @@ export class HttpRequest extends IncomingMessage {
      * @returns         cookie对象
      */
     public getCookie(name:string){
-        if(this.cookies){
+        if(!this.cookies){
             this.getCookies();
         }
-        return this.cookies.find(item=>item.getName() === name);
+        return this.cookies?.find(item=>item.getName() === name);
     }
 
     /**

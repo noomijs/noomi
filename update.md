@@ -13,9 +13,5 @@
 6. 如果未设置实例名，实例名默认为类名，不再是首字母小写的驼峰命名方式。
 7. 不再支持 实例、切面、路由、过滤器配置文件方式，统一采用注解（装饰器）方式；
 8. 切点(pointcut)不再装饰方法，采用装饰属性，advice中直接使用装饰的属性名作为pointcutId。
-
-### 1.0.0-beta7
-1. 取消@DataType和@DataValidator装饰器，用@Prop装饰器代替
-
-### 1.0.0-beta14
-1. 完善web config的跨域设置
+9. 取消@DataType和@DataValidator装饰器，用@Prop装饰器代替
+10. 完善web config的跨域设置

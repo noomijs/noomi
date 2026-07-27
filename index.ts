@@ -15,16 +15,19 @@ export * from './core/log/logmanager';
 
 //web
 export * from './core/web/filterfactory';
-export * from './core/web/webafterhandler';
 export * from './core/web/httpcookie';
 export * from './core/web/httprequest';
 export * from './core/web/httpresponse';
+export * from './core/web/postfileparamhandler';
+export * from './core/web/postformhandler';
+export * from './core/web/posttexthandler';
 export * from './core/web/requestqueue';
 export * from './core/web/session';
 export * from './core/web/sessionfactory';
 export * from './core/web/staticresource';
-export * from './core/web/webconfig';
+export * from './core/web/webafterhandler';
 export * from './core/web/webcache';
+export * from './core/web/webconfig';
 
 //locales
 export * from './core/locales/noomitip_en';
@@ -46,8 +49,6 @@ export * from './core/tools/noomierror';
 export * from './core/tools/launchhookmanager';
 export * from './core/tools/modelmanager';
 export * from './core/tools/cache/ncache';
-export * from './core/tools/cache/memorycache';
-export * from './core/tools/cache/memoryitem';
 export * from './core/tools/pagefactory';
 export * from './core/tools/redisfactory';
 export * from './core/tools/threadlocal';

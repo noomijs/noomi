@@ -1,6 +1,6 @@
 {
   "name": "noomi",
-  "version": "1.0.0-beta16",
+  "version": "1.0.1",
   "description": "一个基于node的企业级框架，支持路由、IoC、Aop、事务嵌套、安全框架、缓存、集群",
   "main": "dist/index.js",
   "types": "dist/types/index.d.ts",
@@ -28,27 +28,13 @@
     "url": "https://github.com/noomijs/noomi/issues"
   },
   "homepage": "https://github.com/noomijs/noomi#readme",
+  "engines": {
+    "node": ">=13.20.0"
+  },
   "dependencies": {
     "@types/node": "^24.0.3",
     "mime": "^2.4.6",
     "redis": "^3.0.2",
     "uuid": "^8.3.1"
-  },
-  "engines": {
-    "node": ">=13.20.0"
-  },
-  "contributors": [
-    {
-      "name": "杨雷",
-      "email": "fieldyang@163.com"
-    },
-    {
-      "name": "唐榜",
-      "email": "244750596@qq.com"
-    },
-    {
-      "name": "赵率宏",
-      "email": "973478129@qq.com"
-    }
-  ]
+  }
 }
